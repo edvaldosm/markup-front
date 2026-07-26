@@ -94,4 +94,21 @@ const title = () => pageTitle[route.name as string] ?? 'Markup'
   border-radius: 50%;
   flex-shrink: 0;
 }
+
+@media (max-width: 768px) {
+  .header {
+    left: 0;
+    padding: 0 var(--space-4);
+    gap: var(--space-3);
+  }
+  .header__left { gap: var(--space-2); min-width: 0; }
+  /* Deixa o título encolher para o switcher de empresa caber */
+  .header__title {
+    font-size: .9375rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header__right { flex-shrink: 0; }
+}
 </style>

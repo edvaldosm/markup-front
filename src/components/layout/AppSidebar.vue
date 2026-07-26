@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
 import { segmentoConfig } from '@/config/segmentos'
 
-defineProps<{ open: boolean }>()
+defineProps<{ open: boolean; mobileOpen?: boolean }>()
 defineEmits<{ toggle: [] }>()
 
 const route = useRoute()
@@ -51,7 +51,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(to +
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--collapsed': !open }">
+  <aside class="sidebar" :class="{ 'sidebar--collapsed': !open, 'sidebar--drawer-open': mobileOpen }">
     <!-- Brand -->
     <div class="sidebar__brand">
       <div class="brand-logo" :style="{ background: `linear-gradient(135deg, ${segConfig.gradiente[0]}, ${segConfig.gradiente[1]})` }">
@@ -121,6 +121,20 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(to +
   overflow: hidden;
 }
 .sidebar--collapsed { width: 64px; }
+
+/* ─── Mobile: drawer off-canvas ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    transition: transform .28s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, .35);
+  }
+  /* Nunca colapsa em ícones no mobile — mostra o menu completo quando aberto */
+  .sidebar--collapsed { width: var(--sidebar-width); }
+  /* Estado aberto do drawer — especificidade dupla p/ vencer .sidebar sem ambiguidade */
+  .sidebar.sidebar--drawer-open { transform: translateX(0); }
+}
 
 /* Brand */
 .sidebar__brand {

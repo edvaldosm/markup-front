@@ -175,4 +175,17 @@ onBeforeUnmount(() => document.removeEventListener('click', onClickFora))
 
 .drop-enter-active, .drop-leave-active { transition: opacity .15s, transform .15s; }
 .drop-enter-from, .drop-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* ─── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .switcher__menu {
+    width: calc(100vw - var(--space-4) * 2);
+    max-width: 340px;
+  }
+}
+/* Em telas bem estreitas, o trigger fica compacto: só ícone + seta */
+@media (max-width: 480px) {
+  .switcher__trigger { padding: var(--space-2); gap: var(--space-1); }
+  .switcher__info { display: none; }
+}
 </style>
