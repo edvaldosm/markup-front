@@ -21,10 +21,17 @@ async function handleLogin() {
   }
 }
 
+/**
+ * Cada atalho entra com um escopo diferente (R09) — trocar de usuário muda as
+ * empresas do seletor e os itens do menu.
+ */
 const demoUsers = [
-  { label: 'Admin', email: 'ana@docesdaana.com.br' },
-  { label: 'Gerente', email: 'marcos@docesdaana.com.br' },
-  { label: 'Vendedor', email: 'carla@docesdaana.com.br' },
+  { label: 'ADMIN global', email: 'admin@markup.com.br', dica: 'vê as 4 empresas' },
+  { label: 'Ana (dona)', email: 'ana@docesdaana.com.br', dica: 'Doces da Ana + NexaTech' },
+  { label: 'Roberto (dono)', email: 'roberto@metalforte.com.br', dica: 'só MetalForte' },
+  { label: 'Juliana (dona)', email: 'juliana@nexatech.com.br', dica: 'só NexaTech' },
+  { label: 'Marcos (gerente)', email: 'marcos@docesdaana.com.br', dica: 'menu reduzido' },
+  { label: 'Carla (vendedora)', email: 'carla@docesdaana.com.br', dica: 'menu mínimo' },
 ]
 </script>
 
@@ -87,6 +94,7 @@ const demoUsers = [
             v-for="u in demoUsers"
             :key="u.email"
             class="demo-btn"
+            :title="u.dica"
             @click="form.email = u.email"
           >
             {{ u.label }}

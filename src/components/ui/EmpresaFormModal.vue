@@ -14,7 +14,7 @@ const empresaStore = useEmpresaStore()
 const { calcularFatorR } = useMarkupCalculator()
 const { formatPercent } = useCurrency()
 
-const form = reactive<Omit<Empresa, 'id' | 'createdAt'>>({
+const form = reactive<Omit<Empresa, 'id' | 'createdAt' | 'donoUsuarioId'>>({
   razaoSocial: '',
   cnpj: '',
   segmento: 'CONFEITARIA',
@@ -56,7 +56,8 @@ async function salvar() {
   if (erros.value.length) return
 
   salvando.value = true
-  const payload: Omit<Empresa, 'id' | 'createdAt'> = {
+  // `donoUsuarioId` é definido pelo store a partir do usuário logado (R09)
+  const payload: Omit<Empresa, 'id' | 'createdAt' | 'donoUsuarioId'> = {
     ...form,
     anexoSimples: ehSimples.value ? form.anexoSimples : undefined,
     folhaPagamentoMensal: ehServico.value ? form.folhaPagamentoMensal : undefined,

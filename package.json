@@ -6,20 +6,25 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "pinia": "^2.3.1",
     "@apollo/client": "^3.12.10",
     "@vue/apollo-composable": "^4.2.2",
-    "graphql": "^16.10.0"
+    "graphql": "^16.10.0",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.11",
+    "jsdom": "^26.1.0",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
+    "vitest": "^3.2.7",
     "vue-tsc": "^2.2.0"
   },
   "allowScripts": {

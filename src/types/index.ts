@@ -16,6 +16,8 @@ export interface Empresa {
   faturamentoMedioMensal: number
   /** Folha de pagamento mensal (salários + pró-labore + encargos) — numerador do Fator R (serviços) */
   folhaPagamentoMensal?: number
+  /** Dono da empresa — o usuário que a cadastrou (R09). No backend: `dono_usuario_id` */
+  donoUsuarioId: string
   createdAt: string
 }
 
@@ -126,6 +128,19 @@ export interface Perfil {
   nome: string
   descricao: string
   permissoes: Permissao[]
+  /**
+   * Escopo global (R09): o perfil ADMIN enxerga e opera **todas** as empresas,
+   * ignorando dono/compartilhamento. Ausente ou `false` ⇒ escopo por empresa.
+   */
+  escopoGlobal?: boolean
+}
+
+/** Vínculo explícito usuário↔empresa (no backend: tabela `USUARIO_EMPRESA`) */
+export interface VinculoEmpresa {
+  empresaId: string
+  empresa?: Empresa
+  perfilId: string
+  perfil?: Perfil
 }
 
 export interface Usuario {
@@ -134,7 +149,12 @@ export interface Usuario {
   email: string
   avatarUrl?: string
   ativo: boolean
-  empresas: { empresaId: string; empresa?: Empresa; perfilId: string; perfil?: Perfil }[]
+  empresas: VinculoEmpresa[]
+  /**
+   * Perfil de escopo global, sem empresa (R09) — só o ADMIN de suporte tem.
+   * Quando presente, prevalece sobre o perfil dos vínculos.
+   */
+  perfilGlobal?: Perfil
   createdAt: string
 }
 
@@ -158,6 +178,8 @@ export interface AuthUser {
   nome: string
   email: string
   avatarUrl?: string
+  /** Perfil efetivo da sessão — define permissões (RBAC) e escopo global (R09) */
   perfil: Perfil
-  empresa: Empresa
+  /** Empresas compartilhadas com este usuário; as que ele possui vêm de `donoUsuarioId` */
+  vinculos: VinculoEmpresa[]
 }

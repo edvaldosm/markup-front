@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
 import { segmentoConfig } from '@/config/segmentos'
+import type { PermissaoChave } from '@/types'
 
 defineProps<{ open: boolean; mobileOpen?: boolean }>()
 defineEmits<{ toggle: [] }>()
@@ -13,39 +14,50 @@ const auth = useAuthStore()
 const empresaStore = useEmpresaStore()
 const segConfig = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 
-const navGroups = [
+/** `permissao` espelha o `meta.permissao` da rota — item sem ela é sempre visível */
+const navGroups: {
+  label: string
+  items: { name: string; to: string; icon: string; permissao?: PermissaoChave }[]
+}[] = [
   {
     label: 'Principal',
     items: [
       { name: 'Dashboard', to: '/dashboard', icon: '◎' },
-      { name: 'Precificação', to: '/precificacao', icon: '◈' },
+      { name: 'Precificação', to: '/precificacao', icon: '◈', permissao: 'PRODUTO_READ' },
     ]
   },
   {
     label: 'Cadastros',
     items: [
-      { name: 'Produtos', to: '/produtos', icon: '⬡' },
-      { name: 'Materiais', to: '/materiais', icon: '◇' },
-      { name: 'Despesas Fixas', to: '/despesas', icon: '◻' },
-      { name: 'Impostos', to: '/impostos', icon: '◈' },
+      { name: 'Produtos', to: '/produtos', icon: '⬡', permissao: 'PRODUTO_READ' },
+      { name: 'Materiais', to: '/materiais', icon: '◇', permissao: 'MATERIAL_READ' },
+      { name: 'Despesas Fixas', to: '/despesas', icon: '◻', permissao: 'DESPESA_READ' },
+      { name: 'Impostos', to: '/impostos', icon: '◈', permissao: 'IMPOSTO_READ' },
     ]
   },
   {
     label: 'Análise',
     items: [
-      { name: 'Fator R', to: '/fator-r', icon: '🧮' },
-      { name: 'Relatórios', to: '/relatorios', icon: '▤' },
+      { name: 'Fator R', to: '/fator-r', icon: '🧮', permissao: 'EMPRESA_READ' },
+      { name: 'Relatórios', to: '/relatorios', icon: '▤', permissao: 'RELATORIO_READ' },
     ]
   },
   {
     label: 'Configurações',
     items: [
-      { name: 'Empresa', to: '/empresa', icon: '⬡' },
-      { name: 'Usuários', to: '/usuarios', icon: '◎' },
-      { name: 'Perfis & RBAC', to: '/perfis', icon: '◈' },
+      { name: 'Empresa', to: '/empresa', icon: '⬡', permissao: 'EMPRESA_READ' },
+      { name: 'Usuários', to: '/usuarios', icon: '◎', permissao: 'USUARIO_READ' },
+      { name: 'Perfis & RBAC', to: '/perfis', icon: '◈', permissao: 'PERFIL_READ' },
     ]
   },
 ]
+
+/** Só os grupos/itens que o perfil do usuário pode acessar (grupo vazio some) */
+const navVisivel = computed(() =>
+  navGroups
+    .map(g => ({ ...g, items: g.items.filter(i => !i.permissao || auth.hasPermissao(i.permissao)) }))
+    .filter(g => g.items.length > 0)
+)
 
 const isActive = (to: string) => route.path === to || route.path.startsWith(to + '/')
 </script>
@@ -67,7 +79,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(to +
 
     <!-- Nav -->
     <nav class="sidebar__nav">
-      <div v-for="group in navGroups" :key="group.label" class="nav-group">
+      <div v-for="group in navVisivel" :key="group.label" class="nav-group">
         <Transition name="fade">
           <p v-if="open" class="nav-group__label">{{ group.label }}</p>
         </Transition>
