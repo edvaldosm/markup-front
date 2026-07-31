@@ -9,8 +9,9 @@ metadata:
 
 # Schema GraphQL — Backend Markup
 
-Fonte do contrato: `graph/schema.graphqls`. Após editar, rodar
-`go tool gqlgen generate` ([[R06-arquivos-gerados-nao-editar]]).
+Fonte do contrato: `src/main/resources/graphql/schema.graphqls`, servido por
+**Spring for GraphQL** em `POST /graphql`. Contrato-first: editar o schema
+primeiro, depois os `@Controller` ([[R06-contrato-first-schema]]).
 
 ## Tipos principais
 
@@ -19,6 +20,7 @@ type Empresa {
   id: ID!
   razaoSocial: String!
   cnpj: String!
+  dono: Usuario!                     # proprietário (R09) — só dono/compartilhados/ADMIN veem
   regimeTributario: RegimeTributario!
   anexoSimples: AnexoSimples
   faturamentoMedioMensal: Float!
@@ -105,7 +107,21 @@ type Query {
   perfis: [Perfil!]!
   permissoes: [Permissao!]!
   usuarios: [Usuario!]!
+
+  # Multi-empresa — só as empresas autorizadas ao usuário (todas se ADMIN) — R09
+  minhasEmpresas: [Empresa!]!
+
+  # Assistente RAG — só formação de preço, com guardrails no backend — R08
+  perguntarAssistente(pergunta: String!): RespostaAssistente!
 }
+
+type RespostaAssistente {
+  status: AssistenteStatus!
+  texto: String!
+  fontes: [String!]!
+}
+
+enum AssistenteStatus { OK  FORA_DE_ESCOPO  RECUSADO  SEM_FONTE }
 ```
 
 ## Mutations

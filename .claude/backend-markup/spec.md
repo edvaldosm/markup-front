@@ -6,8 +6,9 @@
 
 ## Objetivo
 
-Expor uma API **GraphQL** que centraliza todo o cálculo de precificação por
-Markup por Divisor, isolada por empresa e protegida por RBAC.
+Expor uma API **GraphQL** (Java 21 + Spring Boot 4, Spring for GraphQL) que
+centraliza o cálculo de precificação por Markup por Divisor, isolada por empresa
+(ownership), protegida por RBAC, e com um **assistente RAG** de apoio ao usuário.
 
 ## Requisitos funcionais
 
@@ -17,13 +18,21 @@ Markup por Divisor, isolada por empresa e protegida por RBAC.
     breakdown; soma ≥ 100% ⇒ erro, nunca preço ≤ 0.
 - **RB-02 (Custo base):** DEVE calcular CP = `SUM(qtd × custo_unitario)` da ficha técnica.
 - **RB-03 (Despesas fixas):** DEVE calcular %DF = `SUM(valor_mensal_ativo)/faturamento×100` dinamicamente.
-- **RB-04 (Multi-tenant):** toda operação DEVE filtrar por `empresa_id` do JWT. (Artigo B2)
-  - Aceite: usuário não lê/escreve dados de empresa fora do seu token.
-- **RB-05 (RBAC):** cada resolver DEVE exigir a permissão correspondente (`*_READ`/`*_WRITE`). (Artigo B5)
-- **RB-06 (Auth):** login DEVE emitir JWT com claims `id`, `empresa_id`, `role`, `permissoes`; refresh sem re-login.
+- **RB-04 (Multi-tenant):** toda operação DEVE restringir-se às empresas autorizadas
+  ao usuário do JWT. (Artigos B2, B9)
+  - Aceite: usuário não lê/escreve dados de empresa que não possui nem foi compartilhada.
+- **RB-05 (RBAC):** cada operação DEVE exigir a permissão correspondente (`*_READ`/`*_WRITE`). (Artigo B5)
+- **RB-06 (Auth):** login DEVE emitir JWT com claims `sub`, `role`, `permissoes`; refresh sem re-login.
 - **RB-07 (CRUD de domínio):** empresa, despesas, materiais, impostos, produtos
   (com ficha técnica e impostos), perfis/permissões e usuários.
 - **RB-08 (Seed):** DEVE popular impostos padrão, 16 permissões, 5 perfis e admin inicial.
+- **RB-09 (Ownership + ADMIN global):** empresa tem dono (`dono_usuario_id`); usuário
+  comum vê só as próprias/compartilhadas; `minhasEmpresas` reflete isso; ADMIN vê todas. (Artigo B9)
+  - Aceite: Edvaldo (E1,E2), Santiago (E3,E4), Matos (E5,E6) — cada um só vê as suas; ADMIN vê as seis.
+- **RB-10 (Assistente RAG):** `perguntarAssistente(pergunta)` DEVE responder **só**
+  sobre formação de preço, com guardrails de escopo e de conteúdo ofensivo, ancorado
+  no vault ingerido (Spring AI + Claude + pgvector); sem fonte relevante ⇒ não alucina. (Artigo B8)
+  - Aceite: pergunta fora de tema ⇒ `FORA_DE_ESCOPO`; ofensiva ⇒ `RECUSADO`; sem doc ⇒ `SEM_FONTE`.
 
 ## Modelo de dados (requisito)
 
@@ -45,8 +54,9 @@ interface — pertencem ao frontend. (Artigo B7)
 
 | Requisito | Template |
 |-----------|----------|
-| RB-01/02/03 | `formula-markup-divisor`, `resolver-precificacao-go` |
-| RB-04/05 | `rbac-permissoes`, rules R02/R05 |
-| RB-06 | `auth-jwt-gin` |
-| RB-07 | `modelagem-der-markup`, `schema-graphql-markup`, `estrutura-projeto-go` |
+| RB-01/02/03 | `formula-markup-divisor`, `service-precificacao-java` |
+| RB-04/05/09 | `rbac-permissoes`, rules R02/R05/R09 |
+| RB-06 | `auth-jwt-spring` |
+| RB-07 | `modelagem-der-markup`, `schema-graphql-markup`, `estrutura-projeto-spring` |
 | RB-08 | `seed-dados-iniciais` |
+| RB-10 | `assistente-rag-precificacao`, rule R08 |

@@ -1,13 +1,17 @@
 ---
 name: seed-dados-iniciais
-description: Seed inicial do banco do backend Markup — impostos padrão, permissões, perfis e usuário admin. Use ao popular o banco pela primeira vez.
+description: Seed inicial do banco do backend Markup — impostos, permissões, perfis e admin, via Flyway. Use ao popular o banco pela primeira vez.
 metadata:
   domain: backend-markup
   kind: skill
-  origin: IniciandoBackEndMarkup.md §10
+  origin: IniciandoBackEndMarkup.md §10 (portado para Flyway/Spring)
 ---
 
 # Dados iniciais (seed)
+
+Mecanismo: **Flyway** — migração de schema (`V1__schema.sql`) + seed idempotente
+(`V2__seed.sql`) em `resources/db/migration/`. Alternativa: `CommandLineRunner`
+que só insere se a tabela estiver vazia. Senha do admin com `BCryptPasswordEncoder`.
 
 O banco deve ser populado com:
 

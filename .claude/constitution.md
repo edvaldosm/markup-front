@@ -7,25 +7,34 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 1.0.0 — 2026-07-31
+- **Versão:** 2.0.0 — 2026-07-31
+
+### Histórico
+- **2.0.0** — Backend migra de Go/gqlgen para **Java 21 + Spring Boot 4** (GraphQL via Spring for GraphQL). Novos artigos: **B8** (assistente/RAG), **B9** (ownership multi-empresa), **F8** (assistente no front).
+- **1.0.0** — Versão inicial (backend Go).
 
 ---
 
 ## Artigo I — Princípios de Backend
 
+Stack: **Java 21 + Spring Boot 4**, **Spring for GraphQL** (schema-first),
+**Spring Data JPA** + PostgreSQL, **Spring Security** (JWT), **Spring AI** (RAG).
 Detalhe de cada princípio em `.claude/backend-markup/rules/`.
 
 - **B1.** Todo cálculo de precificação vive no backend; o front só exibe. → [R01](backend-markup/rules/R01-calculo-no-backend.md)
-- **B2.** Toda query filtra por `empresa_id` obtido do JWT (multi-tenant). → [R02](backend-markup/rules/R02-isolamento-multiempresa.md)
+- **B2.** Toda consulta filtra por empresa autorizada ao usuário do JWT (multi-tenant). → [R02](backend-markup/rules/R02-isolamento-multiempresa.md)
 - **B3.** `divisorMarkup <= 0` retorna erro; nunca preço ≤ 0. → [R03](backend-markup/rules/R03-divisor-markup-positivo.md)
-- **B4.** Camadas separadas: domain (tipos), service (regra), resolver (orquestração). → [R04](backend-markup/rules/R04-separacao-camadas.md)
-- **B5.** Autorização RBAC verificada no início de cada resolver. → [R05](backend-markup/rules/R05-autorizacao-rbac.md)
-- **B6.** Arquivos gerados pelo gqlgen nunca são editados à mão. → [R06](backend-markup/rules/R06-arquivos-gerados-nao-editar.md)
+- **B4.** Camadas separadas: domain (entidades JPA), repository, service (regra), controller GraphQL (orquestração). → [R04](backend-markup/rules/R04-separacao-camadas.md)
+- **B5.** Autorização RBAC verificada em cada operação (Spring Security). → [R05](backend-markup/rules/R05-autorizacao-rbac.md)
+- **B6.** Contrato-first: o `.graphqls` é a fonte de verdade do contrato; o código segue o schema. → [R06](backend-markup/rules/R06-contrato-first-schema.md)
 - **B7.** Formatação, ordenação de UI e estado de tela não vão para o backend. → [R07](backend-markup/rules/R07-fora-do-backend.md)
+- **B8.** O assistente/RAG responde **apenas** sobre formação de preço; recusa conteúdo ofensivo ou fora de escopo; a fonte é o vault **ingerido** num vector store. → [R08](backend-markup/rules/R08-assistente-escopo-guardrails.md)
+- **B9.** Toda empresa tem um **dono** (quem a cadastrou); usuário só enxerga empresas próprias ou explicitamente compartilhadas; **ADMIN tem visão global**. → [R09](backend-markup/rules/R09-ownership-multiempresa.md)
 
 ## Artigo II — Princípios de Frontend
 
-Detalhe de cada princípio em `.claude/frontend-markup/rules/`.
+Stack: **Vue 3 + Pinia + Vue Router + TypeScript + Vite**, Apollo Client.
+Detalhe em `.claude/frontend-markup/rules/`.
 
 - **F1.** Componentes em `<script setup lang="ts">` + Composition API. → [FR01](frontend-markup/rules/FR01-composition-api-ts.md)
 - **F2.** Estado em Pinia setup stores por domínio, reativo à empresa ativa. → [FR02](frontend-markup/rules/FR02-stores-por-dominio.md)
@@ -34,13 +43,15 @@ Detalhe de cada princípio em `.claude/frontend-markup/rules/`.
 - **F5.** Moeda/percentual só via `useCurrency` (Intl pt-BR). → [FR05](frontend-markup/rules/FR05-formatacao-intl.md)
 - **F6.** GraphQL isolado (`MOCK_MODE`); ao ligar o backend, o cálculo sai do front. → [FR06](frontend-markup/rules/FR06-camada-graphql-isolada.md)
 - **F7.** Rotas com guard de auth + lazy load de componentes. → [FR07](frontend-markup/rules/FR07-rotas-protegidas.md)
+- **F8.** O assistente consome **o backend**, nunca o vault direto; não renderiza conteúdo fora de formação de preço. → [FR08](frontend-markup/rules/FR08-assistente-consome-backend.md)
 
 ## Artigo III — Fronteira Backend ↔ Frontend
 
 - O backend devolve **números crus**; o frontend **formata e apresenta** (B7 + F5).
-- Contrato único: schema GraphQL do backend ([schema](backend-markup/skills/schema-graphql-markup/SKILL.md))
-  espelhado pelos tipos do front ([tipos](frontend-markup/skills/modelo-de-dados-front/SKILL.md));
-  endpoint via `VITE_GQL_ENDPOINT`.
+- Contrato único: schema GraphQL do backend (servido por Spring for GraphQL)
+  espelhado pelos tipos do front; endpoint via `VITE_GQL_ENDPOINT`.
+- O assistente conversa via GraphQL (`perguntarAssistente`), com o guardrail e o
+  RAG **no backend** (B8) — o front só exibe (F8).
 
 ## Artigo IV — Governança (Spec-Driven Development)
 

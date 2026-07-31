@@ -26,6 +26,10 @@ e pronto para ligar no backend GraphQL por uma flag.
 - **RF-07 (Formatação):** moeda/percentual só via `useCurrency` (pt-BR). (Artigo F5)
 - **RF-08 (Tema):** identidade verde via design tokens; pode variar por segmento. (Artigo F3)
 - **RF-09 (Dados):** acesso isolado em `src/graphql` com `MOCK_MODE` e `mockQuery`. (Artigo F6)
+- **RF-10 (Assistente):** widget de chat que ajuda no preenchimento, consumindo
+  `perguntarAssistente` do backend; trata os status OK/FORA_DE_ESCOPO/RECUSADO/SEM_FONTE. (Artigo F8)
+- **RF-11 (Multi-empresa por dono):** `CompanySwitcher` lista só as empresas
+  autorizadas (`minhasEmpresas`); usuário comum não vê empresas de outros; ADMIN vê todas. (espelha B9)
 
 ## Fora de escopo (não-objetivos)
 
@@ -42,4 +46,6 @@ persistência real e autenticação real (mock no protótipo).
 | RF-06 | `paginacao-infinita` |
 | RF-08 | `design-tokens-tema` |
 | RF-09 | `camada-graphql-mock` |
+| RF-10 | `assistente-ui`, backend `assistente-rag-precificacao` |
+| RF-11 | `roteamento-e-layout` (CompanySwitcher), `store-pinia-dominio` |
 | base | `estrutura-projeto-vue`, `modelo-de-dados-front` |

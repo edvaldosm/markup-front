@@ -43,4 +43,4 @@ D        = produto.desconto_maximo
 Se `1 - soma/100 <= 0`, retornar erro — ver [[R03-divisor-markup-positivo]].
 
 **Fonte de verdade:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`.
-Implementação: [[resolver-precificacao-go]].
+Implementação: [[service-precificacao-java]].

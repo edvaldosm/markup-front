@@ -1,6 +1,6 @@
 ---
 name: recriar-frontend-markup
-description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 7 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
+description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 8 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
 ---
 
 # Recriar frontend Markup (Vue 3)
@@ -21,6 +21,7 @@ Gera o protótipo navegável a partir de `.claude/frontend-markup/`. Trabalhe em
 - FR05 — moeda/percentual só via `useCurrency`
 - FR06 — GraphQL isolado (`MOCK_MODE`); ao ligar backend, cálculo sai do front
 - FR07 — rotas com guard de auth + lazy load
+- FR08 — assistente só consome o backend; nunca o vault/LLM direto
 
 ## Fases (cada uma guiada por uma Skill)
 
@@ -35,6 +36,9 @@ Gera o protótipo navegável a partir de `.claude/frontend-markup/`. Trabalhe em
 7. **Router + layout** — `roteamento-e-layout`: guard, `AppLayout`/Sidebar/Header,
    `CompanySwitcher` e as 13 telas em `src/views/`.
 8. **UI base** — componentes `Base*`, `StatCard`, `InfiniteScrollSentinel`, modais.
+9. **Assistente** — `assistente-ui`: `AssistenteWidget.vue` + `useAssistente.ts`
+   consumindo `perguntarAssistente` (mock e real), tratando OK/FORA_DE_ESCOPO/
+   RECUSADO/SEM_FONTE.
 
 ## Verificar
 

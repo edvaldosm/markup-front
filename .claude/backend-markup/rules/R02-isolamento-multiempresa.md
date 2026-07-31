@@ -5,17 +5,20 @@
 
 ## Regra
 
-**Toda query deve filtrar por `empresa_id`** obtido do JWT do usuário
-autenticado (via a relação `USUARIO_EMPRESA`). Nenhum resolver retorna dados de
-uma empresa diferente da do token.
+**Toda consulta deve restringir-se às empresas autorizadas ao usuário** do JWT.
+Nenhuma operação retorna dados de empresa fora do escopo autorizado.
 
-- O `empresa_id` viaja como claim no JWT e é lido a cada request:
-  `empresaID := claims["empresa_id"].(string)`.
-- Um usuário pode pertencer a várias empresas (N:M em `USUARIO_EMPRESA`), cada
-  uma com perfil diferente — o token vale para **uma** empresa por sessão.
+- Os claims do JWT trazem `id` (usuário) e `role`; as empresas visíveis são
+  derivadas do usuário (empresas próprias + compartilhadas, ou **todas** se
+  `role = ADMIN`) — ver [[R09-ownership-multiempresa]].
+- Em Spring: obter o usuário autenticado do `SecurityContext` e aplicar o filtro
+  no `service`/`repository`; **nunca** confiar em `empresaId` vindo do cliente
+  sem checar autorização.
+- Um usuário pode operar várias empresas (N:M em `USUARIO_EMPRESA`), com perfil
+  distinto por empresa.
 
 ## Por quê
 
 Sem esse filtro, um usuário autenticado poderia ler/alterar dados de outra
 empresa. É a fronteira de isolamento do sistema multi-tenant. Ver
-[[R05-autorizacao-rbac]] e [[auth-jwt-gin]].
+[[R05-autorizacao-rbac]], [[R09-ownership-multiempresa]] e [[auth-jwt-spring]].

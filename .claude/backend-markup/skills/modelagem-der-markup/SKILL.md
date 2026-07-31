@@ -1,22 +1,23 @@
 ---
 name: modelagem-der-markup
-description: Modelagem de dados do backend Markup (DER v3 — RBAC corporativo). Use ao criar entidades GORM em internal/domain ou desenhar migrações do banco.
+description: Modelagem de dados do backend Markup (DER v3 — RBAC + ownership). Use ao criar entidades JPA ou migrações Flyway do banco.
 metadata:
   domain: backend-markup
   kind: skill
-  origin: IniciandoBackEndMarkup.md §3, §8
+  origin: IniciandoBackEndMarkup.md §3, §8 (portado para JPA + ownership)
 ---
 
-# Modelagem de dados — DER v3 (RBAC Corporativo)
+# Modelagem de dados — DER v3 (RBAC + ownership)
 
-Regra de isolamento: toda query filtra por `empresa_id` do JWT
-([[R02-isolamento-multiempresa]]).
+Regra de isolamento: consultas restritas às empresas autorizadas ao usuário do
+JWT ([[R02-isolamento-multiempresa]], [[R09-ownership-multiempresa]]).
 
 ## Entidades
 
 ```
 EMPRESA
   id (UUID), razao_social, cnpj,
+  dono_usuario_id → USUARIO        ← proprietário (quem cadastrou) — R09
   regime_tributario (SIMPLES_NACIONAL | LUCRO_PRESUMIDO | LUCRO_REAL | MEI),
   anexo_simples (ANEXO_I..V) [nullable],
   faturamento_medio_mensal        ← divisor do rateio de DF
@@ -58,23 +59,34 @@ USUARIO_EMPRESA  (N:M — usuário em várias empresas com perfis diferentes)
   usuario_id → USUARIO, empresa_id → EMPRESA, perfil_id → PERFIL
 ```
 
-## Exemplo de struct GORM (`internal/domain/produto.go`)
+## Exemplo de entidade JPA (`domain/Produto.java`)
 
-```go
-package domain
+```java
+@Entity @Table(name = "produto")
+public class Produto {
+    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
-type Produto struct {
-    ID          string            `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-    EmpresaID   string            `gorm:"type:uuid;not null;index"                       json:"empresa_id"`
-    Nome        string            `gorm:"not null"                                       json:"nome"`
-    Descricao   *string           `                                                      json:"descricao,omitempty"`
-    Categoria   *string           `                                                      json:"categoria,omitempty"`
-    MargemLucro float64           `gorm:"not null"                                       json:"margem_lucro"`
-    DescontoMax float64           `gorm:"not null"                                       json:"desconto_maximo"`
-    Ativo       bool              `gorm:"default:true"                                   json:"ativo"`
-    Materiais   []ProdutoMaterial `gorm:"foreignKey:ProdutoID"                            json:"materiais"`
-    Impostos    []ProdutoImposto  `gorm:"foreignKey:ProdutoID"                            json:"impostos"`
+    @Column(name = "empresa_id", nullable = false)
+    private String empresaId;
+
+    @Column(nullable = false) private String nome;
+    private String descricao;
+    private String categoria;
+
+    @Column(name = "margem_lucro", nullable = false)  private double margemLucro;
+    @Column(name = "desconto_maximo", nullable = false) private double descontoMaximo;
+    @Column(nullable = false) private boolean ativo = true;
+
+    @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProdutoMaterial> materiais = new ArrayList<>();
+
+    @OneToMany(mappedBy = "produto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProdutoImposto> impostos = new ArrayList<>();
+    // getters/setters
 }
 ```
 
-Convenção: 1 arquivo por entidade em `internal/domain/` ([[estrutura-projeto-go]]).
+`EMPRESA` ganha `@ManyToOne` para o dono (`dono_usuario_id`, R09). Convenção:
+1 classe por entidade em `domain/`; schema/seed via Flyway ([[seed-dados-iniciais]]).
+Estrutura: [[estrutura-projeto-spring]].

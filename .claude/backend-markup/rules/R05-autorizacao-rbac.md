@@ -1,28 +1,30 @@
-# Rule R05 — Autorização RBAC no início de cada resolver
+# Rule R05 — Autorização RBAC em cada operação
 
 **Categoria:** Segurança / Autorização
-**Origem:** IniciandoBackEndMarkup.md §6
+**Origem:** IniciandoBackEndMarkup.md §6 (portado para Spring Security)
 
 ## Regra
 
-Todo resolver que lê ou grava dados **verifica a permissão** correspondente
-antes de executar qualquer lógica, usando as chaves de permissão dos claims do
-JWT:
+Toda operação que lê ou grava dados **verifica a permissão** correspondente antes
+de executar qualquer lógica. Em Spring, as `permissoes` do JWT viram
+`GrantedAuthority` e a checagem é declarativa:
 
-```go
-claims := jwt.ExtractClaims(ginCtx)
-if !contemPermissao(claims["permissoes"], "PRODUTO_WRITE") {
-    return nil, fmt.Errorf("acesso negado: PRODUTO_WRITE necessário")
-}
+```java
+@MutationMapping
+@PreAuthorize("hasAuthority('PRODUTO_WRITE')")
+public Produto salvarProduto(@Argument ProdutoInput input) { ... }
 ```
 
-- As permissões são carregadas **no login** (via `PayloadFunc` do gin-jwt) e
-  viajam no JWT — sem consulta ao banco a cada request.
-- Cada resolver exige a chave adequada (`*_READ` para leitura, `*_WRITE` para
-  escrita). Ver a lista completa em [[rbac-permissoes]].
+- Exige `@EnableMethodSecurity` (ver [[auth-jwt-spring]]).
+- As permissões são carregadas **no login** e viajam no JWT — sem consulta ao
+  banco a cada request.
+- Cada operação exige a chave adequada (`*_READ` para leitura, `*_WRITE` para
+  escrita). Lista completa em [[rbac-permissoes]].
+- Regras que dependem de dados (ownership da empresa) complementam com verificação
+  no service ([[R09-ownership-multiempresa]]).
 
 ## Por quê
 
 A autorização granular por permissão é o mecanismo de controle de acesso do
-sistema; omiti-la em um resolver abre um furo de segurança. Combina com
+sistema; omiti-la em uma operação abre um furo de segurança. Combina com
 [[R02-isolamento-multiempresa]].

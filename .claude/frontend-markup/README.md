@@ -21,6 +21,7 @@ memória `project_markup_frontend.md`. Espelha a estrutura de
 | [rules/FR05-formatacao-intl.md](rules/FR05-formatacao-intl.md) | Moeda/percentual só via `useCurrency` (Intl pt-BR) |
 | [rules/FR06-camada-graphql-isolada.md](rules/FR06-camada-graphql-isolada.md) | GraphQL isolado em `src/graphql`; ao ligar backend, cálculo sai do front |
 | [rules/FR07-rotas-protegidas.md](rules/FR07-rotas-protegidas.md) | Rotas com guard de auth + lazy load de componentes |
+| [rules/FR08-assistente-consome-backend.md](rules/FR08-assistente-consome-backend.md) | Assistente só consome o backend; nunca o vault/LLM direto |
 
 ## Skills — como fazer (procedimentos)
 
@@ -34,3 +35,4 @@ memória `project_markup_frontend.md`. Espelha a estrutura de
 | [skills/camada-graphql-mock](skills/camada-graphql-mock/SKILL.md) | `client.ts`, `MOCK_MODE`, `mockQuery` e migração p/ Apollo |
 | [skills/roteamento-e-layout](skills/roteamento-e-layout/SKILL.md) | Router, `AppLayout`/Sidebar/Header, `CompanySwitcher`, as 13 telas |
 | [skills/design-tokens-tema](skills/design-tokens-tema/SKILL.md) | Tokens do tema verde e convenções visuais |
+| [skills/assistente-ui](skills/assistente-ui/SKILL.md) | Chat do assistente (widget + composable) consumindo o backend |

@@ -1,41 +1,38 @@
 ---
 name: recriar-backend-markup
-description: Recria do zero o backend Go (Gin + gqlgen + GORM + PostgreSQL) do sistema Markup, a partir de .claude/backend-markup, respeitando as 7 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o backend.
+description: Recria do zero o backend Java 21 + Spring Boot 4 (Spring for GraphQL, JPA/PostgreSQL, Spring Security, Spring AI) do sistema Markup, a partir de .claude/backend-markup, respeitando as 9 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o backend.
 ---
 
-# Recriar backend Markup (Go)
+# Recriar backend Markup (Java 21 + Spring Boot 4)
 
-Gera o backend do sistema de precificação a partir de
-`.claude/backend-markup/`. Trabalhe em **pt-br**.
+Gera o backend a partir de `.claude/backend-markup/`. Trabalhe em **pt-br**.
 
 ## Ler antes
 
-`.claude/backend-markup/README.md` e todos os arquivos de `rules/` e `skills/`.
+`.claude/backend-markup/README.md`, `spec.md`, e todos os `rules/` e `skills/`.
 
 ## Invariantes (Rules — nunca violar)
 
-- R01 — todo cálculo de precificação no backend; o front só exibe
-- R02 — toda query filtra por `empresa_id` do JWT
-- R03 — `divisorMarkup <= 0` → erro; nunca preço ≤ 0
-- R04 — camadas domain/service/resolver separadas
-- R05 — verificar permissão RBAC no início de cada resolver
-- R06 — não editar `generated.go` / `models_gen.go`
-- R07 — formatação/ordenação/estado de UI ficam no front
+R01 cálculo no backend · R02 isolamento por empresa autorizada · R03 divisor > 0 ·
+R04 camadas domain/repository/service/controller · R05 RBAC em cada operação ·
+R06 contrato-first (`.graphqls`) · R07 UI fora do backend · R08 assistente só
+sobre preço + guardrails · R09 ownership + ADMIN global.
 
 ## Fases (cada uma guiada por uma Skill)
 
-1. **Estrutura + deps** — `estrutura-projeto-go`: layout `cmd/ graph/ internal/`,
-   `go.mod`, `gqlgen.yml`, dependências (Gin, gqlgen, GORM, gin-jwt, bcrypt).
-2. **Schema GraphQL** — `schema-graphql-markup`: escrever `graph/schema.graphqls`,
-   rodar `go tool gqlgen generate`.
-3. **Domínio GORM** — `modelagem-der-markup`: 1 struct por entidade em `internal/domain/`.
-4. **Services** — `resolver-precificacao-go` + fórmula `formula-markup-divisor`:
-   toda a regra em `internal/service/` (precificação isolada).
-5. **Auth JWT** — `auth-jwt-gin`: middleware gin-jwt, claims, rotas `/login` `/refresh`.
-6. **RBAC** — `rbac-permissoes`: chaves, perfis e checagem nos resolvers.
-7. **Seed** — `seed-dados-iniciais`: impostos, 16 permissões, 5 perfis, admin.
+1. **Estrutura + deps** — `estrutura-projeto-spring`: projeto Maven, `pom.xml`,
+   starters (web, graphql, data-jpa, security, validation, flyway, spring-ai anthropic + pgvector).
+2. **Contrato** — `schema-graphql-markup`: `resources/graphql/schema.graphqls`
+   (inclui `minhasEmpresas` e `perguntarAssistente`).
+3. **Domínio JPA** — `modelagem-der-markup`: entidades `@Entity` (Empresa com `dono_usuario_id`).
+4. **Persistência** — repositórios `JpaRepository` + `service/` com a regra.
+5. **Precificação** — `service-precificacao-java` + `formula-markup-divisor`.
+6. **Segurança** — `auth-jwt-spring` + `rbac-permissoes` (`@PreAuthorize`) + R02/R09 no service.
+7. **Assistente RAG** — `assistente-rag-precificacao`: Spring AI + Claude + pgvector, ingestão do vault, guardrails.
+8. **Seed** — `seed-dados-iniciais`: Flyway (schema + impostos, 16 permissões, 5 perfis, admin).
 
 ## Verificar
 
-`go build ./...` e reportar o resultado real. Confirmar destino/sobrescrita
-antes de escrever arquivos.
+`./mvnw -q compile` (e `test` se houver). Rodar de fato exige **PostgreSQL com
+pgvector** e `ANTHROPIC_API_KEY`. Confirmar destino/sobrescrita antes de escrever.
+Reportar o resultado real do build.

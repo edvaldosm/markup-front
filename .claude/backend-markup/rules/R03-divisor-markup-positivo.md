@@ -27,4 +27,4 @@ if divisorMarkup <= 0 {
 Quando a soma dos percentuais atinge ou ultrapassa 100%, a fórmula
 `PV = CP / divisor` diverge (divisão por zero ou negativo). Retornar erro
 explícito protege o usuário de um preço sem sentido. Ver
-[[formula-markup-divisor]] e [[resolver-precificacao-go]].
+[[formula-markup-divisor]] e [[service-precificacao-java]].
