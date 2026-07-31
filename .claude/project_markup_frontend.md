@@ -11,8 +11,11 @@ Protótipo navegável Vue 3 do sistema de precificação por Markup por Divisor.
 
 **Stack:** Vue 3 + Pinia + Vue Router + TypeScript + Vite. GraphQL mockado via `src/graphql/client.ts` (estrutura Apollo pronta para ligar com `MOCK_MODE = false`).
 
-**Telas implementadas (12):**
-- Login, Dashboard, Empresa, Materiais, Despesas Fixas, Impostos, Produtos (lista), Produto Detalhe (Ficha Técnica), Calculadora de Precificação, Relatórios, Usuários, Perfis & RBAC
+**Telas implementadas (13):**
+- Login, Dashboard, Empresa, Materiais, Despesas Fixas, Impostos, Produtos (lista), Produto Detalhe (Ficha Técnica), Calculadora de Precificação, **Fator R** (serviços/Simples), Relatórios, Usuários, Perfis & RBAC
+- Multi-empresa: `CompanySwitcher` troca a empresa ativa e as stores reagem por reatividade.
+
+> **Rules + Skills do front** destiladas em `.claude/frontend-markup/` (fonte de verdade dos padrões). Ver também `.claude/markup_knowledge_architecture.md`.
 
 **Design:** Verde claro sofisticado — sidebar `#193f1b` (verde escuro), surface branca, accent `#2d7d31`. Design tokens em `src/assets/main.css` como variáveis CSS.
 
