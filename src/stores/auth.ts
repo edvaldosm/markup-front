@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import type { AuthUser } from '@/types'
-import { mockUsuarios, mockPerfis, mockEmpresa } from '@/mock/data'
+import { ref, computed } from 'vue'
+import type { AuthUser, PermissaoChave } from '@/types'
+import { mockUsuarios, perfilDaSessao } from '@/mock/data'
+import { isAdminGlobal, temPermissao } from '@/auth/autorizacao'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
   const loading = ref(false)
+
+  /** ADMIN global (R09): enxerga e opera todas as empresas */
+  const adminGlobal = computed(() => isAdminGlobal(user.value))
 
   function login(email: string, _password: string): Promise<boolean> {
     loading.value = true
@@ -13,13 +17,12 @@ export const useAuthStore = defineStore('auth', () => {
       setTimeout(() => {
         const found = mockUsuarios.find(u => u.email === email && u.ativo)
         if (found) {
-          const perfil = found.empresas[0]?.perfil ?? mockPerfis[0]
           user.value = {
             id: found.id,
             nome: found.nome,
             email: found.email,
-            perfil,
-            empresa: mockEmpresa
+            perfil: perfilDaSessao(found),
+            vinculos: found.empresas,
           }
           loading.value = false
           resolve(true)
@@ -35,9 +38,9 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  function hasPermissao(chave: string): boolean {
-    return user.value?.perfil.permissoes.some(p => p.chave === chave) ?? false
+  function hasPermissao(chave: PermissaoChave): boolean {
+    return temPermissao(user.value, chave)
   }
 
-  return { user, loading, login, logout, hasPermissao }
+  return { user, loading, adminGlobal, login, logout, hasPermissao }
 })

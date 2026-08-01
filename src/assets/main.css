@@ -12,6 +12,18 @@
   --color-primary-800: #1e4f21;
   --color-primary-900: #193f1b;
 
+  /* Neutro grafite — identidade do módulo de Gestão do Site (escopo .theme-admin) */
+  --color-neutral-50:  #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
   --color-surface:    #ffffff;
   --color-bg:         #f6faf6;
   --color-bg-subtle:  #edf7ed;
@@ -26,6 +38,11 @@
   --color-warning: #d97706;
   --color-danger:  #dc2626;
   --color-info:    #2563eb;
+
+  /* Realces derivados da primária — trocam junto com o escopo de tema */
+  --color-primary-shadow:        rgba(45,125,49,.25);
+  --color-primary-shadow-strong: rgba(45,125,49,.35);
+  --focus-ring:                  rgba(85,181,89,.15);
 
   /* Espaçamentos */
   --space-1: 0.25rem;
@@ -58,6 +75,40 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* ─── Escopo de tema: Gestão do Site (neutro) ────────────────────────────────
+   O módulo administrativo não é "mais uma tela do produto": é a área do gestor
+   do site. Para que se reconheça pela cor, o escopo **remapeia os tokens** em vez
+   de introduzir hex novo nos componentes — quem já respeita a FR03 troca de
+   identidade sem uma linha de CSS. Ver [[FR10-escopo-de-tema-por-modulo]].
+
+   A classe é aplicada no `.app-layout` e também no `<html>` (`documentElement`),
+   porque `BaseModal` usa `<Teleport to="body">` e escaparia do escopo do layout. */
+.theme-admin {
+  --color-primary-50:  var(--color-neutral-50);
+  --color-primary-100: var(--color-neutral-100);
+  --color-primary-200: var(--color-neutral-200);
+  --color-primary-300: var(--color-neutral-300);
+  --color-primary-400: var(--color-neutral-400);
+  --color-primary-500: var(--color-neutral-500);
+  --color-primary-600: var(--color-neutral-600);
+  --color-primary-700: var(--color-neutral-700);
+  --color-primary-800: var(--color-neutral-800);
+  --color-primary-900: var(--color-neutral-900);
+
+  --color-bg:           #f7f8fa;
+  --color-bg-subtle:    var(--color-neutral-100);
+  --color-border:       var(--color-neutral-300);
+  --color-border-light: var(--color-neutral-200);
+
+  --color-text:       var(--color-neutral-900);
+  --color-text-muted: var(--color-neutral-500);
+  --color-text-light: var(--color-neutral-400);
+
+  --color-primary-shadow:        rgba(15,23,42,.18);
+  --color-primary-shadow-strong: rgba(15,23,42,.28);
+  --focus-ring:                  rgba(71,85,105,.18);
+}
+
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -88,6 +139,9 @@ input, select, textarea { font-family: inherit; }
   clip: rect(0,0,0,0); border: 0;
 }
 
+/* Só existe no papel — o par de `.no-print` (ver a camada de impressão) */
+.print-only { display: none !important; }
+
 /* ─── Animações ──────────────────────────────────────────────────────────── */
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
@@ -95,6 +149,42 @@ input, select, textarea { font-family: inherit; }
 .slide-up-enter-active, .slide-up-leave-active { transition: all .25s ease; }
 .slide-up-enter-from { opacity: 0; transform: translateY(12px); }
 .slide-up-leave-to   { opacity: 0; transform: translateY(-6px); }
+
+/* ─── Camada de Impressão / PDF ──────────────────────────────────────────────
+   "Gerar PDF" é `window.print()`: quem produz o arquivo é o próprio navegador
+   (Salvar como PDF). Estas regras tiram a moldura do app — sidebar, header,
+   botões — e deixam só o conteúdo da tela no papel. Como o layout impresso é o
+   mesmo CSS da tela, ele nunca sai de sincronia com o que o usuário viu.
+
+   Use `.no-print` no que é interação (botões, links de navegação) e
+   `.print-only` no que só faz sentido no papel (cabeçalho com empresa e data). */
+@media print {
+  @page { size: A4; margin: 14mm 12mm; }
+
+  html, body { background: #fff !important; }
+
+  /* Moldura do app não vai para o papel */
+  .sidebar, .header, .app-backdrop, .no-print { display: none !important; }
+
+  .print-only { display: flex !important; }
+
+  .app-main { margin-left: 0 !important; }
+  .app-content {
+    margin-top: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Cores dos blocos de destaque (caixa do preço, badges) precisam sair impressas */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Cartões e tabelas não podem ser partidos no meio pela quebra de página */
+  .card, .preco-box, .stat-card { break-inside: avoid; box-shadow: none !important; }
+  table { break-inside: auto; }
+  tr    { break-inside: avoid; break-after: auto; }
+
+  a { text-decoration: none; color: inherit; }
+}
 
 /* ─── Camada Mobile (≤ 768px) ────────────────────────────────────────────────
    Regras globais que atravessam os componentes com <style scoped>. O `!important`

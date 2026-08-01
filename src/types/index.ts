@@ -16,6 +16,8 @@ export interface Empresa {
   faturamentoMedioMensal: number
   /** Folha de pagamento mensal (salários + pró-labore + encargos) — numerador do Fator R (serviços) */
   folhaPagamentoMensal?: number
+  /** Dono da empresa — o usuário que a cadastrou (R09). No backend: `dono_usuario_id` */
+  donoUsuarioId: string
   createdAt: string
 }
 
@@ -102,6 +104,40 @@ export interface ResultadoPrecificacao {
   }
 }
 
+/** Um ponto da faixa de negociação: quanto se pratica e o que sobra (C10–C12) */
+export interface DegrauDesconto {
+  /** Desconto aplicado sobre o preço de tabela (%) */
+  desconto: number
+  /** Preço praticado = PV × (1 − desconto/100) */
+  preco: number
+  /** Lucro no preço praticado — a reserva não usada vira lucro */
+  lucro: number
+  /** Lucro como % do preço praticado */
+  margemEfetiva: number
+}
+
+/**
+ * Faixa de negociação de um produto: do preço de tabela (desconto 0%) ao piso
+ * (desconto máximo previsto). Dentro dela a margem de lucro está preservada,
+ * porque `D` já foi reservado no divisor do markup.
+ */
+export interface FaixaNegociacao {
+  /** Sempre 0 — o preço de tabela é o teto (o domínio não tem desconto mínimo) */
+  descontoMinimo: number
+  /** `produto.descontoMaximo` (D) */
+  descontoMaximo: number
+  precoTabela: number
+  /** Piso: preço no desconto máximo — abaixo dele o desconto come a margem */
+  precoMinimo: number
+  /** Quanto o vendedor pode conceder em reais, no máximo */
+  economiaMaxima: number
+  /** Lucro vendendo sem desconto = PV × (ML + D)/100 */
+  lucroNoTeto: number
+  /** Lucro vendendo no piso = PV × ML/100 — a margem-alvo, intacta */
+  lucroNoPiso: number
+  degraus: DegrauDesconto[]
+}
+
 // ─── Usuários / RBAC ──────────────────────────────────────────────────────────
 
 export type PermissaoChave =
@@ -126,6 +162,19 @@ export interface Perfil {
   nome: string
   descricao: string
   permissoes: Permissao[]
+  /**
+   * Escopo global (R09): o perfil ADMIN enxerga e opera **todas** as empresas,
+   * ignorando dono/compartilhamento. Ausente ou `false` ⇒ escopo por empresa.
+   */
+  escopoGlobal?: boolean
+}
+
+/** Vínculo explícito usuário↔empresa (no backend: tabela `USUARIO_EMPRESA`) */
+export interface VinculoEmpresa {
+  empresaId: string
+  empresa?: Empresa
+  perfilId: string
+  perfil?: Perfil
 }
 
 export interface Usuario {
@@ -134,7 +183,12 @@ export interface Usuario {
   email: string
   avatarUrl?: string
   ativo: boolean
-  empresas: { empresaId: string; empresa?: Empresa; perfilId: string; perfil?: Perfil }[]
+  empresas: VinculoEmpresa[]
+  /**
+   * Perfil de escopo global, sem empresa (R09) — só o ADMIN de suporte tem.
+   * Quando presente, prevalece sobre o perfil dos vínculos.
+   */
+  perfilGlobal?: Perfil
   createdAt: string
 }
 
@@ -158,6 +212,8 @@ export interface AuthUser {
   nome: string
   email: string
   avatarUrl?: string
+  /** Perfil efetivo da sessão — define permissões (RBAC) e escopo global (R09) */
   perfil: Perfil
-  empresa: Empresa
+  /** Empresas compartilhadas com este usuário; as que ele possui vêm de `donoUsuarioId` */
+  vinculos: VinculoEmpresa[]
 }

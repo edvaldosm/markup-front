@@ -41,8 +41,34 @@ onMounted(() => {
 
 onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
-/** Acento do tema segue o segmento da empresa ativa */
+/**
+ * Escopo de tema do módulo de Gestão do Site (FR10). Em `/admin*` o layout troca
+ * a paleta verde por uma neutra — o gestor precisa reconhecer, pela cor, que está
+ * na área de suporte e não operando a empresa de um cliente.
+ */
+const emAdmin = computed(() => route.path.startsWith('/admin'))
+
+/**
+ * A classe também vai no `<html>`: o `background` do `body` e tudo que o Vue
+ * teleporta para fora do layout (`BaseModal` usa `<Teleport to="body">`)
+ * escapariam do escopo e voltariam ao verde do produto.
+ */
+watch(emAdmin, (ativo) => {
+  document.documentElement.classList.toggle('theme-admin', ativo)
+}, { immediate: true })
+
+onBeforeUnmount(() => document.documentElement.classList.remove('theme-admin'))
+
+/** Acento do tema: o segmento da empresa ativa — ou o neutro, no módulo do gestor */
 const segStyle = computed(() => {
+  if (emAdmin.value) {
+    return {
+      '--seg-accent': 'var(--color-neutral-600)',
+      '--seg-accent-soft': 'var(--color-neutral-100)',
+      '--seg-grad-from': 'var(--color-neutral-500)',
+      '--seg-grad-to': 'var(--color-neutral-700)',
+    }
+  }
   const cfg = segmentoConfig(empresaStore.empresa?.segmento)
   return {
     '--seg-accent': cfg.cor,
@@ -56,7 +82,7 @@ const segStyle = computed(() => {
 <template>
   <div
     class="app-layout"
-    :class="{ 'sidebar-collapsed': !sidebarOpen, 'mobile-open': mobileOpen }"
+    :class="{ 'sidebar-collapsed': !sidebarOpen, 'mobile-open': mobileOpen, 'theme-admin': emAdmin }"
     :style="segStyle"
   >
     <AppSidebar :open="isMobile ? true : sidebarOpen" :mobile-open="mobileOpen" @toggle="toggleSidebar" />

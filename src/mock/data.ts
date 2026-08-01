@@ -14,6 +14,7 @@ export const mockEmpresa: Empresa = {
   regimeTributario: 'SIMPLES_NACIONAL',
   anexoSimples: 'ANEXO_II',
   faturamentoMedioMensal: 52000,
+  donoUsuarioId: 'usr-001',
   createdAt: '2024-01-15T10:00:00Z'
 }
 
@@ -27,6 +28,7 @@ export const mockEmpresaIndustria: Empresa = {
   anexoSimples: 'ANEXO_II',
   faturamentoMedioMensal: 300000,
   folhaPagamentoMensal: 38000,
+  donoUsuarioId: 'usr-005',
   createdAt: '2023-06-10T08:00:00Z'
 }
 
@@ -43,6 +45,7 @@ export const mockEmpresaServicos: Empresa = {
   anexoSimples: 'ANEXO_III',
   faturamentoMedioMensal: 158000,
   folhaPagamentoMensal: 52000,
+  donoUsuarioId: 'usr-006',
   createdAt: '2023-09-20T09:00:00Z'
 }
 
@@ -60,6 +63,7 @@ export const mockEmpresaServicosV: Empresa = {
   anexoSimples: 'ANEXO_V',
   faturamentoMedioMensal: 120000,
   folhaPagamentoMensal: 24000,
+  donoUsuarioId: 'usr-007',
   createdAt: '2024-02-01T09:00:00Z'
 }
 
@@ -891,48 +895,90 @@ export const mockPermissoes: Permissao[] = [
 
 // ─── Perfis ───────────────────────────────────────────────────────────────────
 
+/**
+ * ADMIN **global** (R09): visão de suporte sobre todas as empresas, independente
+ * de dono ou compartilhamento. É o único perfil com `escopoGlobal`.
+ */
+export const perfilAdminGlobal: Perfil = {
+  id: 'perfil-00',
+  nome: 'ADMIN',
+  descricao: 'Administrador global — vê e opera todas as empresas (suporte)',
+  permissoes: mockPermissoes,
+  escopoGlobal: true,
+}
+
+/** Dono da empresa: acesso total, porém **restrito às empresas dele**. */
+export const perfilProprietario: Perfil = {
+  id: 'perfil-01',
+  nome: 'PROPRIETARIO',
+  descricao: 'Proprietário — acesso total às empresas que possui',
+  permissoes: mockPermissoes,
+}
+
+export const perfilGerente: Perfil = {
+  id: 'perfil-02',
+  nome: 'GERENTE',
+  descricao: 'Gerente — leitura e edição de produtos, materiais e relatórios',
+  permissoes: mockPermissoes.filter(p =>
+    ['PRODUTO_READ','PRODUTO_WRITE','MATERIAL_READ','MATERIAL_WRITE','DESPESA_READ','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
+  )
+}
+
+export const perfilVendedor: Perfil = {
+  id: 'perfil-03',
+  nome: 'VENDEDOR',
+  descricao: 'Vendedor — apenas visualização de produtos e preços',
+  permissoes: mockPermissoes.filter(p =>
+    ['PRODUTO_READ','RELATORIO_READ'].includes(p.chave)
+  )
+}
+
+export const perfilContador: Perfil = {
+  id: 'perfil-04',
+  nome: 'CONTADOR',
+  descricao: 'Contador — acesso a impostos, despesas e relatórios',
+  permissoes: mockPermissoes.filter(p =>
+    ['IMPOSTO_READ','IMPOSTO_WRITE','DESPESA_READ','DESPESA_WRITE','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
+  )
+}
+
 export const mockPerfis: Perfil[] = [
-  {
-    id: 'perfil-01',
-    nome: 'ADMIN',
-    descricao: 'Administrador — acesso total ao sistema',
-    permissoes: mockPermissoes
-  },
-  {
-    id: 'perfil-02',
-    nome: 'GERENTE',
-    descricao: 'Gerente — leitura e edição de produtos, materiais e relatórios',
-    permissoes: mockPermissoes.filter(p =>
-      ['PRODUTO_READ','PRODUTO_WRITE','MATERIAL_READ','MATERIAL_WRITE','DESPESA_READ','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
-    )
-  },
-  {
-    id: 'perfil-03',
-    nome: 'VENDEDOR',
-    descricao: 'Vendedor — apenas visualização de produtos e preços',
-    permissoes: mockPermissoes.filter(p =>
-      ['PRODUTO_READ','RELATORIO_READ'].includes(p.chave)
-    )
-  },
-  {
-    id: 'perfil-04',
-    nome: 'CONTADOR',
-    descricao: 'Contador — acesso a impostos, despesas e relatórios',
-    permissoes: mockPermissoes.filter(p =>
-      ['IMPOSTO_READ','IMPOSTO_WRITE','DESPESA_READ','DESPESA_WRITE','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
-    )
-  },
+  perfilAdminGlobal,
+  perfilProprietario,
+  perfilGerente,
+  perfilVendedor,
+  perfilContador,
 ]
 
 // ─── Usuários ─────────────────────────────────────────────────────────────────
 
+/**
+ * Cenário multi-usuário (R09). Donos: Ana→emp-001, Roberto→emp-002,
+ * Juliana→emp-003, Diego→emp-004 — cada um só enxerga a(s) sua(s).
+ * Edvaldo é ADMIN global e enxerga as quatro. Ana também foi **convidada**
+ * para a NexaTech (emp-003), então vê duas: uma própria + uma compartilhada.
+ */
 export const mockUsuarios: Usuario[] = [
+  {
+    id: 'usr-000',
+    nome: 'Edvaldo Santiago',
+    email: 'admin@markup.com.br',
+    ativo: true,
+    // ADMIN global não precisa de vínculo: o escopo global já autoriza tudo
+    empresas: [],
+    perfilGlobal: perfilAdminGlobal,
+    createdAt: '2023-01-01T08:00:00Z'
+  },
   {
     id: 'usr-001',
     nome: 'Ana Paula Santos',
     email: 'ana@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-001', perfilId: 'perfil-01', perfil: mockPerfis[0] }],
+    empresas: [
+      { empresaId: 'emp-001', perfilId: perfilProprietario.id, perfil: perfilProprietario },
+      // compartilhada: convidada como contadora na NexaTech
+      { empresaId: 'emp-003', perfilId: perfilContador.id, perfil: perfilContador },
+    ],
     createdAt: '2024-01-15T10:00:00Z'
   },
   {
@@ -940,7 +986,7 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Marcos Souza',
     email: 'marcos@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-001', perfilId: 'perfil-02', perfil: mockPerfis[1] }],
+    empresas: [{ empresaId: 'emp-001', perfilId: perfilGerente.id, perfil: perfilGerente }],
     createdAt: '2024-02-20T14:00:00Z'
   },
   {
@@ -948,7 +994,7 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Carla Lima',
     email: 'carla@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-001', perfilId: 'perfil-03', perfil: mockPerfis[2] }],
+    empresas: [{ empresaId: 'emp-001', perfilId: perfilVendedor.id, perfil: perfilVendedor }],
     createdAt: '2024-03-10T09:00:00Z'
   },
   {
@@ -956,7 +1002,7 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Ricardo Alves',
     email: 'contador@contabilidade.com.br',
     ativo: false,
-    empresas: [{ empresaId: 'emp-001', perfilId: 'perfil-04', perfil: mockPerfis[3] }],
+    empresas: [{ empresaId: 'emp-001', perfilId: perfilContador.id, perfil: perfilContador }],
     createdAt: '2024-04-01T11:00:00Z'
   },
   {
@@ -964,7 +1010,7 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Roberto Menezes',
     email: 'roberto@metalforte.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-002', perfilId: 'perfil-01', perfil: mockPerfis[0] }],
+    empresas: [{ empresaId: 'emp-002', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
     createdAt: '2023-06-10T08:00:00Z'
   },
   {
@@ -972,7 +1018,7 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Juliana Ferraz',
     email: 'juliana@nexatech.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-003', perfilId: 'perfil-01', perfil: mockPerfis[0] }],
+    empresas: [{ empresaId: 'emp-003', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
     createdAt: '2023-09-20T09:00:00Z'
   },
   {
@@ -980,10 +1026,19 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Diego Prado',
     email: 'diego@codelab.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-004', perfilId: 'perfil-01', perfil: mockPerfis[0] }],
+    empresas: [{ empresaId: 'emp-004', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
     createdAt: '2024-02-01T09:00:00Z'
   },
 ]
+
+/**
+ * Perfil efetivo da sessão: o global (ADMIN) prevalece; senão o do 1º vínculo.
+ * Simplificação do protótipo — perfil por empresa fica para quando o backend
+ * expuser o vínculo ativo.
+ */
+export function perfilDaSessao(usuario: Usuario): Perfil {
+  return usuario.perfilGlobal ?? usuario.empresas[0]?.perfil ?? perfilVendedor
+}
 
 // ─── Realismo: alíquota efetiva por faixa de faturamento ──────────────────────
 // O DAS é único por empresa (baseado no RBT12), não por produto. Aqui aplicamos a

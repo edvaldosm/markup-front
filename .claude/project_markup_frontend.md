@@ -11,14 +11,20 @@ Protótipo navegável Vue 3 do sistema de precificação por Markup por Divisor.
 
 **Stack:** Vue 3 + Pinia + Vue Router + TypeScript + Vite. GraphQL mockado via `src/graphql/client.ts` (estrutura Apollo pronta para ligar com `MOCK_MODE = false`).
 
-**Telas implementadas (12):**
-- Login, Dashboard, Empresa, Materiais, Despesas Fixas, Impostos, Produtos (lista), Produto Detalhe (Ficha Técnica), Calculadora de Precificação, Relatórios, Usuários, Perfis & RBAC
+**Telas implementadas (17):**
+- Produto (13): Login, Dashboard, Empresa, Materiais, Despesas Fixas, Impostos, Produtos (lista), Produto Detalhe (Ficha Técnica), Calculadora de Precificação, **Fator R** (serviços/Simples), Relatórios, Usuários, Perfis & RBAC
+- **Gestão do Site (4)**, só para o ADMIN global: `/admin` (painel), `/admin/empresas`, `/admin/empresas/:id` (equipe da empresa), `/admin/usuarios`
+- Multi-empresa: `CompanySwitcher` troca a empresa ativa e as stores reagem por reatividade.
 
-**Design:** Verde claro sofisticado — sidebar `#193f1b` (verde escuro), surface branca, accent `#2d7d31`. Design tokens em `src/assets/main.css` como variáveis CSS.
+> **Rules + Skills do front** destiladas em `.claude/frontend-markup/` (fonte de verdade dos padrões). Ver também `.claude/markup_knowledge_architecture.md`.
+
+**Design:** Verde claro sofisticado — sidebar `#193f1b` (verde escuro), surface branca, accent `#2d7d31`. Design tokens em `src/assets/main.css` como variáveis CSS. O módulo de Gestão do Site usa o **escopo `.theme-admin`**, que remapeia a primária para a escala neutra grafite (sidebar `#0f172a`, accent `#475569`) — ver rule FR10.
 
 **Dados mock:** `src/mock/data.ts` — empresa "Doces da Ana", **50 materiais**, **15 despesas fixas**, **15 produtos** (7 categorias), 4 perfis RBAC.
 
-**Lógica de negócio:** `src/composables/useMarkup.ts` — fórmula `PV = CP / (1 - soma/100)`, rateio DF dinâmico.
+**Lógica de negócio:** `src/composables/useMarkup.ts` — fórmula `PV = CP / (1 - soma/100)`, rateio DF dinâmico, faixa de negociação (preço de tabela → piso do desconto máximo, C10–C12). Tudo isso é **provisório**: migra para o backend (ver rule FR06).
+
+**Relatórios:** documento é gerado pelo backend (JasperReports, módulo `com.markup.reports`). O front pede e baixa por `src/graphql/relatorios.ts`; em `MOCK_MODE` cai na impressão da tela (`@media print`). Nunca embarcar lib de PDF — rule FR11.
 
 **Padrão de paginação infinita (obrigatório em todas as telas com lista):**
 - Composable: `src/composables/usePaginacao.ts` — `usePaginacao(source, { pageSize: 10 })`

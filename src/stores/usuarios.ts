@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Usuario, Perfil } from '@/types'
-import { mockUsuarios, mockPerfis } from '@/mock/data'
+import { mockUsuarios, mockPerfis, perfilVendedor } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
 import { useEmpresaStore } from './empresa'
 
@@ -38,9 +38,10 @@ export const useUsuariosStore = defineStore('usuarios', () => {
         ...usuario,
         id: `usr-${Date.now()}`,
         createdAt: new Date().toISOString(),
+        // nunca cair no ADMIN global como default: usuário novo entra no perfil mais restrito
         empresas: usuario.empresas.length
           ? usuario.empresas
-          : [{ empresaId: empresaStore.empresaAtivaId, perfilId: perfis.value[0]?.id ?? '' }],
+          : [{ empresaId: empresaStore.empresaAtivaId, perfilId: perfilVendedor.id }],
       }
       todosUsuarios.value.push(novo)
     }

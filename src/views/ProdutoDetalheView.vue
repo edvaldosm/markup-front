@@ -7,11 +7,13 @@ import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { useImpostosStore } from '@/stores/impostos'
 import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { gerarRelatorioPdf } from '@/graphql/relatorios'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import ProdutoFormModal from '@/components/ui/ProdutoFormModal.vue'
+import FaixaNegociacaoCard from '@/components/ui/FaixaNegociacaoCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,7 +22,7 @@ const materiaisStore = useMateriaisStore()
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const impostosStore = useImpostosStore()
-const { calcularPrecificacao } = useMarkupCalculator()
+const { calcularPrecificacao, calcularFaixaNegociacao } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 const seg = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 
@@ -42,6 +44,36 @@ const resultado = computed(() => {
   if (!produto.value || !empresaStore.empresa) return null
   return calcularPrecificacao(produto.value, empresaStore.empresa, despesasStore.despesas, materiaisStore.materiais)
 })
+
+/** Do preço de tabela ao piso do desconto máximo (C10–C12) */
+const faixa = computed(() =>
+  resultado.value ? calcularFaixaNegociacao(resultado.value) : null
+)
+
+/**
+ * O documento é gerado pelo **módulo de relatórios do backend** (JasperReports,
+ * Artigo B12); o front só pede e baixa ([[FR11-relatorio-vem-do-backend]]).
+ * Em `MOCK_MODE` o cliente cai na impressão da tela — stopgap do protótipo.
+ */
+const gerandoPdf = ref(false)
+const erroPdf = ref<string | null>(null)
+
+async function gerarPdf() {
+  if (!produto.value) return
+  gerandoPdf.value = true
+  erroPdf.value = null
+  try {
+    await gerarRelatorioPdf('FICHA_TECNICA_PRODUTO', { produtoId: produto.value.id })
+  } catch (e) {
+    erroPdf.value = e instanceof Error ? e.message : 'Falha ao gerar o relatório.'
+  } finally {
+    gerandoPdf.value = false
+  }
+}
+
+const emitidoEm = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short', timeStyle: 'short',
+}).format(new Date())
 
 const fichaItens = computed(() => {
   if (!produto.value) return []
@@ -84,18 +116,33 @@ async function salvarMargem() {
 
 <template>
   <div v-if="produto" class="detalhe">
+    <!-- Cabeçalho que só aparece no PDF/impressão -->
+    <div class="print-only folha-cabecalho">
+      <div>
+        <span class="folha-cabecalho__empresa">{{ empresaStore.empresa?.razaoSocial }}</span>
+        <span class="folha-cabecalho__cnpj">CNPJ {{ empresaStore.empresa?.cnpj }}</span>
+      </div>
+      <div class="folha-cabecalho__meta">
+        <span>{{ seg.rotulos.fichaTecnica }} e Precificação</span>
+        <span>Emitido em {{ emitidoEm }}</span>
+      </div>
+    </div>
+
     <!-- Header -->
     <div class="detalhe__header">
       <div>
-        <button class="back-btn" @click="router.push('/produtos')">← Produtos</button>
+        <button class="back-btn no-print" @click="router.push('/produtos')">← Produtos</button>
         <h1 class="detalhe__nome">{{ produto.nome }}</h1>
         <p v-if="produto.descricao" class="detalhe__desc">{{ produto.descricao }}</p>
       </div>
       <div class="detalhe__actions">
         <BaseBadge :color="produto.ativo ? 'green' : 'gray'">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
-        <BaseButton variant="secondary" @click="showEditModal = true">Editar {{ seg.rotulos.produto }}</BaseButton>
+        <BaseButton class="no-print" variant="ghost" :loading="gerandoPdf" @click="gerarPdf">Gerar PDF</BaseButton>
+        <BaseButton class="no-print" variant="secondary" @click="showEditModal = true">Editar {{ seg.rotulos.produto }}</BaseButton>
       </div>
     </div>
+
+    <p v-if="erroPdf" class="erro-pdf no-print">{{ erroPdf }}</p>
 
     <div class="detalhe__grid">
       <!-- Ficha Técnica -->
@@ -139,6 +186,9 @@ async function salvarMargem() {
             <div v-if="!impostosDosProduto.length" class="imp-empty">Nenhum imposto vinculado</div>
           </div>
         </BaseCard>
+
+        <!-- Faixa de negociação: do preço de tabela ao piso do desconto máximo -->
+        <FaixaNegociacaoCard v-if="faixa" :faixa="faixa" class="faixa-card" />
       </div>
 
       <!-- Precificação -->
@@ -149,7 +199,7 @@ async function salvarMargem() {
               <span class="param-item__label">Margem de Lucro (ML)</span>
               <div v-if="!editandoMargem" class="param-item__valor-row">
                 <span class="param-item__valor param-item__valor--green">{{ formatPercent(produto.margemLucro) }}</span>
-                <button class="param-item__edit" @click="iniciarEdicaoMargem">Editar</button>
+                <button class="param-item__edit no-print" @click="iniciarEdicaoMargem">Editar</button>
               </div>
               <div v-else class="param-item__edit-row">
                 <input v-model.number="margemEdit" type="number" step="0.5" class="param-input" />
@@ -158,8 +208,13 @@ async function salvarMargem() {
               </div>
             </div>
             <div class="param-item">
-              <span class="param-item__label">Desconto Máximo</span>
-              <span class="param-item__valor">{{ formatPercent(produto.descontoMaximo) }}</span>
+              <span class="param-item__label">Desconto (mín. → máx.)</span>
+              <span class="param-item__valor">
+                {{ formatPercent(0) }} <span class="param-item__ate">até</span> {{ formatPercent(produto.descontoMaximo) }}
+              </span>
+              <span v-if="faixa" class="param-item__hint">
+                piso de {{ formatCurrency(faixa.precoMinimo) }} — abaixo disso sai do lucro
+              </span>
             </div>
             <div class="param-item">
               <span class="param-item__label">Impostos (total)</span>
@@ -242,6 +297,8 @@ async function salvarMargem() {
 .param-item { display: flex; flex-direction: column; gap: var(--space-1); }
 .param-item__label { font-size: .75rem; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); }
 .param-item__valor { font-size: 1.125rem; font-weight: 700; color: var(--color-text); }
+.param-item__ate { font-size: .8125rem; font-weight: 500; color: var(--color-text-light); }
+.param-item__hint { font-size: .6875rem; color: var(--color-text-muted); line-height: 1.4; }
 .param-item__valor--green { color: var(--color-primary-600); }
 .param-item__valor-row { display: flex; align-items: center; gap: var(--space-3); }
 .param-item__edit { background: none; border: none; font-size: .75rem; color: var(--color-primary-600); cursor: pointer; font-weight: 500; }
@@ -267,10 +324,42 @@ async function salvarMargem() {
 .preco-box__label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--color-primary-400); }
 .preco-box__value { font-size: 2rem; font-weight: 800; color: var(--color-primary-300); }
 .preco-box__breakdown { display: flex; flex-direction: column; gap: var(--space-2); border-top: 1px solid rgba(255,255,255,.1); padding-top: var(--space-4); }
-.pb-row { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--color-primary-300); }
+.pb-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: .8125rem; color: var(--color-primary-300); }
 .pb-row strong { color: var(--color-primary-200); }
 .pb-row--lucro { border-top: 1px solid rgba(255,255,255,.1); padding-top: var(--space-2); }
 .pb-row--lucro span, .pb-row--lucro strong { color: var(--color-primary-200); font-weight: 700; }
+
+.erro-pdf {
+  padding: var(--space-3) var(--space-4);
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius);
+  font-size: .8125rem;
+  color: #b91c1c;
+}
+
+/* ─── Cabeçalho da folha (só no PDF) ─────────────────────────────────────── */
+.folha-cabecalho {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--color-primary-600);
+  margin-bottom: var(--space-2);
+}
+.folha-cabecalho__empresa { display: block; font-size: 1rem; font-weight: 700; color: var(--color-text); }
+.folha-cabecalho__cnpj { display: block; font-size: .75rem; color: var(--color-text-muted); }
+.folha-cabecalho__meta { display: flex; flex-direction: column; text-align: right; font-size: .75rem; color: var(--color-text-muted); }
+
+/* ─── Ajustes de impressão da ficha ──────────────────────────────────────── */
+@media print {
+  .detalhe { gap: var(--space-4); }
+  .detalhe__nome { font-size: 1.125rem; }
+  /* No papel a coluna da direita encolhe: cabe tudo numa folha só */
+  .detalhe__grid { grid-template-columns: 1fr 260px; gap: var(--space-4); }
+  .preco-box__value { font-size: 1.5rem; }
+  .faixa-card { break-before: auto; }
+}
 
 .loading-page { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-12); color: var(--color-text-muted); }
 .spinner { width: 32px; height: 32px; border: 3px solid var(--color-border); border-top-color: var(--color-primary-500); border-radius: 50%; animation: spin .8s linear infinite; }
