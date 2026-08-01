@@ -22,7 +22,7 @@ o loop incremental e para regeneração total.
 ## Bases de conhecimento (referência aninhada)
 
 - `.claude/backend-markup/` — backend **Java 21 + Spring Boot 4** (Spring for GraphQL,
-  JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **11 Rules + 10 Skills**.
+  JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **12 Rules + 11 Skills**.
   (Migrado de Go em 2026-07-31.)
 - `.claude/frontend-markup/` — frontend Vue 3/Pinia/Router/TS/Vite. **11 Rules + 11 Skills**.
   Destilado do código real em `src/**` + memória `project_markup_frontend.md`.

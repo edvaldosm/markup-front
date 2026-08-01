@@ -30,6 +30,10 @@ e pronto para ligar no backend GraphQL por uma flag.
   `perguntarAssistente` do backend; trata os status OK/FORA_DE_ESCOPO/RECUSADO/SEM_FONTE. (Artigo F8)
 - **RF-11 (Multi-empresa por dono):** `CompanySwitcher` lista só as empresas
   autorizadas (`minhasEmpresas`); usuário comum não vê empresas de outros; ADMIN vê todas. (espelha B9)
+- **RF-13 (Relatórios):** exportar documento é **pedir ao backend** e baixar —
+  `src/graphql/relatorios.ts` é a porta única; nenhuma biblioteca de PDF no
+  bundle. Em `MOCK_MODE`, impressão da tela (stopgap datado). (Artigo F11;
+  espelha B12) — spec: [`modulo-relatorios-jasper`](../specs/modulo-relatorios-jasper/spec.md).
 - **RF-12 (Gestão do Site):** módulo `/admin*` só para escopo global (ADMIN) —
   todas as empresas com dono e equipe, todos os usuários com seus vínculos, e
   gestão desses vínculos; identidade visual neutra por escopo de tema.
@@ -53,4 +57,5 @@ persistência real e autenticação real (mock no protótipo).
 | RF-10 | `assistente-ui`, backend `assistente-rag-precificacao` |
 | RF-11 | `roteamento-e-layout` (CompanySwitcher), `store-pinia-dominio` |
 | RF-12 | `modulo-gestao-site`, `design-tokens-tema` (escopo), `testes-navegacao-multiusuario` |
+| RF-13 | `camada-graphql-mock`, backend `modulo-relatorios-jasper` |
 | base | `estrutura-projeto-vue`, `modelo-de-dados-front` |

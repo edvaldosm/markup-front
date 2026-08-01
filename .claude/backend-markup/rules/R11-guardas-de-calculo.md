@@ -36,7 +36,7 @@ depois. O vault lista exatamente esses casos em "erros comuns": custo
 subestimado, %DF fixado à mão, dupla contagem de despesa. Guardas explícitas no
 service são a diferença entre um bug detectável e um prejuízo silencioso.
 
-Catálogo completo (C1–C9, V1–V8): [[catalogo-calculos-validacoes]].
+Catálogo completo (C1–C12, V1–V9): [[catalogo-calculos-validacoes]].
 
 ## Verificação
 

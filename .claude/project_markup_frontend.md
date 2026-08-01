@@ -22,7 +22,9 @@ Protótipo navegável Vue 3 do sistema de precificação por Markup por Divisor.
 
 **Dados mock:** `src/mock/data.ts` — empresa "Doces da Ana", **50 materiais**, **15 despesas fixas**, **15 produtos** (7 categorias), 4 perfis RBAC.
 
-**Lógica de negócio:** `src/composables/useMarkup.ts` — fórmula `PV = CP / (1 - soma/100)`, rateio DF dinâmico.
+**Lógica de negócio:** `src/composables/useMarkup.ts` — fórmula `PV = CP / (1 - soma/100)`, rateio DF dinâmico, faixa de negociação (preço de tabela → piso do desconto máximo, C10–C12). Tudo isso é **provisório**: migra para o backend (ver rule FR06).
+
+**Relatórios:** documento é gerado pelo backend (JasperReports, módulo `com.markup.reports`). O front pede e baixa por `src/graphql/relatorios.ts`; em `MOCK_MODE` cai na impressão da tela (`@media print`). Nunca embarcar lib de PDF — rule FR11.
 
 **Padrão de paginação infinita (obrigatório em todas as telas com lista):**
 - Composable: `src/composables/usePaginacao.ts` — `usePaginacao(source, { pageSize: 10 })`

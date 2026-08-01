@@ -32,6 +32,8 @@ Ao ligar o backend, isto **sai do front**:
 | `resolverAnexo` / `FATOR_R_LIMITE` | `.anexoAplicado` | C9 · [[R10-fator-r-anexo-simples]] |
 | `calcularFaixaNegociacao` | `.faixaNegociacao` | C10, C11, C12 (guarda V9) |
 
+| `gerarRelatorioPdf` (mock: `window.print()`) | `POST /api/relatorios/{tipo}` | módulo `reports` · [[R12-relatorios-no-backend]] |
+
 Isto **permanece** no front:
 
 - `useCurrency` — formatação `Intl` pt-BR ([[FR05-formatacao-intl]]); o backend

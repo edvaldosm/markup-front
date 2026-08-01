@@ -27,7 +27,7 @@ centraliza o cálculo de precificação por Markup por Divisor, isolada por empr
 - **RB-03b (Guardas de cálculo):** toda divisão DEVE ser guardada e toda entrada
   inválida rejeitada — nunca um número plausível e errado. (Artigo B11)
   - Aceite: material órfão ⇒ erro (não custo ignorado); `ML`/`D`/alíquota
-    negativos ⇒ rejeitados na entrada; cada guarda V1–V8 tem teste.
+    negativos ⇒ rejeitados na entrada; cada guarda V1–V9 tem teste.
 - **RB-04 (Multi-tenant):** toda operação DEVE restringir-se às empresas autorizadas
   ao usuário do JWT. (Artigos B2, B9)
   - Aceite: usuário não lê/escreve dados de empresa que não possui nem foi compartilhada.
@@ -39,6 +39,10 @@ centraliza o cálculo de precificação por Markup por Divisor, isolada por empr
 - **RB-09 (Ownership + ADMIN global):** empresa tem dono (`dono_usuario_id`); usuário
   comum vê só as próprias/compartilhadas; `minhasEmpresas` reflete isso; ADMIN vê todas. (Artigo B9)
   - Aceite: Edvaldo (E1,E2), Santiago (E3,E4), Matos (E5,E6) — cada um só vê as suas; ADMIN vê as seis.
+- **RB-10 (Assistente RAG):** `perguntarAssistente(pergunta)` DEVE responder **só**
+  sobre formação de preço, com guardrails de escopo e de conteúdo ofensivo, ancorado
+  no vault ingerido (Spring AI + Claude + pgvector); sem fonte relevante ⇒ não alucina. (Artigo B8)
+  - Aceite: pergunta fora de tema ⇒ `FORA_DE_ESCOPO`; ofensiva ⇒ `RECUSADO`; sem doc ⇒ `SEM_FONTE`.
 - **RB-11 (Gestão do Site):** o backend DEVE expor a visão da base inteira para
   perfis de **escopo global** — `todasEmpresas`, `empresaAdmin`, `todosUsuarios`,
   `metricasDaBase` — e as mutations de vínculo (`vincularUsuario`,
@@ -58,10 +62,6 @@ centraliza o cálculo de precificação por Markup por Divisor, isolada por empr
     catálogo ⇒ negado; empresa não autorizada ⇒ negado (nunca PDF vazio ou com
     dado de outra empresa); relatório de escopo global só para `ESCOPO_GLOBAL`;
     números do PDF idênticos aos do `ResultadoPrecificacao`.
-- **RB-10 (Assistente RAG):** `perguntarAssistente(pergunta)` DEVE responder **só**
-  sobre formação de preço, com guardrails de escopo e de conteúdo ofensivo, ancorado
-  no vault ingerido (Spring AI + Claude + pgvector); sem fonte relevante ⇒ não alucina. (Artigo B8)
-  - Aceite: pergunta fora de tema ⇒ `FORA_DE_ESCOPO`; ofensiva ⇒ `RECUSADO`; sem doc ⇒ `SEM_FONTE`.
 
 ## Modelo de dados (requisito)
 

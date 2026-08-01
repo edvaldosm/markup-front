@@ -56,7 +56,7 @@ Se `1 - soma/100 <= 0`, retornar erro — ver [[R03-divisor-markup-positivo]].
 
 ## Referências
 
-- **Catálogo completo** (C1–C9 + guardas V1–V8): [[catalogo-calculos-validacoes]]
+- **Catálogo completo** (C1–C12 + guardas V1–V9): [[catalogo-calculos-validacoes]]
 - **Guardas de divisão e entrada:** [[R11-guardas-de-calculo]]
 - **Implementação:** [[service-precificacao-java]]
 - **Fonte de verdade:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`

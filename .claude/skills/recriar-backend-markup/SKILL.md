@@ -31,7 +31,7 @@ backend, em módulo próprio (`com.markup.reports`), via JasperReports.
 3. **Domínio JPA** — `modelagem-der-markup`: entidades `@Entity` (Empresa com `dono_usuario_id`).
 4. **Persistência** — repositórios `JpaRepository` + `service/` com a regra.
 5. **Precificação** — `catalogo-calculos-validacoes` (fonte dos números) +
-   `service-precificacao-java` + `formula-markup-divisor`: cálculos C1–C9 e
+   `service-precificacao-java` + `formula-markup-divisor`: cálculos C1–C12 e
    guardas V1–V9, incluindo Fator R, anexo aplicado e a faixa de negociação
    (C10–C12).
 6. **Segurança** — `auth-jwt-spring` + `rbac-permissoes` (`@PreAuthorize`) + R02/R09

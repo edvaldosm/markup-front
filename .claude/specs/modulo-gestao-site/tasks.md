@@ -41,6 +41,19 @@
 - [x] **T-F11** (REQ-11) — `src/test/admin-gestao-site.spec.ts` (19 testes) +
       rotas `/admin*` nas `bloqueadas` das personas não-ADMIN
 
+## Backend — expor as regras no servidor
+
+> Detalhamento e ordem em [`modulo-relatorios-jasper/tasks.md`](../modulo-relatorios-jasper/tasks.md)
+> (T-B2, T-B3). Contrato já registrado em `schema-graphql-markup` e `RB-11`.
+
+- [x] **T-BD1** — contrato e requisitos: queries `todasEmpresas`, `empresaAdmin`,
+      `todosUsuarios`, `metricasDaBase` e as mutations de vínculo, todas sob a
+      authority `ESCOPO_GLOBAL` · alvo: `schema-graphql-markup`, `rbac-permissoes`
+- [ ] **T-B2** — `GestaoDoSiteService` + `@PreAuthorize("hasAuthority('ESCOPO_GLOBAL')")`
+- [ ] **T-B3** — `desvincularUsuario` recusa o dono da própria empresa (REQ-07)
+- [ ] **T-B4** — relatório `GESTAO_EMPRESAS_USUARIOS` (escopo global) no módulo
+      de relatórios
+
 ## Verificação
 
 - [x] `npx vue-tsc --noEmit` limpo · `npm run build` OK

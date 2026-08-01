@@ -47,7 +47,7 @@ Detalhe de cada princípio em `.claude/backend-markup/rules/`.
 - **B11.** Todo cálculo tem guarda explícita; entrada inválida é **rejeitada**, nunca absorvida num número plausível e errado. → [R11](backend-markup/rules/R11-guardas-de-calculo.md)
 - **B12.** Todo documento que sai do sistema é gerado pelo backend, com **JasperReports**, no módulo exclusivo `com.markup.reports`: catálogo fechado, datasource por DTO (nunca SQL no template), autorização igual à da API e nenhum cálculo dentro do relatório. → [R12](backend-markup/rules/R12-relatorios-no-backend.md)
 
-> **Catálogo dos cálculos.** Fórmulas (C1–C9) e guardas (V1–V8) vivem num único
+> **Catálogo dos cálculos.** Fórmulas (C1–C12) e guardas (V1–V9) vivem num único
 > documento: [catalogo-calculos-validacoes](backend-markup/skills/catalogo-calculos-validacoes/SKILL.md).
 > Nenhum cálculo pode existir no sistema sem estar lá.
 

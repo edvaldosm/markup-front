@@ -33,6 +33,21 @@
       `@page A4`, `break-inside: avoid`, cores impressas)
 - [x] **T-F7** — 10 testes em `src/composables/faixa-negociacao.spec.ts`
 
+## Backend — a sede definitiva das duas entregas
+
+> Emenda da Constituição v2.4.0 (B12 + F11): o PDF passa a ser gerado pelo módulo
+> de relatórios com JasperReports. A impressão do navegador vira **stopgap do
+> modo mock** — a decisão de "PDF pelo navegador" registrada no `plan.md` fica
+> superada para o caminho definitivo. Detalhe em
+> [`modulo-relatorios-jasper`](../modulo-relatorios-jasper/tasks.md).
+
+- [x] **T-BD1** — `faixaNegociacao` no `ResultadoPrecificacao` do contrato
+      (C10–C12 no catálogo, `RB-12` na spec do backend)
+- [x] **T-BD2** — front passa a pedir o documento pela camada de dados
+      (`src/graphql/relatorios.ts`), não mais `window.print()` direto na view
+- [ ] **T-B1** — `PrecificacaoService` calcula e devolve `faixaNegociacao`
+- [ ] **T-B8** — `.jrxml` `ficha-tecnica-produto` com o subrelatório da faixa
+
 ## Verificação
 
 - [x] `npx vue-tsc --noEmit` limpo · `npm run build` OK
