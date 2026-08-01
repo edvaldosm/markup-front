@@ -5,7 +5,7 @@ memória `project_markup_frontend.md`. Espelha a estrutura de
 [.claude/backend-markup/](../backend-markup/README.md).
 
 - **Requisitos (SDD):** [spec.md](spec.md) — o *quê/por quê*. Os arquivos de `skills/` são os *templates* (o *como*).
-- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.1.0).
+- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.2.0).
 - **Fonte:** `src/**` (código vivo) + `.claude/project_markup_frontend.md` (memória de estado)
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`
 - **Gerado em:** 2026-07-31

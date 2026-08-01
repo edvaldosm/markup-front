@@ -4,7 +4,7 @@ Rules (invariantes) e Skills (templates) do backend **Java 21 + Spring Boot 4**
 (GraphQL via Spring for GraphQL, JPA/PostgreSQL, Spring Security, Spring AI).
 
 - **Requisitos (SDD):** [spec.md](spec.md) — o *quê/por quê*. Os arquivos de `skills/` são os *templates* (o *como*).
-- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.0.0).
+- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.2.0).
 - **Fonte original:** `IniciandoBackEndMarkup.md` (prompt consolidado, backend Go — **arquivado no git**; migrado para Java nesta base).
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`
 - **Atualizado em:** 2026-07-31 (v2 — Java/Spring + assistente RAG + ownership)
@@ -22,6 +22,8 @@ Rules (invariantes) e Skills (templates) do backend **Java 21 + Spring Boot 4**
 | [R07](rules/R07-fora-do-backend.md) | Formatação, ordenação de UI e estado de tela ficam no front |
 | [R08](rules/R08-assistente-escopo-guardrails.md) | Assistente responde só sobre preço; recusa ofensivo/fora de escopo |
 | [R09](rules/R09-ownership-multiempresa.md) | Empresa tem dono; usuário só vê as próprias/compartilhadas; ADMIN global |
+| [R10](rules/R10-fator-r-anexo-simples.md) | Fator R deriva o anexo do Simples (serviços): ≥28% ⇒ III, senão V |
+| [R11](rules/R11-guardas-de-calculo.md) | Guardas de divisão e validação de entrada; falhar alto, nunca em silêncio |
 
 ## Skills — como fazer (templates)
 
@@ -36,3 +38,4 @@ Rules (invariantes) e Skills (templates) do backend **Java 21 + Spring Boot 4**
 | [estrutura-projeto-spring](skills/estrutura-projeto-spring/SKILL.md) | Layout Java/Spring Boot e fluxo contrato-first |
 | [seed-dados-iniciais](skills/seed-dados-iniciais/SKILL.md) | Seed via Flyway: impostos, permissões, perfis, admin |
 | [assistente-rag-precificacao](skills/assistente-rag-precificacao/SKILL.md) | Assistente RAG (Spring AI + Claude + pgvector) com guardrails |
+| [catalogo-calculos-validacoes](skills/catalogo-calculos-validacoes/SKILL.md) | **Catálogo autoritativo**: todos os cálculos (C1–C9) e guardas (V1–V8) |

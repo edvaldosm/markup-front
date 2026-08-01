@@ -11,9 +11,13 @@ metadata:
 
 Arquivo: `src/composables/useMarkup.ts`.
 
-> **Nota de fronteira:** o cálculo local só vale enquanto `MOCK_MODE = true`. Ao
-> ligar o backend, a precificação passa a vir de `precificarProduto`
-> ([[FR06-camada-graphql-isolada]], backend [[R01-calculo-no-backend]]).
+> **Código com data de validade.** `useMarkupCalculator` existe só enquanto
+> `MOCK_MODE = true`. Ao ligar o backend ele é **removido** (não vira fallback) e
+> a precificação passa a vir de `precificarProduto`. Inventário do que migra:
+> [[FR06-camada-graphql-isolada]]. Fonte de verdade das fórmulas e guardas:
+> backend [[catalogo-calculos-validacoes]] + [[R01-calculo-no-backend]].
+>
+> `useCurrency` **fica** — formatação é do front ([[FR05-formatacao-intl]]).
 
 ## `useMarkupCalculator()`
 

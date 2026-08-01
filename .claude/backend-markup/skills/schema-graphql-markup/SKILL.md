@@ -60,6 +60,9 @@ type ResultadoPrecificacao {
   somaTotalPercentuais: Float!
   divisorMarkup: Float!
   precoVenda: Float!
+  # Fator R e anexo: só para SERVICOS no Simples; nulos nos demais casos — R10
+  fatorR: Float
+  anexoAplicado: AnexoSimples
   breakdown: BreakdownPrecificacao!
 }
 

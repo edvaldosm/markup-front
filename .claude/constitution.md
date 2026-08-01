@@ -7,9 +7,10 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.1.0 — 2026-08-01
+- **Versão:** 2.2.0 — 2026-08-01
 
 ### Histórico
+- **2.2.0** — Novos artigos **B10** (Fator R deriva o anexo) e **B11** (guardas de cálculo). Todos os cálculos e validações passam a ter catálogo único no backend; documentada a migração do cálculo do front para o back.
 - **2.1.0** — Novo artigo **F9**: toda regra de visibilidade/permissão precisa de teste de aceite navegando como cada perfil. Emenda motivada pela implementação da B9 no front.
 - **2.0.0** — Backend migra de Go/gqlgen para **Java 21 + Spring Boot 4** (GraphQL via Spring for GraphQL). Novos artigos: **B8** (assistente/RAG), **B9** (ownership multi-empresa), **F8** (assistente no front).
 - **1.0.0** — Versão inicial (backend Go).
@@ -31,6 +32,12 @@ Detalhe de cada princípio em `.claude/backend-markup/rules/`.
 - **B7.** Formatação, ordenação de UI e estado de tela não vão para o backend. → [R07](backend-markup/rules/R07-fora-do-backend.md)
 - **B8.** O assistente/RAG responde **apenas** sobre formação de preço; recusa conteúdo ofensivo ou fora de escopo; a fonte é o vault **ingerido** num vector store. → [R08](backend-markup/rules/R08-assistente-escopo-guardrails.md)
 - **B9.** Toda empresa tem um **dono** (quem a cadastrou); usuário só enxerga empresas próprias ou explicitamente compartilhadas; **ADMIN tem visão global**. → [R09](backend-markup/rules/R09-ownership-multiempresa.md)
+- **B10.** Para serviços no Simples, o anexo é **derivado do Fator R** (≥28% ⇒ Anexo III, senão Anexo V), nunca só o cadastrado. → [R10](backend-markup/rules/R10-fator-r-anexo-simples.md)
+- **B11.** Todo cálculo tem guarda explícita; entrada inválida é **rejeitada**, nunca absorvida num número plausível e errado. → [R11](backend-markup/rules/R11-guardas-de-calculo.md)
+
+> **Catálogo dos cálculos.** Fórmulas (C1–C9) e guardas (V1–V8) vivem num único
+> documento: [catalogo-calculos-validacoes](backend-markup/skills/catalogo-calculos-validacoes/SKILL.md).
+> Nenhum cálculo pode existir no sistema sem estar lá.
 
 ## Artigo II — Princípios de Frontend
 
@@ -50,6 +57,10 @@ Detalhe em `.claude/frontend-markup/rules/`.
 ## Artigo III — Fronteira Backend ↔ Frontend
 
 - O backend devolve **números crus**; o frontend **formata e apresenta** (B7 + F5).
+- **Cálculo tem uma sede só: o backend** (B1). O cálculo hoje no protótipo Vue
+  (`useMarkup.ts`) é provisório e será **removido** — não vira fallback. Duas
+  fontes de verdade para preço significam dois preços. Inventário da migração em
+  [FR06](frontend-markup/rules/FR06-camada-graphql-isolada.md).
 - Contrato único: schema GraphQL do backend (servido por Spring for GraphQL)
   espelhado pelos tipos do front; endpoint via `VITE_GQL_ENDPOINT`.
 - O assistente conversa via GraphQL (`perguntarAssistente`), com o guardrail e o

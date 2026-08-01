@@ -38,9 +38,25 @@ ML       = produto.margem_lucro
 D        = produto.desconto_maximo
 ```
 
+## Fator R (só serviços no Simples)
+
+A fórmula acima **não muda** para serviços — muda a composição do CP (hora
+técnica vira "material") e o anexo tributário, derivado do Fator R:
+
+```
+fatorR = folha_pagamento_mensal / faturamento_medio_mensal × 100
+fatorR >= 28 → ANEXO_III   |   fatorR < 28 → ANEXO_V
+```
+
+Ver [[R10-fator-r-anexo-simples]].
+
 ## Regra crítica
 
 Se `1 - soma/100 <= 0`, retornar erro — ver [[R03-divisor-markup-positivo]].
 
-**Fonte de verdade:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`.
-Implementação: [[service-precificacao-java]].
+## Referências
+
+- **Catálogo completo** (C1–C9 + guardas V1–V8): [[catalogo-calculos-validacoes]]
+- **Guardas de divisão e entrada:** [[R11-guardas-de-calculo]]
+- **Implementação:** [[service-precificacao-java]]
+- **Fonte de verdade:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`

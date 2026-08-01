@@ -18,6 +18,16 @@ centraliza o cálculo de precificação por Markup por Divisor, isolada por empr
     breakdown; soma ≥ 100% ⇒ erro, nunca preço ≤ 0.
 - **RB-02 (Custo base):** DEVE calcular CP = `SUM(qtd × custo_unitario)` da ficha técnica.
 - **RB-03 (Despesas fixas):** DEVE calcular %DF = `SUM(valor_mensal_ativo)/faturamento×100` dinamicamente.
+  - Aceite: despesa com `ativa = false` não entra no somatório; faturamento ≤ 0 ⇒ %DF = 0.
+- **RB-03a (Fator R e anexo):** para segmento `SERVICOS` no Simples, DEVE derivar
+  `fatorR = folha/faturamento×100` e o `anexoAplicado` (≥28% ⇒ ANEXO_III, senão
+  ANEXO_V), devolvendo ambos em `ResultadoPrecificacao`. (Artigo B10)
+  - Aceite: fora desse recorte, `fatorR` e `anexoAplicado` vêm **nulos**;
+    faturamento ≤ 0 ⇒ `fatorR = 0`.
+- **RB-03b (Guardas de cálculo):** toda divisão DEVE ser guardada e toda entrada
+  inválida rejeitada — nunca um número plausível e errado. (Artigo B11)
+  - Aceite: material órfão ⇒ erro (não custo ignorado); `ML`/`D`/alíquota
+    negativos ⇒ rejeitados na entrada; cada guarda V1–V8 tem teste.
 - **RB-04 (Multi-tenant):** toda operação DEVE restringir-se às empresas autorizadas
   ao usuário do JWT. (Artigos B2, B9)
   - Aceite: usuário não lê/escreve dados de empresa que não possui nem foi compartilhada.
@@ -54,7 +64,8 @@ interface — pertencem ao frontend. (Artigo B7)
 
 | Requisito | Template |
 |-----------|----------|
-| RB-01/02/03 | `formula-markup-divisor`, `service-precificacao-java` |
+| RB-01/02/03 | `catalogo-calculos-validacoes`, `formula-markup-divisor`, `service-precificacao-java` |
+| RB-03a/03b | `catalogo-calculos-validacoes`, rules R10/R11 |
 | RB-04/05/09 | `rbac-permissoes`, rules R02/R05/R09 |
 | RB-06 | `auth-jwt-spring` |
 | RB-07 | `modelagem-der-markup`, `schema-graphql-markup`, `estrutura-projeto-spring` |

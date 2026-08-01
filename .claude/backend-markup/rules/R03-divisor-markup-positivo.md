@@ -1,7 +1,7 @@
 # Rule R03 — Divisor Markup deve ser positivo
 
 **Categoria:** Integridade de cálculo
-**Origem:** IniciandoBackEndMarkup.md §5.4
+**Origem:** IniciandoBackEndMarkup.md §5.4 (portado para Java/Spring)
 
 ## Regra
 
@@ -11,16 +11,18 @@ No cálculo do Preço de Venda:
 divisorMarkup = 1 - (Impostos + DF + ML + D) / 100
 ```
 
-Se `divisorMarkup <= 0`, o resolver **deve retornar `error`** — nunca retornar
+Se `divisorMarkup <= 0`, o service **deve lançar exceção** — nunca retornar
 preço negativo, zero ou infinito.
 
-Mensagem de erro esperada:
-
-```go
-if divisorMarkup <= 0 {
-    return nil, fmt.Errorf("soma de percentuais (%.1f%%) inviabiliza o preço — reduza margens ou impostos", soma)
+```java
+if (divisor <= 0) {
+    throw new PrecificacaoInviavelException(
+        "soma de percentuais (%.1f%%) inviabiliza o preço — reduza margens ou impostos"
+            .formatted(soma));
 }
 ```
+
+A exceção vira erro GraphQL na resposta; o front exibe a mensagem.
 
 ## Por quê
 

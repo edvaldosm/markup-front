@@ -11,9 +11,9 @@ O conhecimento do sistema Markup está organizado em `.claude/` no padrão
 → **skills/templates** (o como) → **implementação**, com skills invocáveis para
 o loop incremental e para regeneração total.
 
-## Padrão SDD (Constituição v2.1.0)
+## Padrão SDD (Constituição v2.2.0)
 
-- `constitution.md` — princípios invioláveis (artigos B1–B9 backend, F1–F9 frontend = as Rules).
+- `constitution.md` — princípios invioláveis (artigos B1–B11 backend, F1–F9 frontend = as Rules).
 - `<base>/spec.md` — requisitos (o quê/por quê), separado das `skills/` (templates).
 - `specs/` — loop por feature: `/specify` → `spec.md`, `/plan` → `plan.md`,
   `/tasks` → `tasks.md`; `specs/_template/` tem os modelos.
@@ -22,7 +22,7 @@ o loop incremental e para regeneração total.
 ## Bases de conhecimento (referência aninhada)
 
 - `.claude/backend-markup/` — backend **Java 21 + Spring Boot 4** (Spring for GraphQL,
-  JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **9 Rules + 9 Skills**.
+  JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **11 Rules + 10 Skills**.
   (Migrado de Go em 2026-07-31.)
 - `.claude/frontend-markup/` — frontend Vue 3/Pinia/Router/TS/Vite. **9 Rules + 10 Skills**.
   Destilado do código real em `src/**` + memória `project_markup_frontend.md`.
