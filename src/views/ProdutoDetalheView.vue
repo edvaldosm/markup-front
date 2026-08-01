@@ -7,6 +7,7 @@ import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { useImpostosStore } from '@/stores/impostos'
 import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { gerarRelatorioPdf } from '@/graphql/relatorios'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -50,12 +51,24 @@ const faixa = computed(() =>
 )
 
 /**
- * "Gerar PDF" usa a impressão do próprio navegador (Salvar como PDF): o layout
- * de impressão vive no CSS (`@media print`), sem dependência nova e sempre em
- * dia com a tela. Ver a spec `faixa-negociacao-e-pdf`.
+ * O documento é gerado pelo **módulo de relatórios do backend** (JasperReports,
+ * Artigo B12); o front só pede e baixa ([[FR11-relatorio-vem-do-backend]]).
+ * Em `MOCK_MODE` o cliente cai na impressão da tela — stopgap do protótipo.
  */
-function gerarPdf() {
-  window.print()
+const gerandoPdf = ref(false)
+const erroPdf = ref<string | null>(null)
+
+async function gerarPdf() {
+  if (!produto.value) return
+  gerandoPdf.value = true
+  erroPdf.value = null
+  try {
+    await gerarRelatorioPdf('FICHA_TECNICA_PRODUTO', { produtoId: produto.value.id })
+  } catch (e) {
+    erroPdf.value = e instanceof Error ? e.message : 'Falha ao gerar o relatório.'
+  } finally {
+    gerandoPdf.value = false
+  }
 }
 
 const emitidoEm = new Intl.DateTimeFormat('pt-BR', {
@@ -124,10 +137,12 @@ async function salvarMargem() {
       </div>
       <div class="detalhe__actions">
         <BaseBadge :color="produto.ativo ? 'green' : 'gray'">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
-        <BaseButton class="no-print" variant="ghost" @click="gerarPdf">Gerar PDF</BaseButton>
+        <BaseButton class="no-print" variant="ghost" :loading="gerandoPdf" @click="gerarPdf">Gerar PDF</BaseButton>
         <BaseButton class="no-print" variant="secondary" @click="showEditModal = true">Editar {{ seg.rotulos.produto }}</BaseButton>
       </div>
     </div>
+
+    <p v-if="erroPdf" class="erro-pdf no-print">{{ erroPdf }}</p>
 
     <div class="detalhe__grid">
       <!-- Ficha Técnica -->
@@ -313,6 +328,15 @@ async function salvarMargem() {
 .pb-row strong { color: var(--color-primary-200); }
 .pb-row--lucro { border-top: 1px solid rgba(255,255,255,.1); padding-top: var(--space-2); }
 .pb-row--lucro span, .pb-row--lucro strong { color: var(--color-primary-200); font-weight: 700; }
+
+.erro-pdf {
+  padding: var(--space-3) var(--space-4);
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius);
+  font-size: .8125rem;
+  color: #b91c1c;
+}
 
 /* ─── Cabeçalho da folha (só no PDF) ─────────────────────────────────────── */
 .folha-cabecalho {

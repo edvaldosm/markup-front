@@ -5,7 +5,7 @@ memória `project_markup_frontend.md`. Espelha a estrutura de
 [.claude/backend-markup/](../backend-markup/README.md).
 
 - **Requisitos (SDD):** [spec.md](spec.md) — o *quê/por quê*. Os arquivos de `skills/` são os *templates* (o *como*).
-- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.3.0).
+- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.4.0).
 - **Fonte:** `src/**` (código vivo) + `.claude/project_markup_frontend.md` (memória de estado)
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`
 - **Gerado em:** 2026-07-31
@@ -24,6 +24,7 @@ memória `project_markup_frontend.md`. Espelha a estrutura de
 | [rules/FR08-assistente-consome-backend.md](rules/FR08-assistente-consome-backend.md) | Assistente só consome o backend; nunca o vault/LLM direto |
 | [rules/FR09-teste-navegacao-por-perfil.md](rules/FR09-teste-navegacao-por-perfil.md) | Visibilidade/permissão exige teste que navega como cada perfil |
 | [rules/FR10-escopo-de-tema-por-modulo.md](rules/FR10-escopo-de-tema-por-modulo.md) | Módulo com público próprio muda de identidade por escopo de tema, não por hardcode |
+| [rules/FR11-relatorio-vem-do-backend.md](rules/FR11-relatorio-vem-do-backend.md) | Relatório vem do backend (Jasper); o front pede e baixa, não monta documento |
 
 ## Skills — como fazer (procedimentos)
 

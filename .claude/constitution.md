@@ -7,9 +7,15 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.3.0 — 2026-08-01
+- **Versão:** 2.4.0 — 2026-08-01
 
 ### Histórico
+- **2.4.0** — Novos artigos **B12** (relatório é do backend, em módulo exclusivo,
+  via JasperReports) e **F11** (o front pede e baixa o documento; não o monta).
+  Emenda motivada pelo requisito de gerar relatórios por JasperReports: documento
+  passa a ser artefato do servidor, versionado e autorizado como qualquer outra
+  operação. A impressão local do protótipo vira stopgap datado, como o cálculo em
+  `useMarkup.ts`.
 - **2.3.0** — Novo artigo **F10**: módulo com público próprio tem **escopo de tema**
   (remapeamento de tokens), nunca cor hardcoded nem componente duplicado. Emenda
   motivada pelo módulo de Gestão do Site (ADMIN global), que precisa ser
@@ -39,6 +45,7 @@ Detalhe de cada princípio em `.claude/backend-markup/rules/`.
 - **B9.** Toda empresa tem um **dono** (quem a cadastrou); usuário só enxerga empresas próprias ou explicitamente compartilhadas; **ADMIN tem visão global**. → [R09](backend-markup/rules/R09-ownership-multiempresa.md)
 - **B10.** Para serviços no Simples, o anexo é **derivado do Fator R** (≥28% ⇒ Anexo III, senão Anexo V), nunca só o cadastrado. → [R10](backend-markup/rules/R10-fator-r-anexo-simples.md)
 - **B11.** Todo cálculo tem guarda explícita; entrada inválida é **rejeitada**, nunca absorvida num número plausível e errado. → [R11](backend-markup/rules/R11-guardas-de-calculo.md)
+- **B12.** Todo documento que sai do sistema é gerado pelo backend, com **JasperReports**, no módulo exclusivo `com.markup.reports`: catálogo fechado, datasource por DTO (nunca SQL no template), autorização igual à da API e nenhum cálculo dentro do relatório. → [R12](backend-markup/rules/R12-relatorios-no-backend.md)
 
 > **Catálogo dos cálculos.** Fórmulas (C1–C9) e guardas (V1–V8) vivem num único
 > documento: [catalogo-calculos-validacoes](backend-markup/skills/catalogo-calculos-validacoes/SKILL.md).
@@ -59,6 +66,7 @@ Detalhe em `.claude/frontend-markup/rules/`.
 - **F8.** O assistente consome **o backend**, nunca o vault direto; não renderiza conteúdo fora de formação de preço. → [FR08](frontend-markup/rules/FR08-assistente-consome-backend.md)
 - **F9.** Toda regra de **visibilidade ou permissão** tem teste de aceite que **navega como cada perfil** e prova o que ele vê e o que lhe é negado. → [FR09](frontend-markup/rules/FR09-teste-navegacao-por-perfil.md)
 - **F10.** Módulo com público próprio muda de identidade por **escopo de tema** (remapeia os tokens), nunca por cor hardcoded ou componente duplicado; e o que o separa — escopo ou permissão — é declarado na rota. → [FR10](frontend-markup/rules/FR10-escopo-de-tema-por-modulo.md)
+- **F11.** O front **pede e baixa** relatório do backend; não monta documento nem embarca biblioteca de PDF. Impressão local existe só no modo mock, datada. → [FR11](frontend-markup/rules/FR11-relatorio-vem-do-backend.md)
 
 ## Artigo III — Fronteira Backend ↔ Frontend
 
@@ -71,6 +79,9 @@ Detalhe em `.claude/frontend-markup/rules/`.
   espelhado pelos tipos do front; endpoint via `VITE_GQL_ENDPOINT`.
 - O assistente conversa via GraphQL (`perguntarAssistente`), com o guardrail e o
   RAG **no backend** (B8) — o front só exibe (F8).
+- **Documento também tem sede única: o backend** (B12 + F11). Dados trafegam por
+  GraphQL; **binário** sai por REST (`/api/relatorios/{tipo}`), com o mesmo JWT —
+  base64 em GraphQL infla o payload e perde `Content-Disposition`.
 
 ## Artigo IV — Governança (Spec-Driven Development)
 

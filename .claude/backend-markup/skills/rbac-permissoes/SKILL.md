@@ -60,5 +60,28 @@ public class ProdutoController {
 Para regras que dependem de dados (ex.: ownership da empresa), complementar com
 verificação no `service` — ADMIN ignora o filtro de dono ([[R09-ownership-multiempresa]]).
 
+## Escopo global ≠ permissão (Gestão do Site)
+
+O módulo administrativo **não** é protegido por uma `PermissaoChave`: um
+PROPRIETARIO tem todas as permissões e ainda assim não administra o site. O que
+separa é o **escopo** do perfil (`perfil.escopo_global = true`), que vira a
+authority `ESCOPO_GLOBAL` no JWT ([[auth-jwt-spring]]):
+
+```java
+@QueryMapping
+@PreAuthorize("hasAuthority('ESCOPO_GLOBAL')")   // R09 + front FR10
+public List<EmpresaAdmin> todasEmpresas() {
+    return gestaoService.todasEmpresas();        // única consulta sem filtro por empresa
+}
+```
+
+Vale para `todasEmpresas`, `empresaAdmin`, `todosUsuarios`, `metricasDaBase` e as
+mutations de vínculo (`vincularUsuario`, `desvincularUsuario`,
+`definirPerfilNoVinculo`, `definirUsuarioAtivo`), e para o relatório
+`GESTAO_EMPRESAS_USUARIOS` ([[modulo-relatorios-jasper]]).
+
+> **Guarda de negócio:** `desvincularUsuario` **recusa** quando o usuário é o
+> dono da empresa — ela ficaria órfã ([[R09-ownership-multiempresa]]).
+
 As permissões vêm nos claims do JWT ([[auth-jwt-spring]]). Seed das 16 chaves e
 dos 5 perfis: [[seed-dados-iniciais]].

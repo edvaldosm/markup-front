@@ -1,6 +1,6 @@
 ---
 name: recriar-frontend-markup
-description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 10 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
+description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 11 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
 ---
 
 # Recriar frontend Markup (Vue 3)
@@ -24,6 +24,7 @@ Gera o protótipo navegável a partir de `.claude/frontend-markup/`. Trabalhe em
 - FR08 — assistente só consome o backend; nunca o vault/LLM direto
 - FR09 — visibilidade/permissão exige teste que navega como cada perfil
 - FR10 — módulo com público próprio muda de identidade por escopo de tema
+- FR11 — relatório vem do backend; o front pede e baixa, nunca monta documento
 
 ## Fases (cada uma guiada por uma Skill)
 

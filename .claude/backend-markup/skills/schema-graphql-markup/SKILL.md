@@ -64,6 +64,7 @@ type ResultadoPrecificacao {
   fatorR: Float
   anexoAplicado: AnexoSimples
   breakdown: BreakdownPrecificacao!
+  faixaNegociacao: FaixaNegociacao!    # C10–C12 — do preço de tabela ao piso
 }
 
 type BreakdownPrecificacao {
@@ -74,11 +75,40 @@ type BreakdownPrecificacao {
   lucroLiquido: Float!
 }
 
+# Faixa de negociação — o desconto máximo já está reservado no divisor (C10–C12)
+type FaixaNegociacao {
+  descontoMinimo: Float!        # sempre 0 — o domínio não tem desconto mínimo
+  descontoMaximo: Float!        # produto.descontoMaximo (D)
+  precoTabela: Float!
+  precoMinimo: Float!           # PV × (1 − D/100) — piso da negociação
+  economiaMaxima: Float!
+  lucroNoTeto: Float!           # PV × (ML + D)/100
+  lucroNoPiso: Float!           # PV × ML/100 — a margem-alvo, intacta
+  degraus: [DegrauDesconto!]!
+}
+
+type DegrauDesconto { desconto: Float! preco: Float! lucro: Float! margemEfetiva: Float! }
+
 # RBAC
 type Permissao { id: ID! chave: String! descricao: String! modulo: String! }
-type Perfil { id: ID! nome: String! descricao: String! permissoes: [Permissao!]! }
-type Usuario { id: ID! nome: String! email: String! ativo: Boolean! empresas: [UsuarioEmpresa!]! }
+type Perfil {
+  id: ID! nome: String! descricao: String! permissoes: [Permissao!]!
+  escopoGlobal: Boolean!            # só o ADMIN — vê e opera todas as empresas (R09)
+}
+type Usuario {
+  id: ID! nome: String! email: String! ativo: Boolean!
+  empresas: [UsuarioEmpresa!]!
+  perfilGlobal: Perfil               # presente só no ADMIN de escopo global
+}
 type UsuarioEmpresa { empresa: Empresa! perfil: Perfil! }
+
+# Gestão do Site — visão da base inteira, só para escopo global (R09/FR10)
+type EmpresaAdmin { empresa: Empresa! dono: Usuario totalUsuarios: Int! equipe: [MembroEquipe!]! }
+type MembroEquipe { usuario: Usuario! perfil: Perfil dono: Boolean! }
+type MetricasBase {
+  totalEmpresas: Int! totalUsuarios: Int! usuariosAtivos: Int!
+  totalVinculos: Int! faturamentoTotal: Float!
+}
 
 # Auth
 type AuthPayload { token: String! usuario: Usuario! empresa: Empresa! perfil: Perfil! }
@@ -113,6 +143,12 @@ type Query {
 
   # Multi-empresa — só as empresas autorizadas ao usuário (todas se ADMIN) — R09
   minhasEmpresas: [Empresa!]!
+
+  # ── Gestão do Site — base inteira; TODAS exigem escopo global (R09/FR10) ──
+  todasEmpresas: [EmpresaAdmin!]!
+  empresaAdmin(empresaId: ID!): EmpresaAdmin
+  todosUsuarios: [Usuario!]!
+  metricasDaBase: MetricasBase!
 
   # Assistente RAG — só formação de preço, com guardrails no backend — R08
   perguntarAssistente(pergunta: String!): RespostaAssistente!
@@ -149,6 +185,13 @@ type Mutation {
   convidarUsuario(input: ConviteUsuarioInput!): Usuario!
   alterarPerfilUsuario(usuarioEmpresaId: ID!, perfilId: ID!): UsuarioEmpresa!
   toggleUsuario(id: ID!, ativo: Boolean!): Usuario!
+
+  # ── Gestão do Site — exigem escopo global (R09/FR10) ──
+  definirPerfilNoVinculo(usuarioId: ID!, empresaId: ID!, perfilId: ID!): UsuarioEmpresa!
+  vincularUsuario(usuarioId: ID!, empresaId: ID!, perfilId: ID!): UsuarioEmpresa!
+  # dono da empresa NÃO pode ser desvinculado — erro explícito (R09)
+  desvincularUsuario(usuarioId: ID!, empresaId: ID!): Boolean!
+  definirUsuarioAtivo(usuarioId: ID!, ativo: Boolean!): Usuario!
 }
 ```
 
@@ -170,3 +213,16 @@ input ConviteUsuarioInput { nome: String! email: String! senha: String! perfilId
 
 Endpoint: `POST http://localhost:8080/graphql` com `Authorization: Bearer <token>`.
 Front: `VITE_GQL_ENDPOINT` em `src/graphql/client.ts`.
+
+## O que **não** passa por aqui: relatórios
+
+Documento é **binário** e sai por REST, não por GraphQL:
+
+```
+POST /api/relatorios/{tipo}      → application/pdf   (mesmo JWT)
+tipo ∈ FICHA_TECNICA_PRODUTO | LISTA_PRECIFICACAO | DESPESAS_FIXAS | GESTAO_EMPRESAS_USUARIOS
+```
+
+Base64 num campo GraphQL infla o payload em ~33%, impede streaming e perde o
+`Content-Disposition` que dá nome ao arquivo. Contrato e regras do módulo:
+[[modulo-relatorios-jasper]] e [[R12-relatorios-no-backend]].

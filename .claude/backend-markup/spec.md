@@ -39,6 +39,25 @@ centraliza o cálculo de precificação por Markup por Divisor, isolada por empr
 - **RB-09 (Ownership + ADMIN global):** empresa tem dono (`dono_usuario_id`); usuário
   comum vê só as próprias/compartilhadas; `minhasEmpresas` reflete isso; ADMIN vê todas. (Artigo B9)
   - Aceite: Edvaldo (E1,E2), Santiago (E3,E4), Matos (E5,E6) — cada um só vê as suas; ADMIN vê as seis.
+- **RB-11 (Gestão do Site):** o backend DEVE expor a visão da base inteira para
+  perfis de **escopo global** — `todasEmpresas`, `empresaAdmin`, `todosUsuarios`,
+  `metricasDaBase` — e as mutations de vínculo (`vincularUsuario`,
+  `desvincularUsuario`, `definirPerfilNoVinculo`, `definirUsuarioAtivo`). (Artigo B9)
+  - Aceite: qualquer perfil sem `ESCOPO_GLOBAL` recebe negação, inclusive
+    PROPRIETARIO (que tem todas as permissões RBAC); desvincular o **dono** da
+    própria empresa é recusado com erro explícito.
+- **RB-12 (Faixa de negociação):** `ResultadoPrecificacao` DEVE trazer
+  `faixaNegociacao` — preço de tabela, preço mínimo (piso do desconto máximo),
+  lucro nos dois extremos e degraus intermediários (C10–C12). (Artigos B1, B11)
+  - Aceite: `lucroNoPiso == breakdown.lucroLiquido`; `lucroNoTeto == lucroLiquido
+    + valorDesconto`; `D = 0` ⇒ faixa de um ponto; `d` fora de `[0, D]` ⇒ rejeitado (V9).
+- **RB-13 (Relatórios):** todo documento DEVE ser gerado pelo backend com
+  **JasperReports**, no módulo exclusivo `com.markup.reports`, e baixado por
+  `POST /api/relatorios/{tipo}` com o mesmo JWT. (Artigo B12)
+  - Aceite: relatório fora do `ReportCatalog` não existe; sem a permissão do
+    catálogo ⇒ negado; empresa não autorizada ⇒ negado (nunca PDF vazio ou com
+    dado de outra empresa); relatório de escopo global só para `ESCOPO_GLOBAL`;
+    números do PDF idênticos aos do `ResultadoPrecificacao`.
 - **RB-10 (Assistente RAG):** `perguntarAssistente(pergunta)` DEVE responder **só**
   sobre formação de preço, com guardrails de escopo e de conteúdo ofensivo, ancorado
   no vault ingerido (Spring AI + Claude + pgvector); sem fonte relevante ⇒ não alucina. (Artigo B8)
@@ -71,3 +90,6 @@ interface — pertencem ao frontend. (Artigo B7)
 | RB-07 | `modelagem-der-markup`, `schema-graphql-markup`, `estrutura-projeto-spring` |
 | RB-08 | `seed-dados-iniciais` |
 | RB-10 | `assistente-rag-precificacao`, rule R08 |
+| RB-11 | `rbac-permissoes` (escopo global), `schema-graphql-markup`, rule R09 |
+| RB-12 | `catalogo-calculos-validacoes` (C10–C12), `service-precificacao-java` |
+| RB-13 | `modulo-relatorios-jasper`, rule R12 |

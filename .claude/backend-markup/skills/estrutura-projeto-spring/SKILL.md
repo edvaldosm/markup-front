@@ -30,6 +30,8 @@ org.postgresql:postgresql
 org.flywaydb:flyway-core
 spring-ai-anthropic-spring-boot-starter
 spring-ai-pgvector-store-spring-boot-starter
+net.sf.jasperreports:jasperreports          ← módulo de relatórios (B12)
+net.sf.jasperreports:jasperreports-fonts
 ```
 
 ## Layout
@@ -45,10 +47,17 @@ backend/
     │   ├── repository/        ← interfaces JpaRepository
     │   ├── service/           ← regra de negócio (PrecificacaoService, AssistenteService, …)
     │   ├── graphql/           ← @Controller GraphQL (finos) + DTOs/records
+    │   ├── reports/           ← MÓDULO EXCLUSIVO DE RELATÓRIOS (B12/R12)
+    │   │   ├── ReportsController.java   ← REST /api/relatorios/{tipo} (binário)
+    │   │   ├── ReportService.java       ← autoriza → busca → preenche
+    │   │   ├── JasperEngine.java        ← compila/cacheia .jasper, exporta
+    │   │   ├── ReportCatalog.java       ← enum: template + permissão + escopo
+    │   │   └── datasource/              ← records de linha (nunca @Entity)
     │   └── security/          ← filtro JWT, RBAC, contexto do usuário
     └── resources/
         ├── application.yml
         ├── graphql/schema.graphqls   ← contrato (fonte — R06)
+        ├── reports/                  ← templates .jrxml + shared/ (estilos, subreports)
         └── db/migration/             ← Flyway (schema + seed)
 ```
 
@@ -56,6 +65,9 @@ backend/
 
 Ver [[R04-separacao-camadas]]: `domain` (entidades), `repository` (consultas),
 `service` (regra), `graphql` (orquestração + RBAC). Contrato-first ([[R06-contrato-first-schema]]).
+
+`reports` é um **módulo à parte**, não uma camada: importa `service/` para ler os
+números e não é importado por ninguém. Detalhe em [[modulo-relatorios-jasper]].
 
 ## Fluxo
 
