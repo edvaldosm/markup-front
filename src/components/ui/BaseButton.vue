@@ -47,9 +47,9 @@ withDefaults(defineProps<{
 .btn--primary {
   background: var(--color-primary-600);
   color: #fff;
-  box-shadow: 0 1px 3px rgba(45,125,49,.25);
+  box-shadow: 0 1px 3px var(--color-primary-shadow);
 }
-.btn--primary:hover:not(:disabled) { background: var(--color-primary-700); box-shadow: 0 2px 6px rgba(45,125,49,.35); }
+.btn--primary:hover:not(:disabled) { background: var(--color-primary-700); box-shadow: 0 2px 6px var(--color-primary-shadow-strong); }
 
 .btn--secondary {
   background: var(--color-primary-50);

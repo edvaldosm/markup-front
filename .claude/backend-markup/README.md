@@ -4,7 +4,7 @@ Rules (invariantes) e Skills (templates) do backend **Java 21 + Spring Boot 4**
 (GraphQL via Spring for GraphQL, JPA/PostgreSQL, Spring Security, Spring AI).
 
 - **Requisitos (SDD):** [spec.md](spec.md) — o *quê/por quê*. Os arquivos de `skills/` são os *templates* (o *como*).
-- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.2.0).
+- **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.3.0).
 - **Fonte original:** `IniciandoBackEndMarkup.md` (prompt consolidado, backend Go — **arquivado no git**; migrado para Java nesta base).
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`
 - **Atualizado em:** 2026-07-31 (v2 — Java/Spring + assistente RAG + ownership)

@@ -30,10 +30,35 @@ Definidos em `:root` de `src/assets/main.css`. Sempre usar via `var(--…)`
 --color-text #1a2e1b       --color-text-muted #5a7a5b   --color-text-light #8aaa8b
 ```
 
+## Neutro grafite (escopo administrativo)
+
+```
+--color-neutral-50  #f8fafc   --color-neutral-500 #64748b
+--color-neutral-100 #f1f5f9   --color-neutral-600 #475569  (accent no escopo)
+--color-neutral-200 #e2e8f0   --color-neutral-700 #334155
+--color-neutral-300 #cbd5e1   --color-neutral-800 #1e293b
+--color-neutral-400 #94a3b8   --color-neutral-900 #0f172a  (sidebar no escopo)
+```
+
 ## Semânticos
 
 `--color-success #3a9b3e`, `--color-warning #d97706`, `--color-danger #dc2626`,
 `--color-info #2563eb`.
+
+## Realces derivados da primária
+
+`--color-primary-shadow` (sombra do botão primário), `--color-primary-shadow-strong`
+(hover) e `--focus-ring` (anel de foco dos inputs). São tokens justamente para
+acompanharem a troca de escopo de tema.
+
+## Escopo de tema `.theme-admin`
+
+Definido logo após o `:root` em `main.css`: remapeia `--color-primary-*` para a
+escala neutra e ajusta bg/borda/texto. Aplicado pelo `AppLayout` em `/admin*` no
+próprio layout **e** no `documentElement` (por causa do `<Teleport to="body">` do
+`BaseModal` e do `background` do `body`). Componente nenhum precisa saber que o
+escopo existe — quem respeita a [[FR03-design-tokens]] troca de identidade sozinho.
+Regra: [[FR10-escopo-de-tema-por-modulo]]. Procedimento: [[modulo-gestao-site]].
 
 ## Escalas
 

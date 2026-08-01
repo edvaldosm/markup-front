@@ -10,6 +10,11 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     /** Permissão RBAC exigida para entrar na rota (FR07 + R05) */
     permissao?: PermissaoChave
+    /**
+     * Rota do módulo de Gestão do Site: exige **escopo global** (ADMIN), não uma
+     * permissão RBAC — ver `podeAcessarModuloAdmin` (R09 + FR10).
+     */
+    adminGlobal?: boolean
   }
 }
 
@@ -32,6 +37,12 @@ export const rotasApp: RouteRecordRaw[] = [
   { path: 'relatorios', name: 'relatorios', component: () => import('@/views/RelatoriosView.vue'), meta: { permissao: 'RELATORIO_READ' } },
   { path: 'usuarios', name: 'usuarios', component: () => import('@/views/UsuariosView.vue'), meta: { permissao: 'USUARIO_READ' } },
   { path: 'perfis', name: 'perfis', component: () => import('@/views/PerfisView.vue'), meta: { permissao: 'PERFIL_READ' } },
+
+  // ─── Gestão do Site (só ADMIN global) ──────────────────────────────────────
+  { path: 'admin', name: 'admin', component: () => import('@/views/admin/AdminVisaoGeralView.vue'), meta: { adminGlobal: true } },
+  { path: 'admin/empresas', name: 'admin-empresas', component: () => import('@/views/admin/AdminEmpresasView.vue'), meta: { adminGlobal: true } },
+  { path: 'admin/empresas/:id', name: 'admin-empresa-detalhe', component: () => import('@/views/admin/AdminEmpresaDetalheView.vue'), meta: { adminGlobal: true } },
+  { path: 'admin/usuarios', name: 'admin-usuarios', component: () => import('@/views/admin/AdminUsuariosView.vue'), meta: { adminGlobal: true } },
 ]
 
 export const routes: RouteRecordRaw[] = [
@@ -63,6 +74,11 @@ export function guardaNavegacao(to: RouteLocationNormalized) {
   }
 
   if (!auth.user) return { name: 'login' }
+
+  // Gestão do Site: escopo global é a chave, não a permissão (R09 + FR10)
+  if (to.meta.adminGlobal && !auth.adminGlobal) {
+    return { name: 'dashboard' }
+  }
 
   // RBAC: sem a permissão da rota, não entra (cai no dashboard)
   const exigida = to.meta.permissao

@@ -104,6 +104,40 @@ export interface ResultadoPrecificacao {
   }
 }
 
+/** Um ponto da faixa de negociação: quanto se pratica e o que sobra (C10–C12) */
+export interface DegrauDesconto {
+  /** Desconto aplicado sobre o preço de tabela (%) */
+  desconto: number
+  /** Preço praticado = PV × (1 − desconto/100) */
+  preco: number
+  /** Lucro no preço praticado — a reserva não usada vira lucro */
+  lucro: number
+  /** Lucro como % do preço praticado */
+  margemEfetiva: number
+}
+
+/**
+ * Faixa de negociação de um produto: do preço de tabela (desconto 0%) ao piso
+ * (desconto máximo previsto). Dentro dela a margem de lucro está preservada,
+ * porque `D` já foi reservado no divisor do markup.
+ */
+export interface FaixaNegociacao {
+  /** Sempre 0 — o preço de tabela é o teto (o domínio não tem desconto mínimo) */
+  descontoMinimo: number
+  /** `produto.descontoMaximo` (D) */
+  descontoMaximo: number
+  precoTabela: number
+  /** Piso: preço no desconto máximo — abaixo dele o desconto come a margem */
+  precoMinimo: number
+  /** Quanto o vendedor pode conceder em reais, no máximo */
+  economiaMaxima: number
+  /** Lucro vendendo sem desconto = PV × (ML + D)/100 */
+  lucroNoTeto: number
+  /** Lucro vendendo no piso = PV × ML/100 — a margem-alvo, intacta */
+  lucroNoPiso: number
+  degraus: DegrauDesconto[]
+}
+
 // ─── Usuários / RBAC ──────────────────────────────────────────────────────────
 
 export type PermissaoChave =

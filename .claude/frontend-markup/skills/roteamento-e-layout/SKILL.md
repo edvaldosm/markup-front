@@ -1,6 +1,6 @@
 ---
 name: roteamento-e-layout
-description: Roteamento, layout (AppLayout/Sidebar/Header/CompanySwitcher) e as 13 telas do frontend Markup. Use ao adicionar telas, rotas ou mexer na navegação.
+description: Roteamento, layout (AppLayout/Sidebar/Header/CompanySwitcher) e as 17 telas do frontend Markup. Use ao adicionar telas, rotas ou mexer na navegação.
 metadata:
   domain: frontend-markup
   kind: skill
@@ -17,15 +17,29 @@ metadata:
 - `/` → `AppLayout` (`meta.requiresAuth`), redireciona `''` → `/dashboard`
 - Curinga `/:pathMatch(.*)*` → `/dashboard`
 
+O que protege cada rota é declarado nela, e são **duas coisas diferentes**:
+
+| Meta | Significa | Checagem no guard |
+|------|-----------|-------------------|
+| `permissao: PermissaoChave` | RBAC dentro da empresa | `auth.hasPermissao(...)` |
+| `adminGlobal: true` | escopo global (Gestão do Site) | `auth.adminGlobal` |
+
+Sem permissão/escopo o guard cai no `dashboard` — o destino de fallback.
+
 ## Layout (`src/components/layout/`)
 
 - `AppLayout` — shell com `<router-view>` das telas internas
 - `AppSidebar` — navegação (sidebar `--color-primary-900`, largura `--sidebar-width`)
 - `AppHeader` — topo (`--header-height`)
 - `CompanySwitcher` — troca de empresa ativa (multi-empresa); dispara a
-  reatividade das stores ([[FR02-stores-por-dominio]])
+  reatividade das stores ([[FR02-stores-por-dominio]]). Em `/admin*` ele **sai**
+  do header (não há empresa ativa na visão global) e dá lugar ao selo
+  "Modo gestor"
 
-## As 13 telas (`src/views/`)
+Em `/admin*` o layout entra no escopo de tema neutro e a sidebar troca a marca do
+segmento pela da área do gestor — ver [[FR10-escopo-de-tema-por-modulo]].
+
+## As 17 telas (`src/views/`)
 
 | Rota | View | Módulo |
 |------|------|--------|
@@ -42,6 +56,13 @@ metadata:
 | `relatorios` | RelatoriosView | Relatórios |
 | `usuarios` | UsuariosView | Usuários |
 | `perfis` | PerfisView | Perfis & RBAC |
+| `admin` | admin/AdminVisaoGeralView | Gestão do Site — painel |
+| `admin-empresas` | admin/AdminEmpresasView | Gestão do Site — empresas |
+| `admin-empresa-detalhe` | admin/AdminEmpresaDetalheView | Equipe da empresa (`/admin/empresas/:id`) |
+| `admin-usuarios` | admin/AdminUsuariosView | Gestão do Site — usuários |
+
+As quatro últimas são o módulo do gestor (`meta.adminGlobal`) — procedimento em
+[[modulo-gestao-site]].
 
 ## Componentes UI base (`src/components/ui/`)
 

@@ -62,6 +62,13 @@ export const useProdutosStore = defineStore('produtos', () => {
 
 ## Stores existentes
 
-`auth`, `empresa`, `produtos`, `materiais`, `despesas`, `impostos`, `usuarios`.
-Ao ligar o backend, `mockQuery(...)` vira `useQuery`/`useMutation`
+`auth`, `empresa`, `produtos`, `materiais`, `despesas`, `impostos`, `usuarios`,
+`admin`. Ao ligar o backend, `mockQuery(...)` vira `useQuery`/`useMutation`
 ([[camada-graphql-mock]]).
+
+### A exceção: `admin`
+
+`stores/admin.ts` é a **única** store que não filtra por empresa ativa — o gestor
+do site precisa da base inteira. O preço dessa exceção é o guard: `fetchTudo()` e
+**toda** ação começam checando `podeAcessarModuloAdmin(auth.user)`; para quem não
+é ADMIN a store é conjunto vazio. Ver [[modulo-gestao-site]].

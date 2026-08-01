@@ -17,7 +17,7 @@ defineProps<{
       </slot>
       <slot name="actions" />
     </div>
-    <div class="card__body">
+    <div class="card__body" :class="`card__body--${padding ?? 'md'}`">
       <slot />
     </div>
   </div>
@@ -53,5 +53,9 @@ defineProps<{
   margin-top: 2px;
 }
 
-.card__body { padding: var(--space-6); }
+/* `padding="none"` deixa o conteúdo rente à borda — usado por tabelas de largura total */
+.card__body--none { padding: 0; }
+.card__body--sm   { padding: var(--space-3); }
+.card__body--md   { padding: var(--space-6); }
+.card__body--lg   { padding: var(--space-8); }
 </style>

@@ -7,9 +7,14 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.2.0 — 2026-08-01
+- **Versão:** 2.3.0 — 2026-08-01
 
 ### Histórico
+- **2.3.0** — Novo artigo **F10**: módulo com público próprio tem **escopo de tema**
+  (remapeamento de tokens), nunca cor hardcoded nem componente duplicado. Emenda
+  motivada pelo módulo de Gestão do Site (ADMIN global), que precisa ser
+  reconhecível pela cor e é a primeira área do sistema barrada por **escopo**
+  (B9) em vez de permissão (B5).
 - **2.2.0** — Novos artigos **B10** (Fator R deriva o anexo) e **B11** (guardas de cálculo). Todos os cálculos e validações passam a ter catálogo único no backend; documentada a migração do cálculo do front para o back.
 - **2.1.0** — Novo artigo **F9**: toda regra de visibilidade/permissão precisa de teste de aceite navegando como cada perfil. Emenda motivada pela implementação da B9 no front.
 - **2.0.0** — Backend migra de Go/gqlgen para **Java 21 + Spring Boot 4** (GraphQL via Spring for GraphQL). Novos artigos: **B8** (assistente/RAG), **B9** (ownership multi-empresa), **F8** (assistente no front).
@@ -53,6 +58,7 @@ Detalhe em `.claude/frontend-markup/rules/`.
 - **F7.** Rotas com guard de auth + lazy load de componentes. → [FR07](frontend-markup/rules/FR07-rotas-protegidas.md)
 - **F8.** O assistente consome **o backend**, nunca o vault direto; não renderiza conteúdo fora de formação de preço. → [FR08](frontend-markup/rules/FR08-assistente-consome-backend.md)
 - **F9.** Toda regra de **visibilidade ou permissão** tem teste de aceite que **navega como cada perfil** e prova o que ele vê e o que lhe é negado. → [FR09](frontend-markup/rules/FR09-teste-navegacao-por-perfil.md)
+- **F10.** Módulo com público próprio muda de identidade por **escopo de tema** (remapeia os tokens), nunca por cor hardcoded ou componente duplicado; e o que o separa — escopo ou permissão — é declarado na rota. → [FR10](frontend-markup/rules/FR10-escopo-de-tema-por-modulo.md)
 
 ## Artigo III — Fronteira Backend ↔ Frontend
 

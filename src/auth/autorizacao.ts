@@ -47,6 +47,17 @@ export function podeAcessarEmpresa(
   return empresasAutorizadas(user, todas).some(e => e.id === empresaId)
 }
 
+/**
+ * Pode entrar no **módulo de Gestão do Site**? Só o escopo global (ADMIN).
+ *
+ * Deliberadamente **não** é uma `PermissaoChave`: as permissões do RBAC dizem o
+ * que se faz *dentro de uma empresa*; aqui o que decide é o escopo — um
+ * PROPRIETARIO tem todas as permissões e mesmo assim não administra o site.
+ */
+export function podeAcessarModuloAdmin(user: AuthUser | null): boolean {
+  return isAdminGlobal(user)
+}
+
 /** O perfil da sessão possui esta permissão RBAC? */
 export function temPermissao(user: AuthUser | null, chave: PermissaoChave): boolean {
   return !!user?.perfil.permissoes.some(p => p.chave === chave)

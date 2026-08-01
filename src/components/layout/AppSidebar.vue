@@ -14,10 +14,24 @@ const auth = useAuthStore()
 const empresaStore = useEmpresaStore()
 const segConfig = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 
-/** `permissao` espelha o `meta.permissao` da rota — item sem ela é sempre visível */
+/** Estamos no módulo de Gestão do Site? Muda a marca e o tema (FR10) */
+const emAdmin = computed(() => route.path.startsWith('/admin'))
+
+/** Marca exibida no topo: o segmento da empresa ativa, ou a área do gestor */
+const brand = computed(() =>
+  emAdmin.value
+    ? { icone: '⚙', nome: 'Gestão do Site', gradiente: ['var(--color-neutral-500)', 'var(--color-neutral-700)'] }
+    : { icone: segConfig.value.icone, nome: segConfig.value.nome, gradiente: segConfig.value.gradiente }
+)
+
+/**
+ * `permissao` espelha o `meta.permissao` da rota — item sem ela é sempre visível.
+ * `soAdminGlobal` espelha o `meta.adminGlobal`: escopo, não permissão (R09/FR10).
+ */
 const navGroups: {
   label: string
-  items: { name: string; to: string; icon: string; permissao?: PermissaoChave }[]
+  soAdminGlobal?: boolean
+  items: { name: string; to: string; icon: string; permissao?: PermissaoChave; exata?: boolean }[]
 }[] = [
   {
     label: 'Principal',
@@ -50,29 +64,41 @@ const navGroups: {
       { name: 'Perfis & RBAC', to: '/perfis', icon: '◈', permissao: 'PERFIL_READ' },
     ]
   },
+  {
+    label: 'Gestão do Site',
+    soAdminGlobal: true,
+    items: [
+      { name: 'Visão Geral', to: '/admin', icon: '▦', exata: true },
+      { name: 'Empresas', to: '/admin/empresas', icon: '▣' },
+      { name: 'Usuários Globais', to: '/admin/usuarios', icon: '◍' },
+    ]
+  },
 ]
 
 /** Só os grupos/itens que o perfil do usuário pode acessar (grupo vazio some) */
 const navVisivel = computed(() =>
   navGroups
+    .filter(g => !g.soAdminGlobal || auth.adminGlobal)
     .map(g => ({ ...g, items: g.items.filter(i => !i.permissao || auth.hasPermissao(i.permissao)) }))
     .filter(g => g.items.length > 0)
 )
 
-const isActive = (to: string) => route.path === to || route.path.startsWith(to + '/')
+/** `exata` evita que `/admin` fique aceso enquanto se navega em `/admin/…` */
+const isActive = (to: string, exata = false) =>
+  exata ? route.path === to : route.path === to || route.path.startsWith(to + '/')
 </script>
 
 <template>
   <aside class="sidebar" :class="{ 'sidebar--collapsed': !open, 'sidebar--drawer-open': mobileOpen }">
     <!-- Brand -->
     <div class="sidebar__brand">
-      <div class="brand-logo" :style="{ background: `linear-gradient(135deg, ${segConfig.gradiente[0]}, ${segConfig.gradiente[1]})` }">
-        <span class="brand-logo__mark">{{ segConfig.icone }}</span>
+      <div class="brand-logo" :style="{ background: `linear-gradient(135deg, ${brand.gradiente[0]}, ${brand.gradiente[1]})` }">
+        <span class="brand-logo__mark">{{ brand.icone }}</span>
       </div>
       <Transition name="fade">
         <div v-if="open" class="brand-text">
           <span class="brand-text__name">Markup</span>
-          <span class="brand-text__tagline">{{ segConfig.nome }}</span>
+          <span class="brand-text__tagline">{{ brand.nome }}</span>
         </div>
       </Transition>
     </div>
@@ -88,7 +114,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(to +
           :key="item.to"
           :to="item.to"
           class="nav-item"
-          :class="{ 'nav-item--active': isActive(item.to) }"
+          :class="{ 'nav-item--active': isActive(item.to, item.exata) }"
         >
           <span class="nav-item__icon">{{ item.icon }}</span>
           <Transition name="fade">

@@ -37,6 +37,13 @@ interface Persona {
 const TODAS = ['/empresa', '/materiais', '/despesas', '/impostos', '/produtos',
                '/precificacao', '/fator-r', '/relatorios', '/usuarios', '/perfis']
 
+/**
+ * Módulo de Gestão do Site — fora de `TODAS` de propósito: PROPRIETARIO tem todas
+ * as permissões RBAC e mesmo assim não entra aqui. O que separa é o **escopo
+ * global** (R09/FR10), não a permissão.
+ */
+const ADMIN = ['/admin', '/admin/empresas', '/admin/usuarios']
+
 const semAsRotas = (bloqueadas: string[]) => TODAS.filter(r => !bloqueadas.includes(r))
 
 const personas: Persona[] = [
@@ -45,7 +52,7 @@ const personas: Persona[] = [
     email: 'admin@markup.com.br',
     perfil: 'ADMIN',
     empresas: ['emp-001', 'emp-002', 'emp-003', 'emp-004'],
-    permitidas: TODAS,
+    permitidas: [...TODAS, ...ADMIN],
     bloqueadas: [],
   },
   {
@@ -54,7 +61,7 @@ const personas: Persona[] = [
     perfil: 'PROPRIETARIO',
     empresas: ['emp-001', 'emp-003'],
     permitidas: TODAS,
-    bloqueadas: [],
+    bloqueadas: [...ADMIN],
   },
   {
     nome: 'Roberto (dono da MetalForte)',
@@ -62,7 +69,7 @@ const personas: Persona[] = [
     perfil: 'PROPRIETARIO',
     empresas: ['emp-002'],
     permitidas: TODAS,
-    bloqueadas: [],
+    bloqueadas: [...ADMIN],
   },
   {
     nome: 'Juliana (dona da NexaTech)',
@@ -70,7 +77,7 @@ const personas: Persona[] = [
     perfil: 'PROPRIETARIO',
     empresas: ['emp-003'],
     permitidas: TODAS,
-    bloqueadas: [],
+    bloqueadas: [...ADMIN],
   },
   {
     nome: 'Marcos (gerente)',
@@ -78,7 +85,7 @@ const personas: Persona[] = [
     perfil: 'GERENTE',
     empresas: ['emp-001'],
     permitidas: semAsRotas(['/impostos', '/usuarios', '/perfis']),
-    bloqueadas: ['/impostos', '/usuarios', '/perfis'],
+    bloqueadas: ['/impostos', '/usuarios', '/perfis', ...ADMIN],
   },
   {
     nome: 'Carla (vendedora)',
@@ -86,7 +93,8 @@ const personas: Persona[] = [
     perfil: 'VENDEDOR',
     empresas: ['emp-001'],
     permitidas: ['/produtos', '/precificacao', '/relatorios'],
-    bloqueadas: ['/empresa', '/materiais', '/despesas', '/impostos', '/fator-r', '/usuarios', '/perfis'],
+    bloqueadas: ['/empresa', '/materiais', '/despesas', '/impostos', '/fator-r',
+                 '/usuarios', '/perfis', ...ADMIN],
   },
 ]
 

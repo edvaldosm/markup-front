@@ -11,12 +11,12 @@ e pronto para ligar no backend GraphQL por uma flag.
 
 ## Requisitos funcionais
 
-- **RF-01 (Navegação):** 13 telas sob layout autenticado + login público, rotas
+- **RF-01 (Navegação):** 17 telas sob layout autenticado + login público, rotas
   com guard e lazy load. (Artigo F7) — ver [roteamento-e-layout](skills/roteamento-e-layout/SKILL.md).
 - **RF-02 (Multi-empresa):** `CompanySwitcher` troca a empresa ativa; todas as
   listas reagem por reatividade. (Artigo F2)
 - **RF-03 (Estado):** uma Pinia setup store por domínio (auth, empresa, produtos,
-  materiais, despesas, impostos, usuarios). (Artigo F2)
+  materiais, despesas, impostos, usuarios, admin). (Artigo F2)
 - **RF-04 (Precificação na UI):** exibir custo, percentuais, divisor, PV e
   breakdown. Em `MOCK_MODE` o cálculo roda em `useMarkupCalculator`; ao ligar o
   backend, consumir `precificarProduto`. (Artigo F6)
@@ -30,6 +30,10 @@ e pronto para ligar no backend GraphQL por uma flag.
   `perguntarAssistente` do backend; trata os status OK/FORA_DE_ESCOPO/RECUSADO/SEM_FONTE. (Artigo F8)
 - **RF-11 (Multi-empresa por dono):** `CompanySwitcher` lista só as empresas
   autorizadas (`minhasEmpresas`); usuário comum não vê empresas de outros; ADMIN vê todas. (espelha B9)
+- **RF-12 (Gestão do Site):** módulo `/admin*` só para escopo global (ADMIN) —
+  todas as empresas com dono e equipe, todos os usuários com seus vínculos, e
+  gestão desses vínculos; identidade visual neutra por escopo de tema.
+  (Artigos F10 + F9; espelha B9) — spec: [`modulo-gestao-site`](../specs/modulo-gestao-site/spec.md).
 
 ## Fora de escopo (não-objetivos)
 
@@ -48,4 +52,5 @@ persistência real e autenticação real (mock no protótipo).
 | RF-09 | `camada-graphql-mock` |
 | RF-10 | `assistente-ui`, backend `assistente-rag-precificacao` |
 | RF-11 | `roteamento-e-layout` (CompanySwitcher), `store-pinia-dominio` |
+| RF-12 | `modulo-gestao-site`, `design-tokens-tema` (escopo), `testes-navegacao-multiusuario` |
 | base | `estrutura-projeto-vue`, `modelo-de-dados-front` |

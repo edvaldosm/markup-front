@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import CompanySwitcher from './CompanySwitcher.vue'
 
@@ -19,9 +20,19 @@ const pageTitle: Record<string, string> = {
   relatorios: 'Relatórios',
   usuarios: 'Gerenciar Usuários',
   perfis: 'Perfis & Permissões',
+  admin: 'Gestão do Site',
+  'admin-empresas': 'Gestão do Site — Empresas',
+  'admin-empresa-detalhe': 'Gestão do Site — Empresa',
+  'admin-usuarios': 'Gestão do Site — Usuários',
 }
 
 const title = () => pageTitle[route.name as string] ?? 'Markup'
+
+/**
+ * No módulo administrativo não existe "empresa ativa" — a visão é da base
+ * inteira. O switcher sai do header e dá lugar ao selo do modo gestor (REQ-09).
+ */
+const emAdmin = computed(() => route.path.startsWith('/admin'))
 </script>
 
 <template>
@@ -35,7 +46,11 @@ const title = () => pageTitle[route.name as string] ?? 'Markup'
       <h1 class="header__title">{{ title() }}</h1>
     </div>
     <div class="header__right">
-      <CompanySwitcher />
+      <span v-if="emAdmin" class="modo-gestor">
+        <span class="modo-gestor__dot" />
+        Modo gestor · escopo global
+      </span>
+      <CompanySwitcher v-else />
     </div>
   </header>
 </template>
@@ -73,6 +88,28 @@ const title = () => pageTitle[route.name as string] ?? 'Markup'
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* Selo do módulo administrativo — herda a paleta neutra do escopo .theme-admin */
+.modo-gestor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.modo-gestor__dot {
+  width: 6px; height: 6px;
+  background: var(--color-primary-600);
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .company-pill {

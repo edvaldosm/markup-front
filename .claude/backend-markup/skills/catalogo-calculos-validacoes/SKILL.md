@@ -1,6 +1,6 @@
 ---
 name: catalogo-calculos-validacoes
-description: Catálogo autoritativo de TODOS os cálculos e validações da precificação Markup (CP, %DF, %Impostos, divisor, PV, breakdown, Fator R, anexo) com as guardas de cada um. Use ao implementar, revisar ou migrar qualquer cálculo para o backend.
+description: Catálogo autoritativo de TODOS os cálculos e validações da precificação Markup (CP, %DF, %Impostos, divisor, PV, breakdown, Fator R, anexo, faixa de negociação) com as guardas de cada um. Use ao implementar, revisar ou migrar qualquer cálculo para o backend.
 metadata:
   domain: backend-markup
   kind: skill
@@ -100,6 +100,42 @@ senão:
 Limite `28` é constante nomeada (`FATOR_R_LIMITE`), nunca literal espalhado.
 Impacto real: o mesmo serviço fica ~40% mais caro no Anexo V.
 
+### C10 — Preço praticado com desconto `d`
+
+```
+preço(d) = PV × (1 − d/100)          para 0 ≤ d ≤ D
+```
+
+### C11 — Preço mínimo (piso de negociação)
+
+```
+PV_min = preço(D) = PV × (1 − D/100)
+```
+
+O piso da faixa de negociação: abaixo dele o desconto deixa de sair da reserva e
+passa a sair do lucro.
+
+### C12 — Lucro no desconto `d`
+
+```
+lucro(d) = PV × (ML + D − d) / 100
+margem efetiva(d) = lucro(d) / preço(d) × 100
+```
+
+`D` já foi reservado no divisor (C4), então **negociar dentro da faixa não toca
+na margem**: o que muda é quanto da reserva vira lucro. Nos extremos:
+
+| Ponto | Lucro | Leitura |
+|-------|-------|---------|
+| `d = 0` (tabela) | `PV × (ML + D)/100` | margem **mais** a reserva inteira |
+| `d = D` (piso) | `PV × ML/100` | exatamente a margem planejada (= `breakdown.lucroLiquido`) |
+
+> **Base de impostos e DF.** C12 mantém impostos e despesas fixas valorados sobre
+> o **preço de tabela**, igual ao breakdown de C7. É a leitura conservadora: na
+> venda com desconto o imposto incide sobre a receita menor, então o lucro real
+> fica um pouco **acima** do exibido — nunca abaixo. Recalcular sobre a receita
+> efetiva é decisão em aberto (ver §4).
+
 ---
 
 ## 2. Validações e guardas
@@ -114,6 +150,7 @@ Impacto real: o mesmo serviço fica ~40% mais caro no Anexo V.
 | V6 | Material órfão | vínculo aponta material inexistente | **erro de integridade** — a FK deve impedir; nunca ignorar em silêncio | [[R11-guardas-de-calculo]] |
 | V7 | Empresa não autorizada | `empresaId` fora do conjunto do usuário | **negar** antes de calcular | [[R02-isolamento-multiempresa]], [[R09-ownership-multiempresa]] |
 | V8 | Percentuais negativos | `ML < 0`, `D < 0`, alíquota `< 0` | **rejeitar** na entrada (validação de input) | [[R11-guardas-de-calculo]] |
+| V9 | Desconto fora da faixa | `d < 0` ou `d > D` | **rejeitar**: a faixa vai de `0` a `D`. Com `D = 0` a faixa degenera num ponto (só o preço de tabela) — não é erro | [[R11-guardas-de-calculo]] |
 
 > **V6 é uma divergência consciente com o protótipo.** O front hoje ignora o
 > material ausente (`if (!mat) return acc`), o que **subestima o custo em
@@ -140,6 +177,25 @@ type ResultadoPrecificacao {
   fatorR: Float                 # nulo fora de serviços no Simples (V5)
   anexoAplicado: AnexoSimples   # nulo fora de serviços no Simples (V5)
   breakdown: BreakdownPrecificacao!
+  faixaNegociacao: FaixaNegociacao!   # C10–C12
+}
+
+type FaixaNegociacao {
+  descontoMinimo: Float!        # sempre 0 — o domínio não tem desconto mínimo
+  descontoMaximo: Float!        # produto.desconto_maximo (D)
+  precoTabela: Float!
+  precoMinimo: Float!           # C11
+  economiaMaxima: Float!        # precoTabela − precoMinimo
+  lucroNoTeto: Float!           # PV × (ML + D)/100
+  lucroNoPiso: Float!           # PV × ML/100
+  degraus: [DegrauDesconto!]!   # C10 + C12 em N pontos entre 0 e D
+}
+
+type DegrauDesconto {
+  desconto: Float!
+  preco: Float!
+  lucro: Float!
+  margemEfetiva: Float!
 }
 ```
 
@@ -157,13 +213,19 @@ Registradas aqui para não virarem improviso na implementação:
 - **Arredondamento do PV.** O vault sugere arredondar para cima (R$ 26,37 →
   R$ 26,50) como boa prática comercial. Hoje **não** é aplicado. Se virar regra,
   é do backend e precisa entrar no contrato. **A decidir.**
+- **Base de impostos/DF na venda com desconto (C12).** Hoje impostos e despesas
+  fixas são valorados sobre o preço de tabela. Recalculá-los sobre a receita
+  efetiva do desconto é mais fiel ao caixa (o DAS incide sobre o que foi
+  faturado) e **eleva** o lucro exibido no piso — no caso do MVP de Startup,
+  de R$ 21.247,61 para ~R$ 22.858,34. Manter conservador ou trocar a base é
+  **decisão de negócio**; enquanto não houver, vale a leitura conservadora.
 - **Alíquota efetiva por faixa (RBT12).** O DAS é único por empresa e depende da
   receita bruta dos 12 meses; o sistema hoje usa a alíquota cadastrada por
   produto. Progressão por faixa está **fora de escopo** até haver spec própria.
 
 ---
 
-**Verificação:** cada cálculo C1–C9 e cada guarda V1–V8 precisa de teste no
+**Verificação:** cada cálculo C1–C12 e cada guarda V1–V9 precisa de teste no
 backend. O exemplo do vault (bolo de cenoura: CP 12,00 · soma 54,5% · divisor
 0,455 · PV 26,37) e o de serviço (CP 360,00 · Anexo III 6% · PV 1.090,91) são
 casos de aceite prontos.

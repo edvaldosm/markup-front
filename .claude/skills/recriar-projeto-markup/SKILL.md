@@ -13,7 +13,7 @@ Divisor, usando as bases de conhecimento segmentadas como fonte. Trabalhe em
 ## Fontes (ler antes de gerar)
 
 - Backend: `.claude/backend-markup/README.md` → 11 Rules + 10 Skills
-- Frontend: `.claude/frontend-markup/README.md` → 9 Rules + 10 Skills
+- Frontend: `.claude/frontend-markup/README.md` → 10 Rules + 11 Skills
 - Verdade do domínio: `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md`
 
 ## Regra de ouro

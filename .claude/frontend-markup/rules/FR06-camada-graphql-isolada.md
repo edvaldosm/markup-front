@@ -30,6 +30,7 @@ Ao ligar o backend, isto **sai do front**:
 | `breakdown` | `.breakdown` | C7 |
 | `calcularFatorR` | `.fatorR` | C8 · [[R10-fator-r-anexo-simples]] |
 | `resolverAnexo` / `FATOR_R_LIMITE` | `.anexoAplicado` | C9 · [[R10-fator-r-anexo-simples]] |
+| `calcularFaixaNegociacao` | `.faixaNegociacao` | C10, C11, C12 (guarda V9) |
 
 Isto **permanece** no front:
 

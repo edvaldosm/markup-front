@@ -101,6 +101,18 @@ Deve falhar em massa (isolamento renderizado + isolamento de store). Restaure e
 confirme `git diff` limpo. Um teste de isolamento que passa com o filtro
 desligado não está testando nada.
 
+## Arquivos de aceite
+
+- `src/test/navegacao-multiusuario.spec.ts` — as 6 personas × 5 provas. As rotas
+  do módulo do gestor ficam na constante `ADMIN`, **fora** de `TODAS`: elas são
+  bloqueadas por escopo, não por permissão, então PROPRIETARIO também as tem em
+  `bloqueadas`.
+- `src/test/admin-gestao-site.spec.ts` — o módulo de Gestão do Site: acesso,
+  visão da base inteira, ações do gestor e o escopo de tema
+  ([[modulo-gestao-site]], [[FR10-escopo-de-tema-por-modulo]]). Ao assertar o
+  conteúdo de uma tabela, consulte **as linhas** (`tbody .usuario__info`) e não
+  `wrapper.text()`: um nome legítimo num seletor de convite dá falso positivo.
+
 ## Onde isso não alcança
 
 Cobre o que a **UI oferece** sobre dados mock. A autoridade é o backend

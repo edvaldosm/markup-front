@@ -45,6 +45,31 @@ export const FATOR_R_LIMITE = 28  // %
 `regimeTributario === 'SIMPLES_NACIONAL'`; caso contrário devolve
 `empresa.anexoSimples`. UI de apoio: `FatorRView` + `FatorRNote`.
 
+## Faixa de negociação (C10–C12)
+
+```ts
+const faixa = calcularFaixaNegociacao(resultado)   // deriva do ResultadoPrecificacao
+// precoTabela = PV                       lucroNoTeto = PV × (ML + D)/100
+// precoMinimo = PV × (1 − D/100)         lucroNoPiso = PV × ML/100
+// degraus[i]  = { desconto, preco, lucro, margemEfetiva }
+```
+
+Não recalcula preço: **lê** o `PV` e os percentuais que já vieram do cálculo —
+uma fonte só para o número. A leitura de negócio: `D` já está reservado no
+divisor, então negociar entre o teto e o piso **não toca na margem**; o que muda
+é quanto da reserva vira lucro. Abaixo do piso, o desconto passa a sair do lucro.
+
+Guardas: `D = 0` ⇒ faixa de um ponto (só o preço de tabela); `D < 0` ⇒ faixa
+zerada (V9); `PV = 0` ⇒ nada negativo. UI: `FaixaNegociacaoCard.vue` na ficha do
+produto. Spec: `.claude/specs/faixa-negociacao-e-pdf/`.
+
+## Exportar a ficha em PDF
+
+`window.print()` + a camada `@media print` de `main.css` — sem lib de PDF. Use
+`.no-print` no que é interação e `.print-only` no que só faz sentido no papel
+(cabeçalho com empresa, CNPJ e data de emissão). O layout impresso é o **mesmo
+CSS da tela**, então não existe uma segunda versão da ficha para envelhecer.
+
 ## `useCurrency()` — formatação (ver [[FR05-formatacao-intl]])
 
 ```ts
