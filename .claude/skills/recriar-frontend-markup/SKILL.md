@@ -1,6 +1,6 @@
 ---
 name: recriar-frontend-markup
-description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 8 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
+description: Recria do zero o frontend Vue 3 (Pinia + Vue Router + TS + Vite) do sistema Markup, a partir de .claude/frontend-markup, respeitando as 9 Rules. Use quando o usuário pedir para gerar/scaffoldar apenas o frontend.
 ---
 
 # Recriar frontend Markup (Vue 3)
@@ -22,6 +22,7 @@ Gera o protótipo navegável a partir de `.claude/frontend-markup/`. Trabalhe em
 - FR06 — GraphQL isolado (`MOCK_MODE`); ao ligar backend, cálculo sai do front
 - FR07 — rotas com guard de auth + lazy load
 - FR08 — assistente só consome o backend; nunca o vault/LLM direto
+- FR09 — visibilidade/permissão exige teste que navega como cada perfil
 
 ## Fases (cada uma guiada por uma Skill)
 
@@ -39,8 +40,10 @@ Gera o protótipo navegável a partir de `.claude/frontend-markup/`. Trabalhe em
 9. **Assistente** — `assistente-ui`: `AssistenteWidget.vue` + `useAssistente.ts`
    consumindo `perguntarAssistente` (mock e real), tratando OK/FORA_DE_ESCOPO/
    RECUSADO/SEM_FONTE.
+10. **Testes** — `testes-navegacao-multiusuario`: vitest + `@vue/test-utils` +
+    jsdom, com a jornada de aceite de cada perfil (FR09).
 
 ## Verificar
 
-`npm install` + `npm run build` (`vue-tsc && vite build`); reportar o resultado
-real. Confirmar destino/sobrescrita antes de escrever arquivos.
+`npm install` + `npm run build` (`vue-tsc && vite build`) + `npm test`; reportar
+o resultado real. Confirmar destino/sobrescrita antes de escrever arquivos.

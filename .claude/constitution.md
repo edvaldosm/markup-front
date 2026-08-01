@@ -7,9 +7,10 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.0.0 — 2026-07-31
+- **Versão:** 2.1.0 — 2026-08-01
 
 ### Histórico
+- **2.1.0** — Novo artigo **F9**: toda regra de visibilidade/permissão precisa de teste de aceite navegando como cada perfil. Emenda motivada pela implementação da B9 no front.
 - **2.0.0** — Backend migra de Go/gqlgen para **Java 21 + Spring Boot 4** (GraphQL via Spring for GraphQL). Novos artigos: **B8** (assistente/RAG), **B9** (ownership multi-empresa), **F8** (assistente no front).
 - **1.0.0** — Versão inicial (backend Go).
 
@@ -44,6 +45,7 @@ Detalhe em `.claude/frontend-markup/rules/`.
 - **F6.** GraphQL isolado (`MOCK_MODE`); ao ligar o backend, o cálculo sai do front. → [FR06](frontend-markup/rules/FR06-camada-graphql-isolada.md)
 - **F7.** Rotas com guard de auth + lazy load de componentes. → [FR07](frontend-markup/rules/FR07-rotas-protegidas.md)
 - **F8.** O assistente consome **o backend**, nunca o vault direto; não renderiza conteúdo fora de formação de preço. → [FR08](frontend-markup/rules/FR08-assistente-consome-backend.md)
+- **F9.** Toda regra de **visibilidade ou permissão** tem teste de aceite que **navega como cada perfil** e prova o que ele vê e o que lhe é negado. → [FR09](frontend-markup/rules/FR09-teste-navegacao-por-perfil.md)
 
 ## Artigo III — Fronteira Backend ↔ Frontend
 

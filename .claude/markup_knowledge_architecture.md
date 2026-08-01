@@ -11,9 +11,9 @@ O conhecimento do sistema Markup está organizado em `.claude/` no padrão
 → **skills/templates** (o como) → **implementação**, com skills invocáveis para
 o loop incremental e para regeneração total.
 
-## Padrão SDD (Constituição v2.0.0)
+## Padrão SDD (Constituição v2.1.0)
 
-- `constitution.md` — princípios invioláveis (artigos B1–B9 backend, F1–F8 frontend = as Rules).
+- `constitution.md` — princípios invioláveis (artigos B1–B9 backend, F1–F9 frontend = as Rules).
 - `<base>/spec.md` — requisitos (o quê/por quê), separado das `skills/` (templates).
 - `specs/` — loop por feature: `/specify` → `spec.md`, `/plan` → `plan.md`,
   `/tasks` → `tasks.md`; `specs/_template/` tem os modelos.
@@ -24,7 +24,7 @@ o loop incremental e para regeneração total.
 - `.claude/backend-markup/` — backend **Java 21 + Spring Boot 4** (Spring for GraphQL,
   JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **9 Rules + 9 Skills**.
   (Migrado de Go em 2026-07-31.)
-- `.claude/frontend-markup/` — frontend Vue 3/Pinia/Router/TS/Vite. **8 Rules + 9 Skills**.
+- `.claude/frontend-markup/` — frontend Vue 3/Pinia/Router/TS/Vite. **9 Rules + 10 Skills**.
   Destilado do código real em `src/**` + memória `project_markup_frontend.md`.
 
 As Skills dessas duas pastas são **referência** (não disparam sozinhas).
@@ -41,7 +41,7 @@ Ordem: **backend-java-spring → (multiempresa-ownership, assistente-rag)**.
 - `recriar-projeto-markup` — orquestrador: recria backend + frontend, garante o
   contrato (`VITE_GQL_ENDPOINT` ↔ `/graphql`, tipos ↔ schema) e verifica build.
 - `recriar-backend-markup` — só o backend Java/Spring (8 fases guiadas pelas Skills).
-- `recriar-frontend-markup` — só o frontend Vue (9 fases guiadas pelas Skills).
+- `recriar-frontend-markup` — só o frontend Vue (10 fases guiadas pelas Skills).
 
 ## Prompt reutilizável
 

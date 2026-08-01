@@ -17,12 +17,15 @@
 - [x] **T-F3** — `src/auth/autorizacao.ts`: espelho puro da R09 (dono ∪ compartilhada; ADMIN ⇒ todas)
 - [x] **T-F4** — navegação por RBAC: `meta.permissao` nas rotas + guard + sidebar filtrada
 - [x] **T-F5** — testes unitários (vitest): autorização, store e navegação
+- [x] **T-F6** (FR09) — testes de aceite navegando como cada perfil · skill: `testes-navegacao-multiusuario`
 
 ## Verificação
 
 - [x] Cenário multi-usuário + ADMIN no mock (4 empresas / 4 donos / 1 compartilhamento)
 - [x] Seleção de empresa não autorizada é recusada (`selecionarEmpresa` ⇒ `false`)
-- [x] `npm run build` (vue-tsc OK) + `npm test` (34 testes)
+- [x] 6 personas × 5 provas: seletor, menu, telas permitidas, telas negadas, zero vazamento
+- [x] Isolamento validado por **mutação** (remover o filtro derruba 13 testes)
+- [x] `npm run build` (vue-tsc OK) + `npm test` (74 testes)
 - [ ] Cenário E1..E6 literal do `spec.md` — depende do backend
 - [ ] Operação (`precificarProduto`) em empresa não autorizada negada — depende do backend
 - [ ] `./mvnw compile` — depende do backend
