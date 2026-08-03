@@ -11,8 +11,8 @@
 
 ## Camadas afetadas
 
-- **Backend:** <entidades/services/resolvers/schema> — templates: <skills de backend-markup>
 - **Frontend:** <telas/stores/composables> — templates: <skills de frontend-markup>
+- **Backend (repo markup-back, se afetado):** <resolvers/schema> — o contrato é do outro repo
 
 ## Mudanças de modelo / contrato
 

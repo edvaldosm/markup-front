@@ -21,27 +21,23 @@ o loop incremental e para regeneração total.
 
 ## Bases de conhecimento (referência aninhada)
 
-- `.claude/backend-markup/` — backend **Java 21 + Spring Boot 4** (Spring for GraphQL,
-  JPA/PostgreSQL+pgvector, Spring Security, Spring AI). **12 Rules + 11 Skills**.
-  (Migrado de Go em 2026-07-31.)
 - `.claude/frontend-markup/` — frontend Vue 3/Pinia/Router/TS/Vite. **11 Rules + 11 Skills**.
   Destilado do código real em `src/**` + memória `project_markup_frontend.md`.
+- **Backend:** vive no repositório próprio **`D:\Projetos\JAVA\markup-back`**
+  (Java 21 + Spring Boot 4). A base `backend-markup/` (12 Rules + 11 Skills), os
+  specs de backend e a skill `recriar-backend-markup` moram lá — foram removidos
+  deste repo em 2026-08-03 para não haver duas cópias divergindo.
 
-As Skills dessas duas pastas são **referência** (não disparam sozinhas).
+As Skills dessa pasta são **referência** (não disparam sozinhas).
 
-## Features especificadas (specs/, aguardando implementação)
+## Contrato entre os dois repos
 
-Ordem: **backend-java-spring → (multiempresa-ownership, assistente-rag)**.
-- `specs/backend-java-spring/` — migração de stack Go→Java, preservando o contrato GraphQL.
-- `specs/assistente-rag/` — assistente RAG (Spring AI + Claude + pgvector) com guardrails (só preço / anti-ofensivo).
-- `specs/multiempresa-ownership/` — empresa tem dono; isolamento por dono; ADMIN global.
+O `schema.graphqls` do markup-back é a **fonte de verdade** do contrato (B6). O
+front espelha os tipos e aponta `VITE_GQL_ENDPOINT` para `/graphql`.
 
 ## Skills invocáveis (`.claude/skills/` — chamáveis por comando)
 
-- `recriar-projeto-markup` — orquestrador: recria backend + frontend, garante o
-  contrato (`VITE_GQL_ENDPOINT` ↔ `/graphql`, tipos ↔ schema) e verifica build.
-- `recriar-backend-markup` — só o backend Java/Spring (8 fases guiadas pelas Skills).
-- `recriar-frontend-markup` — só o frontend Vue (10 fases guiadas pelas Skills).
+- `recriar-frontend-markup` — recria o frontend Vue (10 fases guiadas pelas Skills).
 
 ## Prompt reutilizável
 
@@ -50,11 +46,12 @@ Rules/Skills para outros documentos.
 
 **Decisões (2026-07-31):** backend em **Java 21 + Spring Boot 4** mantendo **GraphQL**
 (Spring for GraphQL); IA do assistente = **Spring AI + Claude + pgvector**;
-multi-empresa = **dono + compartilhamento explícito + ADMIN global**. O backend será
-gerado em **`backend/` dentro deste repo** (monorepo `markup-front/backend/`).
+multi-empresa = **dono + compartilhamento explícito + ADMIN global**.
+**Revisto em 2026-08-03:** o backend não é monorepo — é repositório separado
+(`markup-back`), já implementado e com o GraphQL no ar.
 
-**How to apply:** para recriar/scaffoldar o projeto, invocar a skill
-`recriar-projeto-markup` (ou a escopada). Para alterar regras/procedimentos,
+**How to apply:** para recriar/scaffoldar o frontend, invocar a skill
+`recriar-frontend-markup`. Para alterar regras/procedimentos,
 editar a Rule/Skill correspondente na base — é a fonte de verdade, não os
 arquivos de spec antigos.
 

@@ -32,23 +32,26 @@
 
 Stack: **Java 21 + Spring Boot 4**, **Spring for GraphQL** (schema-first),
 **Spring Data JPA** + PostgreSQL, **Spring Security** (JWT), **Spring AI** (RAG).
-Detalhe de cada princípio em `.claude/backend-markup/rules/`.
+Detalhe de cada princípio em **`markup-back/.claude/backend-markup/rules/`** — o
+backend tem repositório próprio, e a base de conhecimento dele mora lá. Os
+artigos B1–B12 ficam aqui porque a Constituição é do **sistema**, não de um
+repositório; o que saiu deste repo foi a documentação de implementação.
 
-- **B1.** Todo cálculo de precificação vive no backend; o front só exibe. → [R01](backend-markup/rules/R01-calculo-no-backend.md)
-- **B2.** Toda consulta filtra por empresa autorizada ao usuário do JWT (multi-tenant). → [R02](backend-markup/rules/R02-isolamento-multiempresa.md)
-- **B3.** `divisorMarkup <= 0` retorna erro; nunca preço ≤ 0. → [R03](backend-markup/rules/R03-divisor-markup-positivo.md)
-- **B4.** Camadas separadas: domain (entidades JPA), repository, service (regra), controller GraphQL (orquestração). → [R04](backend-markup/rules/R04-separacao-camadas.md)
-- **B5.** Autorização RBAC verificada em cada operação (Spring Security). → [R05](backend-markup/rules/R05-autorizacao-rbac.md)
-- **B6.** Contrato-first: o `.graphqls` é a fonte de verdade do contrato; o código segue o schema. → [R06](backend-markup/rules/R06-contrato-first-schema.md)
-- **B7.** Formatação, ordenação de UI e estado de tela não vão para o backend. → [R07](backend-markup/rules/R07-fora-do-backend.md)
-- **B8.** O assistente/RAG responde **apenas** sobre formação de preço; recusa conteúdo ofensivo ou fora de escopo; a fonte é o vault **ingerido** num vector store. → [R08](backend-markup/rules/R08-assistente-escopo-guardrails.md)
-- **B9.** Toda empresa tem um **dono** (quem a cadastrou); usuário só enxerga empresas próprias ou explicitamente compartilhadas; **ADMIN tem visão global**. → [R09](backend-markup/rules/R09-ownership-multiempresa.md)
-- **B10.** Para serviços no Simples, o anexo é **derivado do Fator R** (≥28% ⇒ Anexo III, senão Anexo V), nunca só o cadastrado. → [R10](backend-markup/rules/R10-fator-r-anexo-simples.md)
-- **B11.** Todo cálculo tem guarda explícita; entrada inválida é **rejeitada**, nunca absorvida num número plausível e errado. → [R11](backend-markup/rules/R11-guardas-de-calculo.md)
-- **B12.** Todo documento que sai do sistema é gerado pelo backend, com **JasperReports**, no módulo exclusivo `com.markup.reports`: catálogo fechado, datasource por DTO (nunca SQL no template), autorização igual à da API e nenhum cálculo dentro do relatório. → [R12](backend-markup/rules/R12-relatorios-no-backend.md)
+- **B1.** Todo cálculo de precificação vive no backend; o front só exibe. → `R01` (markup-back)
+- **B2.** Toda consulta filtra por empresa autorizada ao usuário do JWT (multi-tenant). → `R02` (markup-back)
+- **B3.** `divisorMarkup <= 0` retorna erro; nunca preço ≤ 0. → `R03` (markup-back)
+- **B4.** Camadas separadas: domain (entidades JPA), repository, service (regra), controller GraphQL (orquestração). → `R04` (markup-back)
+- **B5.** Autorização RBAC verificada em cada operação (Spring Security). → `R05` (markup-back)
+- **B6.** Contrato-first: o `.graphqls` é a fonte de verdade do contrato; o código segue o schema. → `R06` (markup-back)
+- **B7.** Formatação, ordenação de UI e estado de tela não vão para o backend. → `R07` (markup-back)
+- **B8.** O assistente/RAG responde **apenas** sobre formação de preço; recusa conteúdo ofensivo ou fora de escopo; a fonte é o vault **ingerido** num vector store. → `R08` (markup-back)
+- **B9.** Toda empresa tem um **dono** (quem a cadastrou); usuário só enxerga empresas próprias ou explicitamente compartilhadas; **ADMIN tem visão global**. → `R09` (markup-back)
+- **B10.** Para serviços no Simples, o anexo é **derivado do Fator R** (≥28% ⇒ Anexo III, senão Anexo V), nunca só o cadastrado. → `R10` (markup-back)
+- **B11.** Todo cálculo tem guarda explícita; entrada inválida é **rejeitada**, nunca absorvida num número plausível e errado. → `R11` (markup-back)
+- **B12.** Todo documento que sai do sistema é gerado pelo backend, com **JasperReports**, no módulo exclusivo `com.markup.reports`: catálogo fechado, datasource por DTO (nunca SQL no template), autorização igual à da API e nenhum cálculo dentro do relatório. → `R12` (markup-back)
 
 > **Catálogo dos cálculos.** Fórmulas (C1–C12) e guardas (V1–V9) vivem num único
-> documento: [catalogo-calculos-validacoes](backend-markup/skills/catalogo-calculos-validacoes/SKILL.md).
+> documento: `catalogo-calculos-validacoes` (skill em **markup-back**).
 > Nenhum cálculo pode existir no sistema sem estar lá.
 
 ## Artigo II — Princípios de Frontend

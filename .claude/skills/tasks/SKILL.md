@@ -15,11 +15,11 @@ Cria `.claude/specs/<slug>/tasks.md` a partir do `plan.md`. Trabalhe em **pt-br*
    (Backend / Frontend / Verificação). Cada tarefa tem:
    - id (`T-B1`, `T-F1`…), referência ao requisito (`REQ-xx`),
    - arquivo/skill alvo, critério de "done" e dependências (`dep:`).
-4. **Fechar** com a etapa de verificação (`go build`, `npm run build`) e a
+4. **Fechar** com a etapa de verificação (`npm run build`, `npm test`) e a
    checagem dos critérios de aceite do `spec.md`.
 
 ## Saída
 
 Caminho do `tasks.md`. **Próximo:** implementar as tarefas (ou usar
-`recriar-backend-markup` / `recriar-frontend-markup` para scaffold total quando a
-feature for grande o bastante para justificar regeneração).
+`recriar-frontend-markup` para scaffold total quando a feature for grande o
+bastante para justificar regeneração).

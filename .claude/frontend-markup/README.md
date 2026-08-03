@@ -1,8 +1,10 @@
 # Frontend Markup — Base de conhecimento segmentada
 
 Rules e Skills destiladas do código real do protótipo Vue 3 (`src/`) e da
-memória `project_markup_frontend.md`. Espelha a estrutura de
-[.claude/backend-markup/](../backend-markup/README.md).
+memória `project_markup_frontend.md`. Espelha a estrutura da base equivalente do
+backend, que vive no repositório **markup-back** (`.claude/backend-markup/`).
+Wikilinks para regras de backend (`[[R01-...]]`, `[[catalogo-calculos-validacoes]]`)
+apontam para lá — são referências cruzadas entre repos, não links quebrados.
 
 - **Requisitos (SDD):** [spec.md](spec.md) — o *quê/por quê*. Os arquivos de `skills/` são os *templates* (o *como*).
 - **Princípios:** [../constitution.md](../constitution.md) — as `rules/` são os artigos (v2.4.0).

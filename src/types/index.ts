@@ -1,7 +1,7 @@
 // ─── Domínio ─────────────────────────────────────────────────────────────────
 
 /** Segmento de negócio — define identidade visual, rótulos e comportamento tributário */
-export type SegmentoNegocio = 'CONFEITARIA' | 'INDUSTRIA' | 'SERVICOS'
+export type SegmentoNegocio = 'CONFEITARIA' | 'INDUSTRIA' | 'SERVICOS' | 'COMERCIO'
 
 export type RegimeTributario = 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | 'MEI'
 export type AnexoSimples = 'ANEXO_I' | 'ANEXO_II' | 'ANEXO_III' | 'ANEXO_IV' | 'ANEXO_V'
@@ -9,17 +9,30 @@ export type AnexoSimples = 'ANEXO_I' | 'ANEXO_II' | 'ANEXO_III' | 'ANEXO_IV' | '
 export interface Empresa {
   id: string
   razaoSocial: string
-  cnpj: string
+  cnpj?: string
   segmento: SegmentoNegocio
   regimeTributario: RegimeTributario
-  anexoSimples?: AnexoSimples
+  /**
+   * Anexo informado no cadastro. Para serviços no Simples ele é apenas o ponto
+   * de partida: o anexo que vale é derivado do Fator R e vem em
+   * `ResultadoPrecificacao.anexoAplicado` (B10).
+   */
+  anexoCadastrado?: AnexoSimples
   faturamentoMedioMensal: number
   /** Folha de pagamento mensal (salários + pró-labore + encargos) — numerador do Fator R (serviços) */
   folhaPagamentoMensal?: number
+  /** Rateio das despesas fixas sobre o faturamento (C2) — **calculado pelo backend** (B1) */
+  percentualDespesasFixas: number
   /** Dono da empresa — o usuário que a cadastrou (R09). No backend: `dono_usuario_id` */
   donoUsuarioId: string
-  createdAt: string
+  despesasFixas: DespesaFixa[]
 }
+
+/** Campos que o front envia ao salvar uma empresa — espelha `EmpresaInput`. */
+export type EmpresaEntrada = Omit<
+  Empresa,
+  'id' | 'donoUsuarioId' | 'percentualDespesasFixas' | 'despesasFixas'
+> & { id?: string }
 
 export interface DespesaFixa {
   id: string
@@ -164,9 +177,9 @@ export interface Perfil {
   permissoes: Permissao[]
   /**
    * Escopo global (R09): o perfil ADMIN enxerga e opera **todas** as empresas,
-   * ignorando dono/compartilhamento. Ausente ou `false` ⇒ escopo por empresa.
+   * ignorando dono/compartilhamento. `false` ⇒ escopo por empresa.
    */
-  escopoGlobal?: boolean
+  escopoGlobal: boolean
 }
 
 /** Vínculo explícito usuário↔empresa (no backend: tabela `USUARIO_EMPRESA`) */
@@ -181,7 +194,6 @@ export interface Usuario {
   id: string
   nome: string
   email: string
-  avatarUrl?: string
   ativo: boolean
   empresas: VinculoEmpresa[]
   /**
@@ -189,7 +201,6 @@ export interface Usuario {
    * Quando presente, prevalece sobre o perfil dos vínculos.
    */
   perfilGlobal?: Perfil
-  createdAt: string
 }
 
 // ─── GraphQL helpers ──────────────────────────────────────────────────────────

@@ -15,8 +15,9 @@ Cria `.claude/specs/<slug>/plan.md` a partir do `spec.md` aprovado. Trabalhe em
 2. **Criar** `plan.md` a partir de `.claude/specs/_template/plan.md`.
 3. **Definir a abordagem** e as camadas afetadas, apontando os **templates**
    existentes que servem de base:
-   - Backend: skills em `.claude/backend-markup/skills/`.
    - Frontend: skills em `.claude/frontend-markup/skills/`.
+   - Backend (quando a feature exigir): repo `markup-back`, skills em
+     `.claude/backend-markup/skills/` e contrato em `src/main/resources/graphql/schema.graphqls`.
 4. **Contratos:** especificar mudanças de schema GraphQL e de `src/types` de forma
    que fiquem espelhados (Artigo III da Constituição).
 5. **Rastreabilidade:** mapear cada `REQ-xx` a uma decisão de design.

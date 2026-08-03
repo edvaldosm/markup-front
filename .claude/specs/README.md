@@ -17,21 +17,23 @@ implementar (ou recriar-* para scaffold total)
 
 ## Baselines já especificados
 
-O estado atual do sistema está descrito nos specs de baseline de cada base:
+O estado atual do frontend está em [../frontend-markup/spec.md](../frontend-markup/spec.md).
+O baseline do backend vive no repo **markup-back** (`.claude/backend-markup/spec.md`).
 
-- Backend: [../backend-markup/spec.md](../backend-markup/spec.md)
-- Frontend: [../frontend-markup/spec.md](../frontend-markup/spec.md)
+## Escopo deste diretório
 
-## Features especificadas (aguardando implementação)
+Só specs que tocam o **frontend**. Specs de backend (`backend-java-spring`,
+`assistente-rag`, `multiempresa-ownership`, `modulo-relatorios-jasper`) foram
+movidas para `markup-back/.claude/specs/` em 2026-08-03 — o backend já está
+implementado, e manter cópia aqui só criaria duas versões divergindo.
 
-| Feature | Spec | Depende de |
-|---------|------|-----------|
-| Backend Java 21 + Spring Boot 4 | [backend-java-spring/](backend-java-spring/spec.md) | — |
-| Assistente RAG (Spring AI + Claude + pgvector) | [assistente-rag/](assistente-rag/spec.md) | backend-java-spring |
-| Multi-empresa por dono + ADMIN global | [multiempresa-ownership/](multiempresa-ownership/spec.md) | backend-java-spring |
+## Features especificadas
 
-Cada uma tem `spec.md` + `plan.md` + `tasks.md`. Ordem de implementação:
-**backend-java-spring → (multiempresa-ownership, assistente-rag)**.
+| Feature | Spec | Estado |
+|---------|------|--------|
+| Integração backend — sessão e empresas | [integracao-backend-sessao-empresas/](integracao-backend-sessao-empresas/spec.md) | fatia 1 de 3 |
+| Módulo Gestão do Site | [modulo-gestao-site/](modulo-gestao-site/spec.md) | implementado (mock) |
+| Faixa de negociação e PDF | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | implementado (mock) |
 
 ## Regras do fluxo
 
