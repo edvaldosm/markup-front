@@ -3,6 +3,16 @@
 **Categoria:** Integração / Fronteira
 **Origem:** `src/graphql/client.ts`, `src/composables/useMarkup.ts`
 
+> ⚠️ **Emenda pendente — esta regra está parcialmente desatualizada desde
+> 2026-08-03.** A fatia 1 da integração
+> ([integracao-backend-sessao-empresas](../../specs/integracao-backend-sessao-empresas/spec.md))
+> decidiu que **não existe flag de runtime**: sessão e empresas falam com o
+> backend sempre, e o mock sobrevive apenas como fixture de teste.
+> `MOCK_MODE`/`mockQuery` continuam no código só pelas telas das fatias 2–3,
+> marcados `@deprecated`. **Reescrever esta regra ao fim da fatia 3**, quando
+> `src/mock/` for apagado — antes disso o texto abaixo ainda descreve o que as
+> telas não migradas fazem.
+
 ## Regra
 
 Todo acesso a dados passa pela camada `src/graphql/` (`client.ts`), controlada

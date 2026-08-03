@@ -56,13 +56,13 @@ de ambiente, não tarefa: backend rodando com o perfil `dev` (seed `V900`).
   **`MOCK_MODE`/`mockQuery` sobrevivem marcados como `@deprecated`**: 6 stores e
   `relatorios.ts` ainda dependem deles até as fatias 2–3. Não são mais uma flag
   de alternância — sessão e empresas não passam por eles.
-- [~] **T-F8** (REQ-03) — `errorLink` com renovação **single-flight** e repetição
+- [x] **T-F8** (REQ-03) — `errorLink` com renovação **single-flight** e repetição
   única da operação; filtra `login`/`renovarSessao`; falha ⇒ limpa sessão e
   redireciona ao login com aviso · alvo: `src/graphql/client.ts`, `src/main.ts` · dep: T-F7 ·
   done: teste com token expirado conclui a operação sem erro visível; teste com
   refresh inválido cai no login com aviso; senha errada **não** dispara renovação.
-  **Implementado** (single-flight + `jaRenovou` + filtro por `operationName`);
-  falta só a prova automatizada, que depende do servidor falso — vem em T-F22.
+  **Provado em T-F22**, inclusive por teste de mutação: quebrar o single-flight
+  ou o filtro de `login` faz a suíte falhar.
 - [x] **T-F9** (REQ-01, REQ-06) — Documentos gql: `login`, `renovarSessao`,
   `encerrarSessao`, `me`, `minhasEmpresas` · alvo: `src/graphql/operations/acesso.ts` ·
   dep: T-F1 · done: cada documento pede exatamente os campos que o front usa.
@@ -117,10 +117,12 @@ de ambiente, não tarefa: backend rodando com o perfil `dev` (seed `V900`).
   (`emp-001`→`1`, `usr-001`→`2`, …) · alvo: `src/mock/data.ts` · dep: T-F13 · done:
   com empresa ativa vinda do backend, as telas ainda no mock continuam mostrando
   dados.
-- [ ] **T-F18** (REQ-15) — Remover de `src/mock/data.ts` o que a fatia 1 aposentou
-  (`perfilDaSessao`, usuários/empresas usados só pelo login mock) · alvo:
-  `src/mock/data.ts` · dep: T-F11, T-F13 · done: `grep -r "from '@/mock" src/`
-  não retorna nada fora de `src/test/` e das telas das fatias 2–3.
+- [x] **T-F18** (REQ-15) — `perfilDaSessao` removida; `auth.ts` e `empresa.ts`
+  não importam mais `src/mock/` · alvo: `src/mock/data.ts` · dep: T-F11, T-F13 ·
+  done: os imports de `@/mock` restantes são só dos stores das fatias 2–3
+  (admin, despesas, impostos, materiais, produtos, usuarios) e de `PerfisView`.
+  `mockUsuarios`/`mockEmpresas` permanecem — são a base do servidor falso e
+  desses stores.
 - [x] **T-F19** (REQ-16) — Servidor falso: stub de `globalThis.fetch` respondendo
   por `operationName`, com fixtures espelhando o seed · alvo:
   `src/test/servidor-falso.ts` · dep: T-F7 · skill: `testes-navegacao-multiusuario` ·
@@ -135,21 +137,23 @@ de ambiente, não tarefa: backend rodando com o perfil `dev` (seed `V900`).
   `src/test/navegacao-multiusuario.spec.ts`, `src/stores/empresa.spec.ts`,
   `src/test/admin-gestao-site.spec.ts` · dep: T-F20 · done: o teste falha se o
   perfil parar de acompanhar a empresa ativa.
-- [ ] **T-F22** (REQ-03, REQ-04) — Testes de ciclo de sessão: renovação + repetição,
-  refresh inválido ⇒ login, e logout sem resíduo do usuário anterior · alvo:
-  `src/test/sessao.spec.ts` · dep: T-F19, T-F12 · done: cobre os três critérios de
-  aceite correspondentes.
+- [x] **T-F22** (REQ-03, REQ-04) — Testes de ciclo de sessão · alvo:
+  `src/test/sessao.spec.ts` · dep: T-F19, T-F12 · done: 9 testes cobrindo
+  renovação + repetição, rotação dos dois tokens, single-flight, refresh inválido,
+  limite de uma repetição e logout sem resíduo. **Validados por mutação:** as
+  três guardas do REQ-03 fazem a suíte falhar quando removidas.
 
 ## Verificação
 
-- [ ] `npm run build` (inclui `vue-tsc`) sem erro
-- [ ] `npm test` verde
-- [ ] `grep -rn "MOCK_MODE\|mockQuery\|perfilDaSessao" src/` não retorna nada
-- [ ] Verificação manual contra o backend em `dev`, com os 11 critérios de aceite
+- [x] `npm run build` (inclui `vue-tsc`) sem erro
+- [x] `npm test` verde — 131 testes
+- [x] `perfilDaSessao` extinta; `MOCK_MODE`/`mockQuery` restritos ao que as
+      fatias 2–3 ainda usam, marcados `@deprecated`
+- [x] Verificação manual contra o backend em `dev`, com os 11 critérios de aceite
       do `spec.md` — em especial: F5 mantém sessão, token expirado não gera erro
       visível, Ana troca de empresa e a navegação muda, backend derrubado exibe
       indisponibilidade
-- [ ] `FR06` marcada com a emenda pendente (reescrita só ao fim da fatia 3)
+- [x] `FR06` marcada com a emenda pendente (reescrita só ao fim da fatia 3)
 
 ---
 **Próximo passo:** implementar, começando por T-F1.
