@@ -15,7 +15,7 @@ const showModal = ref(false)
 const editando = ref<Partial<Usuario>>({})
 
 function novo() {
-  editando.value = { nome: '', email: '', ativo: true, empresas: [], createdAt: '' }
+  editando.value = { nome: '', email: '', ativo: true, empresas: [] }
   showModal.value = true
 }
 

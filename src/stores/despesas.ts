@@ -4,6 +4,7 @@ import type { DespesaFixa } from '@/types'
 import { mockDespesasFixas } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
 import { useEmpresaStore } from './empresa'
+import { registrarResetDeSessao } from './reset'
 
 export const useDespesasStore = defineStore('despesas', () => {
   const empresaStore = useEmpresaStore()
@@ -43,5 +44,11 @@ export const useDespesasStore = defineStore('despesas', () => {
     todos.value = todos.value.filter(d => d.id !== id)
   }
 
-  return { despesas, loading, totalMensal, fetchDespesas, salvar, remover }
+  function reset(): void {
+    todos.value = []
+  }
+
+  registrarResetDeSessao(reset)
+
+  return { despesas, loading, totalMensal, fetchDespesas, salvar, remover, reset }
 })

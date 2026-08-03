@@ -4,6 +4,7 @@ import type { Material } from '@/types'
 import { mockMateriais } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
 import { useEmpresaStore } from './empresa'
+import { registrarResetDeSessao } from './reset'
 
 export const useMateriaisStore = defineStore('materiais', () => {
   const empresaStore = useEmpresaStore()
@@ -39,5 +40,11 @@ export const useMateriaisStore = defineStore('materiais', () => {
     todos.value = todos.value.filter(m => m.id !== id)
   }
 
-  return { materiais, loading, fetchMateriais, salvar, remover }
+  function reset(): void {
+    todos.value = []
+  }
+
+  registrarResetDeSessao(reset)
+
+  return { materiais, loading, fetchMateriais, salvar, remover, reset }
 })

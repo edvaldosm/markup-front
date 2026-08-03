@@ -12,7 +12,9 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { montarAppComo, entrarComo, aguardar } from './app-harness'
+import { montarAppComo, entrarComo, aguardar, prepararAmbiente } from './app-harness'
+import { type ServidorFalso } from './servidor-falso'
+import type { VinculoEmpresa } from '@/types'
 import { useAdminStore } from '@/stores/admin'
 import { mockUsuarios, mockEmpresas } from '@/mock/data'
 
@@ -24,20 +26,24 @@ const ROTAS_ADMIN = ['/admin', '/admin/empresas', '/admin/usuarios']
  * testes deste arquivo. Sem restaurar, um teste de desvínculo estragaria a
  * contagem de equipe do teste seguinte.
  */
-type Snapshot = { ativo: boolean; empresas: { empresaId: string; perfilId: string }[] }[]
+type Snapshot = { ativo: boolean; empresas: VinculoEmpresa[] }[]
 
 function tirarSnapshot(): Snapshot {
   return mockUsuarios.map(u => ({
     ativo: u.ativo,
-    empresas: u.empresas.map(v => ({ empresaId: v.empresaId, perfilId: v.perfilId })),
+    // O `perfil` entra no snapshot: o perfil efetivo da sessão vem do vínculo
+    // (REQ-09), então restaurar só o `perfilId` deixaria o usuário sem permissão
+    // nenhuma nos testes seguintes.
+    empresas: u.empresas.map(v => ({ ...v })),
   }))
 }
 
 let snapshot: Snapshot
+let servidor: ServidorFalso
 
 beforeEach(() => {
   vi.useFakeTimers()
-  setActivePinia(createPinia())
+  servidor = prepararAmbiente()
   snapshot = tirarSnapshot()
 })
 
@@ -47,6 +53,7 @@ afterEach(() => {
     u.empresas = snapshot[i].empresas.map(v => ({ ...v }))
   })
   document.documentElement.classList.remove('theme-admin')
+  servidor.restaurar()
   vi.useRealTimers()
 })
 
@@ -60,7 +67,7 @@ describe('acesso ao módulo (REQ-01)', () => {
       expect(app.rotasNoMenu(), `menu deveria oferecer ${rota}`).toContain(rota)
       expect(await app.irPara(rota)).not.toBe('dashboard')
     }
-    expect(await app.irPara('/admin/empresas/emp-002')).toBe('admin-empresa-detalhe')
+    expect(await app.irPara('/admin/empresas/2')).toBe('admin-empresa-detalhe')
     app.desmontar()
   })
 
@@ -71,7 +78,7 @@ describe('acesso ao módulo (REQ-01)', () => {
   ])('%s não vê o módulo e é barrada nas rotas', async (_nome, email) => {
     const app = await montarAppComo(email)
 
-    for (const rota of [...ROTAS_ADMIN, '/admin/empresas/emp-001']) {
+    for (const rota of [...ROTAS_ADMIN, '/admin/empresas/1']) {
       expect(app.rotasNoMenu(), `menu não deveria oferecer ${rota}`).not.toContain(rota)
       expect(await app.irPara(rota), `${rota} deveria cair no dashboard`).toBe('dashboard')
     }
@@ -96,11 +103,11 @@ describe('acesso ao módulo (REQ-01)', () => {
     const store = useAdminStore()
     await aguardar(store.fetchTudo())
 
-    expect(await aguardar(store.definirUsuarioAtivo('usr-003', false))).toBeNull()
-    expect(await aguardar(store.vincularUsuario('usr-003', 'emp-002', 'perfil-03'))).toBe(false)
-    expect(await aguardar(store.desvincularUsuario('usr-003', 'emp-001'))).toBe(false)
+    expect(await aguardar(store.definirUsuarioAtivo('4', false))).toBeNull()
+    expect(await aguardar(store.vincularUsuario('4', '2', '4'))).toBe(false)
+    expect(await aguardar(store.desvincularUsuario('4', '1'))).toBe(false)
     // e o mock permanece intacto
-    expect(mockUsuarios.find(u => u.id === 'usr-003')!.empresas).toHaveLength(1)
+    expect(mockUsuarios.find(u => u.id === '4')!.empresas).toHaveLength(1)
   })
 })
 
@@ -137,7 +144,7 @@ describe('visão global do gestor (REQ-02..REQ-05)', () => {
 
   it('o detalhe da empresa mostra a equipe com acesso e marca o dono', async () => {
     const app = await montarAppComo(GESTOR)
-    expect(await app.irPara('/admin/empresas/emp-001')).toBe('admin-empresa-detalhe')
+    expect(await app.irPara('/admin/empresas/1')).toBe('admin-empresa-detalhe')
 
     expect(app.texto()).toContain('Doces da Ana')
 
@@ -166,9 +173,9 @@ describe('visão global do gestor (REQ-02..REQ-05)', () => {
       mockUsuarios.reduce((acc, u) => acc + u.empresas.length, 0)
     )
     // Ana aparece nas duas empresas em que tem vínculo
-    const ana = store.usuariosAdmin.find(u => u.usuario.id === 'usr-001')!
-    expect(ana.acessos.map(a => a.empresa.id).sort()).toEqual(['emp-001', 'emp-003'])
-    expect(ana.acessos.find(a => a.empresa.id === 'emp-001')!.dono).toBe(true)
+    const ana = store.usuariosAdmin.find(u => u.usuario.id === '2')!
+    expect(ana.acessos.map(a => a.empresa.id).sort()).toEqual(['1', '3'])
+    expect(ana.acessos.find(a => a.empresa.id === '1')!.dono).toBe(true)
   })
 })
 
@@ -184,57 +191,57 @@ describe('poderes do gestor (REQ-06/REQ-07)', () => {
   it('ativa e desativa o acesso de um usuário', async () => {
     const store = useAdminStore()
 
-    expect(await aguardar(store.definirUsuarioAtivo('usr-003', false))).toBe(false)
-    expect(store.usuarioPorId('usr-003')!.ativo).toBe(false)
+    expect(await aguardar(store.definirUsuarioAtivo('4', false))).toBe(false)
+    expect(store.usuarioPorId('4')!.ativo).toBe(false)
 
-    expect(await aguardar(store.definirUsuarioAtivo('usr-003', true))).toBe(true)
-    expect(store.usuarioPorId('usr-003')!.ativo).toBe(true)
+    expect(await aguardar(store.definirUsuarioAtivo('4', true))).toBe(true)
+    expect(store.usuarioPorId('4')!.ativo).toBe(true)
   })
 
   it('troca o perfil de um usuário dentro de uma empresa', async () => {
     const store = useAdminStore()
 
-    expect(await aguardar(store.definirPerfilNoVinculo('usr-003', 'emp-001', 'perfil-02'))).toBe(true)
+    expect(await aguardar(store.definirPerfilNoVinculo('4', '1', '3'))).toBe(true)
 
-    const carla = store.empresaAdminPorId('emp-001')!.equipe.find(m => m.usuario.id === 'usr-003')!
+    const carla = store.empresaAdminPorId('1')!.equipe.find(m => m.usuario.id === '4')!
     expect(carla.perfil?.nome).toBe('GERENTE')
     // o vínculo dela na outra empresa não existe — nada foi criado por engano
-    expect(store.usuarioPorId('usr-003')!.empresas).toHaveLength(1)
+    expect(store.usuarioPorId('4')!.empresas).toHaveLength(1)
   })
 
   it('vincula um usuário existente a outra empresa e recusa vínculo repetido', async () => {
     const store = useAdminStore()
 
-    expect(await aguardar(store.vincularUsuario('usr-002', 'emp-002', 'perfil-03'))).toBe(true)
-    expect(store.empresaAdminPorId('emp-002')!.equipe.map(m => m.usuario.id)).toContain('usr-002')
+    expect(await aguardar(store.vincularUsuario('3', '2', '4'))).toBe(true)
+    expect(store.empresaAdminPorId('2')!.equipe.map(m => m.usuario.id)).toContain('3')
 
-    expect(await aguardar(store.vincularUsuario('usr-002', 'emp-002', 'perfil-02'))).toBe(false)
-    expect(store.usuarioPorId('usr-002')!.empresas.filter(v => v.empresaId === 'emp-002')).toHaveLength(1)
+    expect(await aguardar(store.vincularUsuario('3', '2', '3'))).toBe(false)
+    expect(store.usuarioPorId('3')!.empresas.filter(v => v.empresaId === '2')).toHaveLength(1)
   })
 
   it('desvincula um usuário comum', async () => {
     const store = useAdminStore()
 
-    expect(await aguardar(store.desvincularUsuario('usr-003', 'emp-001'))).toBe(true)
-    expect(store.empresaAdminPorId('emp-001')!.equipe.map(m => m.usuario.id)).not.toContain('usr-003')
+    expect(await aguardar(store.desvincularUsuario('4', '1'))).toBe(true)
+    expect(store.empresaAdminPorId('1')!.equipe.map(m => m.usuario.id)).not.toContain('4')
   })
 
   it('RECUSA desvincular o dono da própria empresa (REQ-07 / B9)', async () => {
     const store = useAdminStore()
 
-    expect(await aguardar(store.desvincularUsuario('usr-001', 'emp-001'))).toBe(false)
+    expect(await aguardar(store.desvincularUsuario('2', '1'))).toBe(false)
 
-    const equipe = store.empresaAdminPorId('emp-001')!.equipe
-    expect(equipe.map(m => m.usuario.id)).toContain('usr-001')
-    expect(equipe.find(m => m.dono)!.usuario.id).toBe('usr-001')
+    const equipe = store.empresaAdminPorId('1')!.equipe
+    expect(equipe.map(m => m.usuario.id)).toContain('2')
+    expect(equipe.find(m => m.dono)!.usuario.id).toBe('2')
   })
 
   it('a mesma pessoa continua podendo perder acesso a uma empresa que não é dela', async () => {
     const store = useAdminStore()
 
     // Ana é dona da emp-001, mas apenas convidada na emp-003
-    expect(await aguardar(store.desvincularUsuario('usr-001', 'emp-003'))).toBe(true)
-    expect(store.usuarioPorId('usr-001')!.empresas.map(v => v.empresaId)).toEqual(['emp-001'])
+    expect(await aguardar(store.desvincularUsuario('2', '3'))).toBe(true)
+    expect(store.usuarioPorId('2')!.empresas.map(v => v.empresaId)).toEqual(['1'])
   })
 })
 

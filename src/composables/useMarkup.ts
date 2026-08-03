@@ -26,7 +26,7 @@ export function useMarkupCalculator() {
     if (empresa.segmento === 'SERVICOS' && empresa.regimeTributario === 'SIMPLES_NACIONAL') {
       return calcularFatorR(empresa) >= FATOR_R_LIMITE ? 'ANEXO_III' : 'ANEXO_V'
     }
-    return empresa.anexoSimples
+    return empresa.anexoCadastrado
   }
 
   function calcularCustoBase(produto: Produto, materiais: Material[]): number {

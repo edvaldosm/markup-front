@@ -1,9 +1,11 @@
 /**
  * Harness de teste: sobe o app **de verdade** (router real, `AppLayout` real e
- * as views reais em lazy-load) sobre um history em memória.
+ * as views reais em lazy-load) sobre um history em memória, falando com o
+ * `servidor-falso` no lugar do backend.
  *
  * Serve aos testes de aceite da R09: navegar como cada usuário e comprovar que
- * ele só vê a(s) empresa(s) dele.
+ * ele só vê a(s) empresa(s) dele — agora com a decisão vindo do servidor, e não
+ * de um filtro do próprio front.
  */
 import { vi, expect } from 'vitest'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
@@ -13,17 +15,25 @@ import { defineComponent, h } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { rotasApp, guardaNavegacao } from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { instalarServidorFalso, SENHA_PADRAO, type ServidorFalso } from './servidor-falso'
+import { limparSessao } from '@/graphql/sessao'
+import { apolloClient } from '@/graphql/client'
 
 const LoginStub = defineComponent({ name: 'LoginStub', render: () => h('div', 'login') })
 
 const Raiz = defineComponent({ name: 'RaizTeste', render: () => h(RouterView) })
 
 /**
- * Deixa promises + timers do mock (`mockQuery`, `login`) resolverem.
- * Os stores simulam latência com `setTimeout`, então avançamos os fake timers.
+ * Deixa promises e timers pendentes resolverem.
+ *
+ * As respostas do servidor falso são imediatas, mas os stores ainda não
+ * migrados usam `mockQuery` com `setTimeout` — por isso os timers continuam
+ * sendo avançados aqui. Some quando o mock sair, na fatia 3.
  */
 export async function assentar() {
-  await vi.runAllTimersAsync()
+  // Só avança timers quando o teste os simula: `runAllTimersAsync` lança se os
+  // fake timers não estiverem ligados, e nem toda suíte precisa deles.
+  if (vi.isFakeTimers()) await vi.runAllTimersAsync()
   await flushPromises()
 }
 
@@ -35,6 +45,25 @@ export async function assentar() {
 export async function aguardar<T>(promessa: Promise<T>): Promise<T> {
   await assentar()
   return promessa
+}
+
+/**
+ * Prepara um teste: Pinia novo, servidor falso no ar e sessão zerada.
+ *
+ * O cofre de sessão e o cache do Apollo são **módulos**, não estado do Pinia —
+ * sobrevivem entre testes. Sem limpá-los, um teste entraria autenticado pelo
+ * anterior, e o seguinte veria dado em cache de outra empresa.
+ */
+export function prepararAmbiente(): ServidorFalso {
+  setActivePinia(createPinia())
+  limparSessao()
+  try {
+    localStorage.clear()
+  } catch {
+    /* jsdom sempre tem localStorage; a guarda é para ambientes sem ele */
+  }
+  void apolloClient.clearStore()
+  return instalarServidorFalso()
 }
 
 export function criarRouter(): Router {
@@ -50,12 +79,12 @@ export function criarRouter(): Router {
   return router
 }
 
-/** Autentica pelo store real, respeitando o delay simulado do login */
-export async function entrarComo(email: string) {
+/** Autentica pelo store real, contra o servidor falso. */
+export async function entrarComo(email: string, senha = SENHA_PADRAO) {
   const auth = useAuthStore()
-  const promessa = auth.login(email, '123456')
+  const promessa = auth.login(email, senha)
   await assentar()
-  expect(await promessa).toBe(true)
+  expect(await promessa, `login de ${email} deveria ser aceito`).toBe(true)
   return auth
 }
 
@@ -73,10 +102,18 @@ export interface AppMontado {
   desmontar(): void
 }
 
-/** Faz login, monta o app real e navega até o dashboard */
+/**
+ * Faz login, monta o app real e navega até o dashboard.
+ *
+ * Diferente da versão anterior, **carrega as empresas antes de montar**: o
+ * perfil efetivo depende da empresa ativa (REQ-09), então montar sem elas
+ * renderizaria um momento sem permissão nenhuma.
+ */
 export async function montarAppComo(email: string): Promise<AppMontado> {
-  setActivePinia(createPinia())
   await entrarComo(email)
+
+  const { useEmpresaStore } = await import('@/stores/empresa')
+  await aguardar(useEmpresaStore().fetchEmpresas())
 
   const router = criarRouter()
   await router.push('/dashboard')

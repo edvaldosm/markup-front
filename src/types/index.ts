@@ -25,13 +25,15 @@ export interface Empresa {
   percentualDespesasFixas: number
   /** Dono da empresa — o usuário que a cadastrou (R09). No backend: `dono_usuario_id` */
   donoUsuarioId: string
-  despesasFixas: DespesaFixa[]
+  // `despesasFixas` existe no schema como campo aninhado de Empresa; o front
+  // continua lendo-as pelo store próprio (`despesasFixas(empresaId)`) até a
+  // fatia 2 da integração, então não é espelhado aqui ainda.
 }
 
 /** Campos que o front envia ao salvar uma empresa — espelha `EmpresaInput`. */
 export type EmpresaEntrada = Omit<
   Empresa,
-  'id' | 'donoUsuarioId' | 'percentualDespesasFixas' | 'despesasFixas'
+  'id' | 'donoUsuarioId' | 'percentualDespesasFixas'
 > & { id?: string }
 
 export interface DespesaFixa {
@@ -217,14 +219,7 @@ export interface PaginatedResult<T> {
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-
-export interface AuthUser {
-  id: string
-  nome: string
-  email: string
-  avatarUrl?: string
-  /** Perfil efetivo da sessão — define permissões (RBAC) e escopo global (R09) */
-  perfil: Perfil
-  /** Empresas compartilhadas com este usuário; as que ele possui vêm de `donoUsuarioId` */
-  vinculos: VinculoEmpresa[]
-}
+//
+// Não existe um tipo de "usuário da sessão" separado: o autenticado é o mesmo
+// `Usuario` que o backend descreve. O perfil não cabe nele porque **não é
+// atributo do usuário** — depende da empresa ativa (`perfilEfetivo`, REQ-09).

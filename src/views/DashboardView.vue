@@ -71,7 +71,7 @@ const alertas = computed(() => {
         <span class="seg-hero__meta">
           {{ seg.nome }} · CNPJ {{ empresaStore.empresa?.cnpj }} ·
           {{ empresaStore.empresa?.regimeTributario === 'SIMPLES_NACIONAL' ? 'Simples Nacional' : empresaStore.empresa?.regimeTributario }}
-          <template v-if="empresaStore.empresa?.anexoSimples"> · {{ empresaStore.empresa.anexoSimples.replace('_', ' ') }}</template>
+          <template v-if="empresaStore.empresa?.anexoCadastrado"> · {{ empresaStore.empresa.anexoCadastrado.replace('_', ' ') }}</template>
         </span>
       </div>
     </div>

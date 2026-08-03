@@ -115,9 +115,9 @@ describe('faixa de negociação — degraus', () => {
 describe('faixa sobre um produto real do mock', () => {
   it('MVP de Startup (CodeLab): piso ≈ R$ 51.441,60 com ML preservada', () => {
     const produto = mockProdutos.find(p => p.id === 'prod-c01')!
-    const empresa = mockEmpresas.find(e => e.id === 'emp-004')!
-    const despesas = mockDespesasFixas.filter(d => d.empresaId === 'emp-004')
-    const materiais = mockMateriais.filter(m => m.empresaId === 'emp-004')
+    const empresa = mockEmpresas.find(e => e.id === '4')!
+    const despesas = mockDespesasFixas.filter(d => d.empresaId === '4')
+    const materiais = mockMateriais.filter(m => m.empresaId === '4')
 
     const res = calcularPrecificacao(produto, empresa, despesas, materiais)
     const faixa = calcularFaixaNegociacao(res)

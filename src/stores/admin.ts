@@ -5,6 +5,7 @@ import { mockEmpresas, mockUsuarios, mockPerfis } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
 import { podeAcessarModuloAdmin } from '@/auth/autorizacao'
 import { useAuthStore } from './auth'
+import { registrarResetDeSessao } from './reset'
 
 /** Um membro da equipe de uma empresa: quem é, com que perfil e se é o dono */
 export interface MembroEquipe {
@@ -56,7 +57,7 @@ export const useAdminStore = defineStore('admin', () => {
   const carregado = ref(false)
 
   /** A sessão atual é a do gestor do site? */
-  const souGestor = computed(() => podeAcessarModuloAdmin(auth.user))
+  const souGestor = computed(() => podeAcessarModuloAdmin(auth.perfil))
 
   function limpar() {
     empresas.value = []
@@ -64,6 +65,9 @@ export const useAdminStore = defineStore('admin', () => {
     perfis.value = []
     carregado.value = false
   }
+
+  // A base inteira da Gestão do Site não pode sobreviver ao logout (REQ-04)
+  registrarResetDeSessao(limpar)
 
   /**
    * Carrega a base inteira. Com o backend ligado, vira `todasEmpresas` +

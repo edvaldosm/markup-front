@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRouter, createMemoryHistory, type RouteRecordRaw } from 'vue-router'
 import { defineComponent, h } from 'vue'
 import { rotasApp, guardaNavegacao } from './index'
 import { useAuthStore } from '@/stores/auth'
+import { useEmpresaStore } from '@/stores/empresa'
+import { prepararAmbiente, entrarComo as autenticar } from '@/test/app-harness'
+import { type ServidorFalso } from '@/test/servidor-falso'
+
+let servidor: ServidorFalso
 
 /**
  * Router de teste: mesmas rotas e mesmo guard do app, mas com history em
@@ -28,14 +32,20 @@ function criarRouterTeste() {
   return router
 }
 
+/**
+ * Autentica **e carrega as empresas**: o perfil efetivo — o que o guard consulta
+ * — vem do vínculo da empresa ativa (REQ-09). Sem as empresas, todo perfil
+ * pareceria vazio e toda rota cairia no dashboard.
+ */
 async function entrarComo(email: string) {
-  const auth = useAuthStore()
-  expect(await auth.login(email, '123456')).toBe(true)
+  const auth = await autenticar(email)
+  await useEmpresaStore().fetchEmpresas()
   return auth
 }
 
 describe('navegação — guard de autenticação (FR07)', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => { servidor = prepararAmbiente() })
+  afterEach(() => servidor.restaurar())
 
   it('visitante sem login é mandado para /login', async () => {
     const router = criarRouterTeste()
@@ -66,7 +76,8 @@ describe('navegação — guard de autenticação (FR07)', () => {
 })
 
 describe('navegação — guard de permissão RBAC (R05)', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => { servidor = prepararAmbiente() })
+  afterEach(() => servidor.restaurar())
 
   it('vendedora não acessa /usuarios (sem USUARIO_READ)', async () => {
     await entrarComo('carla@docesdaana.com.br')
@@ -117,7 +128,7 @@ describe('navegação — guard de permissão RBAC (R05)', () => {
 
   it('dashboard é sempre acessível — é o destino de fallback', async () => {
     for (const email of ['carla@docesdaana.com.br', 'marcos@docesdaana.com.br', 'admin@markup.com.br']) {
-      setActivePinia(createPinia())
+      prepararAmbiente()
       await entrarComo(email)
       const router = criarRouterTeste()
       await router.push('/dashboard')
@@ -131,7 +142,7 @@ describe('navegação — guard de permissão RBAC (R05)', () => {
     await router.push('/produtos')
     expect(router.currentRoute.value.path).toBe('/produtos')
 
-    auth.logout()
+    await auth.logout()
     await router.push('/materiais')
     expect(router.currentRoute.value.name).toBe('login')
   })

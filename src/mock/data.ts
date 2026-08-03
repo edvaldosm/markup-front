@@ -7,29 +7,29 @@ import type {
 
 /** 🧁 Confeitaria — Simples Nacional Anexo II (indústria/comércio de mercadoria própria) */
 export const mockEmpresa: Empresa = {
-  id: 'emp-001',
+  id: '1',
   razaoSocial: 'Doces da Ana — Confeitaria Artesanal',
   cnpj: '12.345.678/0001-90',
   segmento: 'CONFEITARIA',
   regimeTributario: 'SIMPLES_NACIONAL',
-  anexoSimples: 'ANEXO_II',
+  anexoCadastrado: 'ANEXO_II',
   faturamentoMedioMensal: 52000,
-  donoUsuarioId: 'usr-001',
-  createdAt: '2024-01-15T10:00:00Z'
+  percentualDespesasFixas: 0,   // preenchido abaixo a partir das despesas ativas
+  donoUsuarioId: '2'
 }
 
 /** 🏭 Indústria — Simples Nacional Anexo II, maior porte de faturamento */
 export const mockEmpresaIndustria: Empresa = {
-  id: 'emp-002',
+  id: '2',
   razaoSocial: 'MetalForte Indústria de Esquadrias LTDA',
   cnpj: '23.456.789/0001-12',
   segmento: 'INDUSTRIA',
   regimeTributario: 'SIMPLES_NACIONAL',
-  anexoSimples: 'ANEXO_II',
+  anexoCadastrado: 'ANEXO_II',
   faturamentoMedioMensal: 300000,
   folhaPagamentoMensal: 38000,
-  donoUsuarioId: 'usr-005',
-  createdAt: '2023-06-10T08:00:00Z'
+  percentualDespesasFixas: 0,   // preenchido abaixo a partir das despesas ativas
+  donoUsuarioId: '6'
 }
 
 /**
@@ -37,16 +37,16 @@ export const mockEmpresaIndustria: Empresa = {
  * → tributa no Anexo III (6% na 1ª faixa) em vez do Anexo V (15,5%).
  */
 export const mockEmpresaServicos: Empresa = {
-  id: 'emp-003',
+  id: '3',
   razaoSocial: 'NexaTech Consultoria em Tecnologia LTDA',
   cnpj: '34.567.890/0001-34',
   segmento: 'SERVICOS',
   regimeTributario: 'SIMPLES_NACIONAL',
-  anexoSimples: 'ANEXO_III',
+  anexoCadastrado: 'ANEXO_III',
   faturamentoMedioMensal: 158000,
   folhaPagamentoMensal: 52000,
-  donoUsuarioId: 'usr-006',
-  createdAt: '2023-09-20T09:00:00Z'
+  percentualDespesasFixas: 0,   // preenchido abaixo a partir das despesas ativas
+  donoUsuarioId: '7'
 }
 
 /**
@@ -55,16 +55,16 @@ export const mockEmpresaServicos: Empresa = {
  * Demonstra o lado oposto da NexaTech: mesmo segmento, tributação mais pesada.
  */
 export const mockEmpresaServicosV: Empresa = {
-  id: 'emp-004',
+  id: '4',
   razaoSocial: 'CodeLab Studio de Software LTDA',
   cnpj: '45.678.901/0001-56',
   segmento: 'SERVICOS',
   regimeTributario: 'SIMPLES_NACIONAL',
-  anexoSimples: 'ANEXO_V',
+  anexoCadastrado: 'ANEXO_V',
   faturamentoMedioMensal: 120000,
   folhaPagamentoMensal: 24000,
-  donoUsuarioId: 'usr-007',
-  createdAt: '2024-02-01T09:00:00Z'
+  percentualDespesasFixas: 0,   // preenchido abaixo a partir das despesas ativas
+  donoUsuarioId: '8'
 }
 
 export const mockEmpresas: Empresa[] = [
@@ -74,154 +74,168 @@ export const mockEmpresas: Empresa[] = [
 // ─── Despesas Fixas ───────────────────────────────────────────────────────────
 
 export const mockDespesasFixas: DespesaFixa[] = [
-  { id: 'df-001', empresaId: 'emp-001', descricao: 'Aluguel do espaço', valorMensal: 1800, categoria: 'ALUGUEL', ativa: true },
-  { id: 'df-002', empresaId: 'emp-001', descricao: 'Energia elétrica', valorMensal: 420, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-003', empresaId: 'emp-001', descricao: 'Gás de cozinha', valorMensal: 180, categoria: 'GAS', ativa: true },
-  { id: 'df-004', empresaId: 'emp-001', descricao: 'Internet fibra', valorMensal: 99.90, categoria: 'INTERNET', ativa: true },
-  { id: 'df-005', empresaId: 'emp-001', descricao: 'Pró-labore proprietária', valorMensal: 2500, categoria: 'PROLABORE', ativa: true },
-  { id: 'df-006', empresaId: 'emp-001', descricao: 'Honorários contabilidade', valorMensal: 350, categoria: 'CONTADOR', ativa: true },
-  { id: 'df-007', empresaId: 'emp-001', descricao: 'Seguro do estabelecimento', valorMensal: 220, categoria: 'OUTRO', ativa: true },
-  { id: 'df-008', empresaId: 'emp-001', descricao: 'Sistema de gestão (SaaS)', valorMensal: 129, categoria: 'OUTRO', ativa: true },
-  { id: 'df-009', empresaId: 'emp-001', descricao: 'Manutenção de equipamentos', valorMensal: 150, categoria: 'OUTRO', ativa: true },
-  { id: 'df-010', empresaId: 'emp-001', descricao: 'Água e saneamento', valorMensal: 95, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-011', empresaId: 'emp-001', descricao: 'Material de limpeza', valorMensal: 80, categoria: 'OUTRO', ativa: true },
-  { id: 'df-012', empresaId: 'emp-001', descricao: 'Telefone celular', valorMensal: 59.90, categoria: 'INTERNET', ativa: true },
-  { id: 'df-013', empresaId: 'emp-001', descricao: 'Pró-labore auxiliar de confeitaria', valorMensal: 1412, categoria: 'PROLABORE', ativa: true },
-  { id: 'df-014', empresaId: 'emp-001', descricao: 'Propaganda e marketing digital', valorMensal: 300, categoria: 'OUTRO', ativa: false },
-  { id: 'df-015', empresaId: 'emp-001', descricao: 'Frete e entregas (fixo mensal)', valorMensal: 200, categoria: 'OUTRO', ativa: true },
+  { id: 'df-001', empresaId: '1', descricao: 'Aluguel do espaço', valorMensal: 1800, categoria: 'ALUGUEL', ativa: true },
+  { id: 'df-002', empresaId: '1', descricao: 'Energia elétrica', valorMensal: 420, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-003', empresaId: '1', descricao: 'Gás de cozinha', valorMensal: 180, categoria: 'GAS', ativa: true },
+  { id: 'df-004', empresaId: '1', descricao: 'Internet fibra', valorMensal: 99.90, categoria: 'INTERNET', ativa: true },
+  { id: 'df-005', empresaId: '1', descricao: 'Pró-labore proprietária', valorMensal: 2500, categoria: 'PROLABORE', ativa: true },
+  { id: 'df-006', empresaId: '1', descricao: 'Honorários contabilidade', valorMensal: 350, categoria: 'CONTADOR', ativa: true },
+  { id: 'df-007', empresaId: '1', descricao: 'Seguro do estabelecimento', valorMensal: 220, categoria: 'OUTRO', ativa: true },
+  { id: 'df-008', empresaId: '1', descricao: 'Sistema de gestão (SaaS)', valorMensal: 129, categoria: 'OUTRO', ativa: true },
+  { id: 'df-009', empresaId: '1', descricao: 'Manutenção de equipamentos', valorMensal: 150, categoria: 'OUTRO', ativa: true },
+  { id: 'df-010', empresaId: '1', descricao: 'Água e saneamento', valorMensal: 95, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-011', empresaId: '1', descricao: 'Material de limpeza', valorMensal: 80, categoria: 'OUTRO', ativa: true },
+  { id: 'df-012', empresaId: '1', descricao: 'Telefone celular', valorMensal: 59.90, categoria: 'INTERNET', ativa: true },
+  { id: 'df-013', empresaId: '1', descricao: 'Pró-labore auxiliar de confeitaria', valorMensal: 1412, categoria: 'PROLABORE', ativa: true },
+  { id: 'df-014', empresaId: '1', descricao: 'Propaganda e marketing digital', valorMensal: 300, categoria: 'OUTRO', ativa: false },
+  { id: 'df-015', empresaId: '1', descricao: 'Frete e entregas (fixo mensal)', valorMensal: 200, categoria: 'OUTRO', ativa: true },
 
   // 🏭 Indústria — MetalForte (emp-002)
-  { id: 'df-i01', empresaId: 'emp-002', descricao: 'Aluguel do galpão industrial', valorMensal: 12000, categoria: 'ALUGUEL', ativa: true },
-  { id: 'df-i02', empresaId: 'emp-002', descricao: 'Energia elétrica (maquinário pesado)', valorMensal: 8500, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-i03', empresaId: 'emp-002', descricao: 'Gás industrial (solda/corte)', valorMensal: 2200, categoria: 'GAS', ativa: true },
-  { id: 'df-i04', empresaId: 'emp-002', descricao: 'Internet dedicada + telefonia', valorMensal: 650, categoria: 'INTERNET', ativa: true },
-  { id: 'df-i05', empresaId: 'emp-002', descricao: 'Pró-labore sócios (2)', valorMensal: 16000, categoria: 'PROLABORE', ativa: true },
-  { id: 'df-i06', empresaId: 'emp-002', descricao: 'Honorários contábeis', valorMensal: 1800, categoria: 'CONTADOR', ativa: true },
-  { id: 'df-i07', empresaId: 'emp-002', descricao: 'Manutenção preventiva de máquinas', valorMensal: 3200, categoria: 'OUTRO', ativa: true },
-  { id: 'df-i08', empresaId: 'emp-002', descricao: 'Seguro industrial e patrimonial', valorMensal: 1900, categoria: 'OUTRO', ativa: true },
-  { id: 'df-i09', empresaId: 'emp-002', descricao: 'ERP industrial (licença)', valorMensal: 890, categoria: 'OUTRO', ativa: true },
-  { id: 'df-i10', empresaId: 'emp-002', descricao: 'EPIs e segurança do trabalho', valorMensal: 1100, categoria: 'OUTRO', ativa: true },
-  { id: 'df-i11', empresaId: 'emp-002', descricao: 'Água e efluentes industriais', valorMensal: 1400, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-i12', empresaId: 'emp-002', descricao: 'Frota de entrega (leasing)', valorMensal: 4500, categoria: 'OUTRO', ativa: true },
+  { id: 'df-i01', empresaId: '2', descricao: 'Aluguel do galpão industrial', valorMensal: 12000, categoria: 'ALUGUEL', ativa: true },
+  { id: 'df-i02', empresaId: '2', descricao: 'Energia elétrica (maquinário pesado)', valorMensal: 8500, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-i03', empresaId: '2', descricao: 'Gás industrial (solda/corte)', valorMensal: 2200, categoria: 'GAS', ativa: true },
+  { id: 'df-i04', empresaId: '2', descricao: 'Internet dedicada + telefonia', valorMensal: 650, categoria: 'INTERNET', ativa: true },
+  { id: 'df-i05', empresaId: '2', descricao: 'Pró-labore sócios (2)', valorMensal: 16000, categoria: 'PROLABORE', ativa: true },
+  { id: 'df-i06', empresaId: '2', descricao: 'Honorários contábeis', valorMensal: 1800, categoria: 'CONTADOR', ativa: true },
+  { id: 'df-i07', empresaId: '2', descricao: 'Manutenção preventiva de máquinas', valorMensal: 3200, categoria: 'OUTRO', ativa: true },
+  { id: 'df-i08', empresaId: '2', descricao: 'Seguro industrial e patrimonial', valorMensal: 1900, categoria: 'OUTRO', ativa: true },
+  { id: 'df-i09', empresaId: '2', descricao: 'ERP industrial (licença)', valorMensal: 890, categoria: 'OUTRO', ativa: true },
+  { id: 'df-i10', empresaId: '2', descricao: 'EPIs e segurança do trabalho', valorMensal: 1100, categoria: 'OUTRO', ativa: true },
+  { id: 'df-i11', empresaId: '2', descricao: 'Água e efluentes industriais', valorMensal: 1400, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-i12', empresaId: '2', descricao: 'Frota de entrega (leasing)', valorMensal: 4500, categoria: 'OUTRO', ativa: true },
 
   // 🛠️ Serviços — NexaTech (emp-003)
-  { id: 'df-s01', empresaId: 'emp-003', descricao: 'Aluguel do escritório', valorMensal: 4200, categoria: 'ALUGUEL', ativa: true },
-  { id: 'df-s02', empresaId: 'emp-003', descricao: 'Energia elétrica', valorMensal: 780, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-s03', empresaId: 'emp-003', descricao: 'Internet fibra dedicada', valorMensal: 520, categoria: 'INTERNET', ativa: true },
-  { id: 'df-s04', empresaId: 'emp-003', descricao: 'Pró-labore sócios (2)', valorMensal: 14000, categoria: 'PROLABORE', ativa: true },
-  { id: 'df-s05', empresaId: 'emp-003', descricao: 'Honorários contábeis', valorMensal: 900, categoria: 'CONTADOR', ativa: true },
-  { id: 'df-s06', empresaId: 'emp-003', descricao: 'Licenças de software (IDEs, cloud, SaaS)', valorMensal: 3800, categoria: 'OUTRO', ativa: true },
-  { id: 'df-s07', empresaId: 'emp-003', descricao: 'Infraestrutura em nuvem (AWS/Azure)', valorMensal: 2600, categoria: 'OUTRO', ativa: true },
-  { id: 'df-s08', empresaId: 'emp-003', descricao: 'Marketing e prospecção', valorMensal: 1500, categoria: 'OUTRO', ativa: true },
-  { id: 'df-s09', empresaId: 'emp-003', descricao: 'Plano de saúde da equipe', valorMensal: 3200, categoria: 'OUTRO', ativa: true },
-  { id: 'df-s10', empresaId: 'emp-003', descricao: 'Coworking / salas de reunião extras', valorMensal: 700, categoria: 'OUTRO', ativa: false },
+  { id: 'df-s01', empresaId: '3', descricao: 'Aluguel do escritório', valorMensal: 4200, categoria: 'ALUGUEL', ativa: true },
+  { id: 'df-s02', empresaId: '3', descricao: 'Energia elétrica', valorMensal: 780, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-s03', empresaId: '3', descricao: 'Internet fibra dedicada', valorMensal: 520, categoria: 'INTERNET', ativa: true },
+  { id: 'df-s04', empresaId: '3', descricao: 'Pró-labore sócios (2)', valorMensal: 14000, categoria: 'PROLABORE', ativa: true },
+  { id: 'df-s05', empresaId: '3', descricao: 'Honorários contábeis', valorMensal: 900, categoria: 'CONTADOR', ativa: true },
+  { id: 'df-s06', empresaId: '3', descricao: 'Licenças de software (IDEs, cloud, SaaS)', valorMensal: 3800, categoria: 'OUTRO', ativa: true },
+  { id: 'df-s07', empresaId: '3', descricao: 'Infraestrutura em nuvem (AWS/Azure)', valorMensal: 2600, categoria: 'OUTRO', ativa: true },
+  { id: 'df-s08', empresaId: '3', descricao: 'Marketing e prospecção', valorMensal: 1500, categoria: 'OUTRO', ativa: true },
+  { id: 'df-s09', empresaId: '3', descricao: 'Plano de saúde da equipe', valorMensal: 3200, categoria: 'OUTRO', ativa: true },
+  { id: 'df-s10', empresaId: '3', descricao: 'Coworking / salas de reunião extras', valorMensal: 700, categoria: 'OUTRO', ativa: false },
 
   // 🛠️ Serviços enxuta — CodeLab (emp-004) — folha baixa, muita terceirização
-  { id: 'df-c01', empresaId: 'emp-004', descricao: 'Aluguel do escritório', valorMensal: 3500, categoria: 'ALUGUEL', ativa: true },
-  { id: 'df-c02', empresaId: 'emp-004', descricao: 'Energia elétrica', valorMensal: 600, categoria: 'ENERGIA', ativa: true },
-  { id: 'df-c03', empresaId: 'emp-004', descricao: 'Internet fibra dedicada', valorMensal: 450, categoria: 'INTERNET', ativa: true },
-  { id: 'df-c04', empresaId: 'emp-004', descricao: 'Pró-labore sócio (1)', valorMensal: 8000, categoria: 'PROLABORE', ativa: true },
-  { id: 'df-c05', empresaId: 'emp-004', descricao: 'Honorários contábeis', valorMensal: 800, categoria: 'CONTADOR', ativa: true },
-  { id: 'df-c06', empresaId: 'emp-004', descricao: 'Licenças de software e SaaS', valorMensal: 2500, categoria: 'OUTRO', ativa: true },
-  { id: 'df-c07', empresaId: 'emp-004', descricao: 'Infraestrutura em nuvem', valorMensal: 1800, categoria: 'OUTRO', ativa: true },
-  { id: 'df-c08', empresaId: 'emp-004', descricao: 'Marketing e prospecção', valorMensal: 1200, categoria: 'OUTRO', ativa: true },
-  { id: 'df-c09', empresaId: 'emp-004', descricao: 'Plano de saúde', valorMensal: 1200, categoria: 'OUTRO', ativa: true },
+  { id: 'df-c01', empresaId: '4', descricao: 'Aluguel do escritório', valorMensal: 3500, categoria: 'ALUGUEL', ativa: true },
+  { id: 'df-c02', empresaId: '4', descricao: 'Energia elétrica', valorMensal: 600, categoria: 'ENERGIA', ativa: true },
+  { id: 'df-c03', empresaId: '4', descricao: 'Internet fibra dedicada', valorMensal: 450, categoria: 'INTERNET', ativa: true },
+  { id: 'df-c04', empresaId: '4', descricao: 'Pró-labore sócio (1)', valorMensal: 8000, categoria: 'PROLABORE', ativa: true },
+  { id: 'df-c05', empresaId: '4', descricao: 'Honorários contábeis', valorMensal: 800, categoria: 'CONTADOR', ativa: true },
+  { id: 'df-c06', empresaId: '4', descricao: 'Licenças de software e SaaS', valorMensal: 2500, categoria: 'OUTRO', ativa: true },
+  { id: 'df-c07', empresaId: '4', descricao: 'Infraestrutura em nuvem', valorMensal: 1800, categoria: 'OUTRO', ativa: true },
+  { id: 'df-c08', empresaId: '4', descricao: 'Marketing e prospecção', valorMensal: 1200, categoria: 'OUTRO', ativa: true },
+  { id: 'df-c09', empresaId: '4', descricao: 'Plano de saúde', valorMensal: 1200, categoria: 'OUTRO', ativa: true },
 ]
+
+/**
+ * `Empresa.percentualDespesasFixas` é **calculado pelo backend** (C2/B1) e chega
+ * pronto na query. Aqui o mock só reproduz o número, derivando-o das despesas
+ * ativas, para as telas que ainda não migraram continuarem coerentes — nunca
+ * como definição de como o cálculo se faz.
+ */
+for (const emp of mockEmpresas) {
+  const totalAtivas = mockDespesasFixas
+    .filter(d => d.empresaId === emp.id && d.ativa)
+    .reduce((soma, d) => soma + d.valorMensal, 0)
+  emp.percentualDespesasFixas =
+    emp.faturamentoMedioMensal > 0 ? (totalAtivas / emp.faturamentoMedioMensal) * 100 : 0
+}
 
 // ─── Materiais ────────────────────────────────────────────────────────────────
 
 export const mockMateriais: Material[] = [
-  { id: 'mat-001', empresaId: 'emp-001', nome: 'Farinha de trigo', unidade: 'KG', custoUnitario: 4.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 25 },
-  { id: 'mat-002', empresaId: 'emp-001', nome: 'Açúcar refinado', unidade: 'KG', custoUnitario: 3.80, fornecedor: 'Distribuidora Pão de Ouro', estoque: 20 },
-  { id: 'mat-003', empresaId: 'emp-001', nome: 'Ovos', unidade: 'UN', custoUnitario: 0.65, fornecedor: 'Sítio das Galinhas', estoque: 180 },
-  { id: 'mat-004', empresaId: 'emp-001', nome: 'Manteiga', unidade: 'KG', custoUnitario: 28.00, fornecedor: 'Laticínios Central', estoque: 5 },
-  { id: 'mat-005', empresaId: 'emp-001', nome: 'Chocolate em pó', unidade: 'KG', custoUnitario: 22.00, fornecedor: 'Cacau Foods', estoque: 8 },
-  { id: 'mat-006', empresaId: 'emp-001', nome: 'Leite integral', unidade: 'L', custoUnitario: 4.20, fornecedor: 'Laticínios Central', estoque: 30 },
-  { id: 'mat-007', empresaId: 'emp-001', nome: 'Cenoura', unidade: 'KG', custoUnitario: 3.50, fornecedor: 'Hortifruti do Bairro', estoque: 12 },
-  { id: 'mat-008', empresaId: 'emp-001', nome: 'Caixa embalagem kraft', unidade: 'UN', custoUnitario: 1.80, fornecedor: 'Embalagens Flex', estoque: 200 },
-  { id: 'mat-009', empresaId: 'emp-001', nome: 'Fermento em pó', unidade: 'KG', custoUnitario: 18.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 3 },
-  { id: 'mat-010', empresaId: 'emp-001', nome: 'Creme de leite', unidade: 'ML', custoUnitario: 0.012, fornecedor: 'Laticínios Central', estoque: 10000 },
+  { id: 'mat-001', empresaId: '1', nome: 'Farinha de trigo', unidade: 'KG', custoUnitario: 4.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 25 },
+  { id: 'mat-002', empresaId: '1', nome: 'Açúcar refinado', unidade: 'KG', custoUnitario: 3.80, fornecedor: 'Distribuidora Pão de Ouro', estoque: 20 },
+  { id: 'mat-003', empresaId: '1', nome: 'Ovos', unidade: 'UN', custoUnitario: 0.65, fornecedor: 'Sítio das Galinhas', estoque: 180 },
+  { id: 'mat-004', empresaId: '1', nome: 'Manteiga', unidade: 'KG', custoUnitario: 28.00, fornecedor: 'Laticínios Central', estoque: 5 },
+  { id: 'mat-005', empresaId: '1', nome: 'Chocolate em pó', unidade: 'KG', custoUnitario: 22.00, fornecedor: 'Cacau Foods', estoque: 8 },
+  { id: 'mat-006', empresaId: '1', nome: 'Leite integral', unidade: 'L', custoUnitario: 4.20, fornecedor: 'Laticínios Central', estoque: 30 },
+  { id: 'mat-007', empresaId: '1', nome: 'Cenoura', unidade: 'KG', custoUnitario: 3.50, fornecedor: 'Hortifruti do Bairro', estoque: 12 },
+  { id: 'mat-008', empresaId: '1', nome: 'Caixa embalagem kraft', unidade: 'UN', custoUnitario: 1.80, fornecedor: 'Embalagens Flex', estoque: 200 },
+  { id: 'mat-009', empresaId: '1', nome: 'Fermento em pó', unidade: 'KG', custoUnitario: 18.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 3 },
+  { id: 'mat-010', empresaId: '1', nome: 'Creme de leite', unidade: 'ML', custoUnitario: 0.012, fornecedor: 'Laticínios Central', estoque: 10000 },
   // mat-011 a mat-050
-  { id: 'mat-011', empresaId: 'emp-001', nome: 'Chocolate meio amargo 70%', unidade: 'KG', custoUnitario: 48.00, fornecedor: 'Cacau Foods', estoque: 6 },
-  { id: 'mat-012', empresaId: 'emp-001', nome: 'Chocolate branco', unidade: 'KG', custoUnitario: 42.00, fornecedor: 'Cacau Foods', estoque: 4 },
-  { id: 'mat-013', empresaId: 'emp-001', nome: 'Achocolatado em pó', unidade: 'KG', custoUnitario: 14.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 10 },
-  { id: 'mat-014', empresaId: 'emp-001', nome: 'Leite condensado', unidade: 'KG', custoUnitario: 9.80, fornecedor: 'Laticínios Central', estoque: 15 },
-  { id: 'mat-015', empresaId: 'emp-001', nome: 'Doce de leite cremoso', unidade: 'KG', custoUnitario: 12.50, fornecedor: 'Laticínios Central', estoque: 8 },
-  { id: 'mat-016', empresaId: 'emp-001', nome: 'Cream cheese', unidade: 'KG', custoUnitario: 35.00, fornecedor: 'Laticínios Central', estoque: 3 },
-  { id: 'mat-017', empresaId: 'emp-001', nome: 'Manteiga sem sal', unidade: 'KG', custoUnitario: 30.00, fornecedor: 'Laticínios Central', estoque: 4 },
-  { id: 'mat-018', empresaId: 'emp-001', nome: 'Óleo de soja', unidade: 'L', custoUnitario: 7.20, fornecedor: 'Distribuidora Pão de Ouro', estoque: 18 },
-  { id: 'mat-019', empresaId: 'emp-001', nome: 'Açúcar de confeiteiro', unidade: 'KG', custoUnitario: 6.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 12 },
-  { id: 'mat-020', empresaId: 'emp-001', nome: 'Açúcar mascavo', unidade: 'KG', custoUnitario: 8.90, fornecedor: 'Distribuidora Pão de Ouro', estoque: 7 },
-  { id: 'mat-021', empresaId: 'emp-001', nome: 'Farinha de amêndoas', unidade: 'KG', custoUnitario: 62.00, fornecedor: 'Importados Gourmet', estoque: 2 },
-  { id: 'mat-022', empresaId: 'emp-001', nome: 'Farinha de arroz', unidade: 'KG', custoUnitario: 8.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 9 },
-  { id: 'mat-023', empresaId: 'emp-001', nome: 'Amido de milho', unidade: 'KG', custoUnitario: 6.80, fornecedor: 'Distribuidora Pão de Ouro', estoque: 14 },
-  { id: 'mat-024', empresaId: 'emp-001', nome: 'Bicarbonato de sódio', unidade: 'KG', custoUnitario: 5.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 6 },
-  { id: 'mat-025', empresaId: 'emp-001', nome: 'Sal refinado', unidade: 'KG', custoUnitario: 2.20, fornecedor: 'Distribuidora Pão de Ouro', estoque: 20 },
-  { id: 'mat-026', empresaId: 'emp-001', nome: 'Extrato de baunilha', unidade: 'ML', custoUnitario: 0.08, fornecedor: 'Importados Gourmet', estoque: 500 },
-  { id: 'mat-027', empresaId: 'emp-001', nome: 'Essência de laranja', unidade: 'ML', custoUnitario: 0.05, fornecedor: 'Aromas & Sabores', estoque: 300 },
-  { id: 'mat-028', empresaId: 'emp-001', nome: 'Canela em pó', unidade: 'KG', custoUnitario: 28.00, fornecedor: 'Aromas & Sabores', estoque: 1 },
-  { id: 'mat-029', empresaId: 'emp-001', nome: 'Cravo em pó', unidade: 'KG', custoUnitario: 32.00, fornecedor: 'Aromas & Sabores', estoque: 1 },
-  { id: 'mat-030', empresaId: 'emp-001', nome: 'Noz-moscada', unidade: 'KG', custoUnitario: 55.00, fornecedor: 'Aromas & Sabores', estoque: 0 },
-  { id: 'mat-031', empresaId: 'emp-001', nome: 'Iogurte natural integral', unidade: 'KG', custoUnitario: 7.50, fornecedor: 'Laticínios Central', estoque: 10 },
-  { id: 'mat-032', empresaId: 'emp-001', nome: 'Queijo mascarpone', unidade: 'KG', custoUnitario: 78.00, fornecedor: 'Importados Gourmet', estoque: 2 },
-  { id: 'mat-033', empresaId: 'emp-001', nome: 'Gelatina sem sabor', unidade: 'KG', custoUnitario: 45.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 1 },
-  { id: 'mat-034', empresaId: 'emp-001', nome: 'Agar-agar', unidade: 'KG', custoUnitario: 120.00, fornecedor: 'Importados Gourmet', estoque: 0 },
-  { id: 'mat-035', empresaId: 'emp-001', nome: 'Nozes picadas', unidade: 'KG', custoUnitario: 68.00, fornecedor: 'Importados Gourmet', estoque: 3 },
-  { id: 'mat-036', empresaId: 'emp-001', nome: 'Castanha de caju torrada', unidade: 'KG', custoUnitario: 55.00, fornecedor: 'Importados Gourmet', estoque: 2 },
-  { id: 'mat-037', empresaId: 'emp-001', nome: 'Amendoim torrado sem sal', unidade: 'KG', custoUnitario: 14.00, fornecedor: 'Hortifruti do Bairro', estoque: 5 },
-  { id: 'mat-038', empresaId: 'emp-001', nome: 'Coco ralado seco', unidade: 'KG', custoUnitario: 18.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 6 },
-  { id: 'mat-039', empresaId: 'emp-001', nome: 'Passas de uva preta', unidade: 'KG', custoUnitario: 22.00, fornecedor: 'Importados Gourmet', estoque: 4 },
-  { id: 'mat-040', empresaId: 'emp-001', nome: 'Frutas cristalizadas mistas', unidade: 'KG', custoUnitario: 19.00, fornecedor: 'Importados Gourmet', estoque: 3 },
-  { id: 'mat-041', empresaId: 'emp-001', nome: 'Morango fresco', unidade: 'KG', custoUnitario: 12.00, fornecedor: 'Hortifruti do Bairro', estoque: 4 },
-  { id: 'mat-042', empresaId: 'emp-001', nome: 'Banana prata', unidade: 'KG', custoUnitario: 4.50, fornecedor: 'Hortifruti do Bairro', estoque: 15 },
-  { id: 'mat-043', empresaId: 'emp-001', nome: 'Limão siciliano', unidade: 'KG', custoUnitario: 9.00, fornecedor: 'Hortifruti do Bairro', estoque: 8 },
-  { id: 'mat-044', empresaId: 'emp-001', nome: 'Maçã fuji', unidade: 'KG', custoUnitario: 8.50, fornecedor: 'Hortifruti do Bairro', estoque: 10 },
-  { id: 'mat-045', empresaId: 'emp-001', nome: 'Polpa de maracujá congelada', unidade: 'KG', custoUnitario: 16.00, fornecedor: 'Frios & Congelados', estoque: 5 },
-  { id: 'mat-046', empresaId: 'emp-001', nome: 'Corante alimentar vermelho', unidade: 'ML', custoUnitario: 0.18, fornecedor: 'Aromas & Sabores', estoque: 200 },
-  { id: 'mat-047', empresaId: 'emp-001', nome: 'Corante alimentar azul', unidade: 'ML', custoUnitario: 0.18, fornecedor: 'Aromas & Sabores', estoque: 150 },
-  { id: 'mat-048', empresaId: 'emp-001', nome: 'Saco plástico biodegradável', unidade: 'UN', custoUnitario: 0.35, fornecedor: 'Embalagens Flex', estoque: 500 },
-  { id: 'mat-049', empresaId: 'emp-001', nome: 'Fita de cetim 15mm', unidade: 'UN', custoUnitario: 1.20, fornecedor: 'Embalagens Flex', estoque: 120 },
-  { id: 'mat-050', empresaId: 'emp-001', nome: 'Forma de alumínio descartável', unidade: 'UN', custoUnitario: 2.50, fornecedor: 'Embalagens Flex', estoque: 80 },
+  { id: 'mat-011', empresaId: '1', nome: 'Chocolate meio amargo 70%', unidade: 'KG', custoUnitario: 48.00, fornecedor: 'Cacau Foods', estoque: 6 },
+  { id: 'mat-012', empresaId: '1', nome: 'Chocolate branco', unidade: 'KG', custoUnitario: 42.00, fornecedor: 'Cacau Foods', estoque: 4 },
+  { id: 'mat-013', empresaId: '1', nome: 'Achocolatado em pó', unidade: 'KG', custoUnitario: 14.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 10 },
+  { id: 'mat-014', empresaId: '1', nome: 'Leite condensado', unidade: 'KG', custoUnitario: 9.80, fornecedor: 'Laticínios Central', estoque: 15 },
+  { id: 'mat-015', empresaId: '1', nome: 'Doce de leite cremoso', unidade: 'KG', custoUnitario: 12.50, fornecedor: 'Laticínios Central', estoque: 8 },
+  { id: 'mat-016', empresaId: '1', nome: 'Cream cheese', unidade: 'KG', custoUnitario: 35.00, fornecedor: 'Laticínios Central', estoque: 3 },
+  { id: 'mat-017', empresaId: '1', nome: 'Manteiga sem sal', unidade: 'KG', custoUnitario: 30.00, fornecedor: 'Laticínios Central', estoque: 4 },
+  { id: 'mat-018', empresaId: '1', nome: 'Óleo de soja', unidade: 'L', custoUnitario: 7.20, fornecedor: 'Distribuidora Pão de Ouro', estoque: 18 },
+  { id: 'mat-019', empresaId: '1', nome: 'Açúcar de confeiteiro', unidade: 'KG', custoUnitario: 6.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 12 },
+  { id: 'mat-020', empresaId: '1', nome: 'Açúcar mascavo', unidade: 'KG', custoUnitario: 8.90, fornecedor: 'Distribuidora Pão de Ouro', estoque: 7 },
+  { id: 'mat-021', empresaId: '1', nome: 'Farinha de amêndoas', unidade: 'KG', custoUnitario: 62.00, fornecedor: 'Importados Gourmet', estoque: 2 },
+  { id: 'mat-022', empresaId: '1', nome: 'Farinha de arroz', unidade: 'KG', custoUnitario: 8.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 9 },
+  { id: 'mat-023', empresaId: '1', nome: 'Amido de milho', unidade: 'KG', custoUnitario: 6.80, fornecedor: 'Distribuidora Pão de Ouro', estoque: 14 },
+  { id: 'mat-024', empresaId: '1', nome: 'Bicarbonato de sódio', unidade: 'KG', custoUnitario: 5.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 6 },
+  { id: 'mat-025', empresaId: '1', nome: 'Sal refinado', unidade: 'KG', custoUnitario: 2.20, fornecedor: 'Distribuidora Pão de Ouro', estoque: 20 },
+  { id: 'mat-026', empresaId: '1', nome: 'Extrato de baunilha', unidade: 'ML', custoUnitario: 0.08, fornecedor: 'Importados Gourmet', estoque: 500 },
+  { id: 'mat-027', empresaId: '1', nome: 'Essência de laranja', unidade: 'ML', custoUnitario: 0.05, fornecedor: 'Aromas & Sabores', estoque: 300 },
+  { id: 'mat-028', empresaId: '1', nome: 'Canela em pó', unidade: 'KG', custoUnitario: 28.00, fornecedor: 'Aromas & Sabores', estoque: 1 },
+  { id: 'mat-029', empresaId: '1', nome: 'Cravo em pó', unidade: 'KG', custoUnitario: 32.00, fornecedor: 'Aromas & Sabores', estoque: 1 },
+  { id: 'mat-030', empresaId: '1', nome: 'Noz-moscada', unidade: 'KG', custoUnitario: 55.00, fornecedor: 'Aromas & Sabores', estoque: 0 },
+  { id: 'mat-031', empresaId: '1', nome: 'Iogurte natural integral', unidade: 'KG', custoUnitario: 7.50, fornecedor: 'Laticínios Central', estoque: 10 },
+  { id: 'mat-032', empresaId: '1', nome: 'Queijo mascarpone', unidade: 'KG', custoUnitario: 78.00, fornecedor: 'Importados Gourmet', estoque: 2 },
+  { id: 'mat-033', empresaId: '1', nome: 'Gelatina sem sabor', unidade: 'KG', custoUnitario: 45.00, fornecedor: 'Distribuidora Pão de Ouro', estoque: 1 },
+  { id: 'mat-034', empresaId: '1', nome: 'Agar-agar', unidade: 'KG', custoUnitario: 120.00, fornecedor: 'Importados Gourmet', estoque: 0 },
+  { id: 'mat-035', empresaId: '1', nome: 'Nozes picadas', unidade: 'KG', custoUnitario: 68.00, fornecedor: 'Importados Gourmet', estoque: 3 },
+  { id: 'mat-036', empresaId: '1', nome: 'Castanha de caju torrada', unidade: 'KG', custoUnitario: 55.00, fornecedor: 'Importados Gourmet', estoque: 2 },
+  { id: 'mat-037', empresaId: '1', nome: 'Amendoim torrado sem sal', unidade: 'KG', custoUnitario: 14.00, fornecedor: 'Hortifruti do Bairro', estoque: 5 },
+  { id: 'mat-038', empresaId: '1', nome: 'Coco ralado seco', unidade: 'KG', custoUnitario: 18.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 6 },
+  { id: 'mat-039', empresaId: '1', nome: 'Passas de uva preta', unidade: 'KG', custoUnitario: 22.00, fornecedor: 'Importados Gourmet', estoque: 4 },
+  { id: 'mat-040', empresaId: '1', nome: 'Frutas cristalizadas mistas', unidade: 'KG', custoUnitario: 19.00, fornecedor: 'Importados Gourmet', estoque: 3 },
+  { id: 'mat-041', empresaId: '1', nome: 'Morango fresco', unidade: 'KG', custoUnitario: 12.00, fornecedor: 'Hortifruti do Bairro', estoque: 4 },
+  { id: 'mat-042', empresaId: '1', nome: 'Banana prata', unidade: 'KG', custoUnitario: 4.50, fornecedor: 'Hortifruti do Bairro', estoque: 15 },
+  { id: 'mat-043', empresaId: '1', nome: 'Limão siciliano', unidade: 'KG', custoUnitario: 9.00, fornecedor: 'Hortifruti do Bairro', estoque: 8 },
+  { id: 'mat-044', empresaId: '1', nome: 'Maçã fuji', unidade: 'KG', custoUnitario: 8.50, fornecedor: 'Hortifruti do Bairro', estoque: 10 },
+  { id: 'mat-045', empresaId: '1', nome: 'Polpa de maracujá congelada', unidade: 'KG', custoUnitario: 16.00, fornecedor: 'Frios & Congelados', estoque: 5 },
+  { id: 'mat-046', empresaId: '1', nome: 'Corante alimentar vermelho', unidade: 'ML', custoUnitario: 0.18, fornecedor: 'Aromas & Sabores', estoque: 200 },
+  { id: 'mat-047', empresaId: '1', nome: 'Corante alimentar azul', unidade: 'ML', custoUnitario: 0.18, fornecedor: 'Aromas & Sabores', estoque: 150 },
+  { id: 'mat-048', empresaId: '1', nome: 'Saco plástico biodegradável', unidade: 'UN', custoUnitario: 0.35, fornecedor: 'Embalagens Flex', estoque: 500 },
+  { id: 'mat-049', empresaId: '1', nome: 'Fita de cetim 15mm', unidade: 'UN', custoUnitario: 1.20, fornecedor: 'Embalagens Flex', estoque: 120 },
+  { id: 'mat-050', empresaId: '1', nome: 'Forma de alumínio descartável', unidade: 'UN', custoUnitario: 2.50, fornecedor: 'Embalagens Flex', estoque: 80 },
 
   // 🏭 Indústria — matérias-primas (emp-002)
-  { id: 'mat-i01', empresaId: 'emp-002', nome: 'Perfil de alumínio anodizado', unidade: 'M', custoUnitario: 28.50, fornecedor: 'Alumínios Brasil', estoque: 420, tipo: 'INSUMO' },
-  { id: 'mat-i02', empresaId: 'emp-002', nome: 'Vidro temperado 8mm', unidade: 'M2', custoUnitario: 145.00, fornecedor: 'Vidraçaria Cristal', estoque: 60, tipo: 'INSUMO' },
-  { id: 'mat-i03', empresaId: 'emp-002', nome: 'Chapa de aço galvanizado', unidade: 'M2', custoUnitario: 89.00, fornecedor: 'Siderúrgica Norte', estoque: 90, tipo: 'INSUMO' },
-  { id: 'mat-i04', empresaId: 'emp-002', nome: 'Fechadura multiponto', unidade: 'UN', custoUnitario: 78.00, fornecedor: 'Ferragens Premium', estoque: 150, tipo: 'INSUMO' },
-  { id: 'mat-i05', empresaId: 'emp-002', nome: 'Roldana em nylon reforçado', unidade: 'UN', custoUnitario: 6.40, fornecedor: 'Ferragens Premium', estoque: 800, tipo: 'INSUMO' },
-  { id: 'mat-i06', empresaId: 'emp-002', nome: 'Borracha de vedação (EPDM)', unidade: 'M', custoUnitario: 3.20, fornecedor: 'Vedações Tech', estoque: 1200, tipo: 'INSUMO' },
-  { id: 'mat-i07', empresaId: 'emp-002', nome: 'Parafuso inox autobrocante', unidade: 'UN', custoUnitario: 0.35, fornecedor: 'Ferragens Premium', estoque: 15000, tipo: 'INSUMO' },
-  { id: 'mat-i08', empresaId: 'emp-002', nome: 'Silicone estrutural (bisnaga)', unidade: 'UN', custoUnitario: 24.00, fornecedor: 'Vedações Tech', estoque: 200, tipo: 'INSUMO' },
-  { id: 'mat-i09', empresaId: 'emp-002', nome: 'Tinta eletrostática (pó)', unidade: 'KG', custoUnitario: 32.00, fornecedor: 'Coberturas Industriais', estoque: 180, tipo: 'INSUMO' },
-  { id: 'mat-i10', empresaId: 'emp-002', nome: 'Puxador de alumínio', unidade: 'UN', custoUnitario: 19.50, fornecedor: 'Alumínios Brasil', estoque: 300, tipo: 'INSUMO' },
-  { id: 'mat-i11', empresaId: 'emp-002', nome: 'Escova de vedação', unidade: 'M', custoUnitario: 2.10, fornecedor: 'Vedações Tech', estoque: 900, tipo: 'INSUMO' },
-  { id: 'mat-i12', empresaId: 'emp-002', nome: 'Contramarco de alumínio', unidade: 'M', custoUnitario: 15.80, fornecedor: 'Alumínios Brasil', estoque: 350, tipo: 'INSUMO' },
+  { id: 'mat-i01', empresaId: '2', nome: 'Perfil de alumínio anodizado', unidade: 'M', custoUnitario: 28.50, fornecedor: 'Alumínios Brasil', estoque: 420, tipo: 'INSUMO' },
+  { id: 'mat-i02', empresaId: '2', nome: 'Vidro temperado 8mm', unidade: 'M2', custoUnitario: 145.00, fornecedor: 'Vidraçaria Cristal', estoque: 60, tipo: 'INSUMO' },
+  { id: 'mat-i03', empresaId: '2', nome: 'Chapa de aço galvanizado', unidade: 'M2', custoUnitario: 89.00, fornecedor: 'Siderúrgica Norte', estoque: 90, tipo: 'INSUMO' },
+  { id: 'mat-i04', empresaId: '2', nome: 'Fechadura multiponto', unidade: 'UN', custoUnitario: 78.00, fornecedor: 'Ferragens Premium', estoque: 150, tipo: 'INSUMO' },
+  { id: 'mat-i05', empresaId: '2', nome: 'Roldana em nylon reforçado', unidade: 'UN', custoUnitario: 6.40, fornecedor: 'Ferragens Premium', estoque: 800, tipo: 'INSUMO' },
+  { id: 'mat-i06', empresaId: '2', nome: 'Borracha de vedação (EPDM)', unidade: 'M', custoUnitario: 3.20, fornecedor: 'Vedações Tech', estoque: 1200, tipo: 'INSUMO' },
+  { id: 'mat-i07', empresaId: '2', nome: 'Parafuso inox autobrocante', unidade: 'UN', custoUnitario: 0.35, fornecedor: 'Ferragens Premium', estoque: 15000, tipo: 'INSUMO' },
+  { id: 'mat-i08', empresaId: '2', nome: 'Silicone estrutural (bisnaga)', unidade: 'UN', custoUnitario: 24.00, fornecedor: 'Vedações Tech', estoque: 200, tipo: 'INSUMO' },
+  { id: 'mat-i09', empresaId: '2', nome: 'Tinta eletrostática (pó)', unidade: 'KG', custoUnitario: 32.00, fornecedor: 'Coberturas Industriais', estoque: 180, tipo: 'INSUMO' },
+  { id: 'mat-i10', empresaId: '2', nome: 'Puxador de alumínio', unidade: 'UN', custoUnitario: 19.50, fornecedor: 'Alumínios Brasil', estoque: 300, tipo: 'INSUMO' },
+  { id: 'mat-i11', empresaId: '2', nome: 'Escova de vedação', unidade: 'M', custoUnitario: 2.10, fornecedor: 'Vedações Tech', estoque: 900, tipo: 'INSUMO' },
+  { id: 'mat-i12', empresaId: '2', nome: 'Contramarco de alumínio', unidade: 'M', custoUnitario: 15.80, fornecedor: 'Alumínios Brasil', estoque: 350, tipo: 'INSUMO' },
 
   // 🛠️ Serviços — mão de obra (hora técnica) e custos diretos (emp-003)
-  { id: 'mat-s01', empresaId: 'emp-003', nome: 'Hora — Desenvolvedor Sênior', unidade: 'H', custoUnitario: 62.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s02', empresaId: 'emp-003', nome: 'Hora — Desenvolvedor Pleno', unidade: 'H', custoUnitario: 42.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s03', empresaId: 'emp-003', nome: 'Hora — Desenvolvedor Júnior', unidade: 'H', custoUnitario: 24.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s04', empresaId: 'emp-003', nome: 'Hora — Gestão de Projeto (PM)', unidade: 'H', custoUnitario: 55.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s05', empresaId: 'emp-003', nome: 'Hora — UX/UI Designer', unidade: 'H', custoUnitario: 48.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s06', empresaId: 'emp-003', nome: 'Hora — Arquiteto de Soluções', unidade: 'H', custoUnitario: 85.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-s07', empresaId: 'emp-003', nome: 'Deslocamento técnico (por visita)', unidade: 'UN', custoUnitario: 90.00, fornecedor: 'Custo direto', tipo: 'INSUMO' },
-  { id: 'mat-s08', empresaId: 'emp-003', nome: 'Ambiente cloud dedicado (mês/projeto)', unidade: 'UN', custoUnitario: 320.00, fornecedor: 'AWS', tipo: 'INSUMO' },
-  { id: 'mat-s09', empresaId: 'emp-003', nome: 'Licença de software por projeto', unidade: 'UN', custoUnitario: 180.00, fornecedor: 'Fornecedores diversos', tipo: 'INSUMO' },
-  { id: 'mat-s10', empresaId: 'emp-003', nome: 'Certificado digital / assinatura', unidade: 'UN', custoUnitario: 45.00, fornecedor: 'Certificadora', tipo: 'INSUMO' },
+  { id: 'mat-s01', empresaId: '3', nome: 'Hora — Desenvolvedor Sênior', unidade: 'H', custoUnitario: 62.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s02', empresaId: '3', nome: 'Hora — Desenvolvedor Pleno', unidade: 'H', custoUnitario: 42.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s03', empresaId: '3', nome: 'Hora — Desenvolvedor Júnior', unidade: 'H', custoUnitario: 24.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s04', empresaId: '3', nome: 'Hora — Gestão de Projeto (PM)', unidade: 'H', custoUnitario: 55.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s05', empresaId: '3', nome: 'Hora — UX/UI Designer', unidade: 'H', custoUnitario: 48.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s06', empresaId: '3', nome: 'Hora — Arquiteto de Soluções', unidade: 'H', custoUnitario: 85.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-s07', empresaId: '3', nome: 'Deslocamento técnico (por visita)', unidade: 'UN', custoUnitario: 90.00, fornecedor: 'Custo direto', tipo: 'INSUMO' },
+  { id: 'mat-s08', empresaId: '3', nome: 'Ambiente cloud dedicado (mês/projeto)', unidade: 'UN', custoUnitario: 320.00, fornecedor: 'AWS', tipo: 'INSUMO' },
+  { id: 'mat-s09', empresaId: '3', nome: 'Licença de software por projeto', unidade: 'UN', custoUnitario: 180.00, fornecedor: 'Fornecedores diversos', tipo: 'INSUMO' },
+  { id: 'mat-s10', empresaId: '3', nome: 'Certificado digital / assinatura', unidade: 'UN', custoUnitario: 45.00, fornecedor: 'Certificadora', tipo: 'INSUMO' },
 
   // 🏭 Indústria — matérias-primas adicionais (emp-002)
-  { id: 'mat-i13', empresaId: 'emp-002', nome: 'Chapa de policarbonato 10mm', unidade: 'M2', custoUnitario: 165.00, fornecedor: 'Coberturas Industriais', estoque: 40, tipo: 'INSUMO' },
-  { id: 'mat-i14', empresaId: 'emp-002', nome: 'Perfil U de alumínio', unidade: 'M', custoUnitario: 12.50, fornecedor: 'Alumínios Brasil', estoque: 500, tipo: 'INSUMO' },
-  { id: 'mat-i15', empresaId: 'emp-002', nome: 'Tubo de aço 40×40mm', unidade: 'M', custoUnitario: 22.00, fornecedor: 'Siderúrgica Norte', estoque: 300, tipo: 'INSUMO' },
-  { id: 'mat-i16', empresaId: 'emp-002', nome: 'Vidro laminado 10mm', unidade: 'M2', custoUnitario: 210.00, fornecedor: 'Vidraçaria Cristal', estoque: 35, tipo: 'INSUMO' },
+  { id: 'mat-i13', empresaId: '2', nome: 'Chapa de policarbonato 10mm', unidade: 'M2', custoUnitario: 165.00, fornecedor: 'Coberturas Industriais', estoque: 40, tipo: 'INSUMO' },
+  { id: 'mat-i14', empresaId: '2', nome: 'Perfil U de alumínio', unidade: 'M', custoUnitario: 12.50, fornecedor: 'Alumínios Brasil', estoque: 500, tipo: 'INSUMO' },
+  { id: 'mat-i15', empresaId: '2', nome: 'Tubo de aço 40×40mm', unidade: 'M', custoUnitario: 22.00, fornecedor: 'Siderúrgica Norte', estoque: 300, tipo: 'INSUMO' },
+  { id: 'mat-i16', empresaId: '2', nome: 'Vidro laminado 10mm', unidade: 'M2', custoUnitario: 210.00, fornecedor: 'Vidraçaria Cristal', estoque: 35, tipo: 'INSUMO' },
 
   // 🛠️ Serviços enxuta — CodeLab (emp-004) — horas freelancer + terceirização
-  { id: 'mat-c01', empresaId: 'emp-004', nome: 'Hora — Dev Sênior (freelancer)', unidade: 'H', custoUnitario: 75.00, fornecedor: 'Freelancers', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-c02', empresaId: 'emp-004', nome: 'Hora — Dev Pleno (CLT)', unidade: 'H', custoUnitario: 40.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-c03', empresaId: 'emp-004', nome: 'Hora — Especialista terceirizado', unidade: 'H', custoUnitario: 120.00, fornecedor: 'Consultoria parceira', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-c04', empresaId: 'emp-004', nome: 'Hora — QA / Testes', unidade: 'H', custoUnitario: 32.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
-  { id: 'mat-c05', empresaId: 'emp-004', nome: 'Ambiente cloud por projeto', unidade: 'UN', custoUnitario: 280.00, fornecedor: 'AWS', tipo: 'INSUMO' },
-  { id: 'mat-c06', empresaId: 'emp-004', nome: 'Licença de ferramenta por projeto', unidade: 'UN', custoUnitario: 150.00, fornecedor: 'Fornecedores diversos', tipo: 'INSUMO' },
+  { id: 'mat-c01', empresaId: '4', nome: 'Hora — Dev Sênior (freelancer)', unidade: 'H', custoUnitario: 75.00, fornecedor: 'Freelancers', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-c02', empresaId: '4', nome: 'Hora — Dev Pleno (CLT)', unidade: 'H', custoUnitario: 40.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-c03', empresaId: '4', nome: 'Hora — Especialista terceirizado', unidade: 'H', custoUnitario: 120.00, fornecedor: 'Consultoria parceira', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-c04', empresaId: '4', nome: 'Hora — QA / Testes', unidade: 'H', custoUnitario: 32.00, fornecedor: 'Equipe interna', tipo: 'MAO_DE_OBRA' },
+  { id: 'mat-c05', empresaId: '4', nome: 'Ambiente cloud por projeto', unidade: 'UN', custoUnitario: 280.00, fornecedor: 'AWS', tipo: 'INSUMO' },
+  { id: 'mat-c06', empresaId: '4', nome: 'Licença de ferramenta por projeto', unidade: 'UN', custoUnitario: 150.00, fornecedor: 'Fornecedores diversos', tipo: 'INSUMO' },
 ]
 
 // ─── Impostos ─────────────────────────────────────────────────────────────────
@@ -240,7 +254,7 @@ export const mockImpostos: Imposto[] = [
 export const mockProdutos: Produto[] = [
   {
     id: 'prod-001',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Bolo de Cenoura com Cobertura de Chocolate',
     descricao: 'Bolo caseiro de cenoura com cobertura cremosa de chocolate belga',
     categoria: 'Bolos Clássicos',
@@ -262,7 +276,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-002',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Bolo Red Velvet',
     descricao: 'Clássico red velvet com cream cheese frosting',
     categoria: 'Bolos Especiais',
@@ -282,7 +296,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-003',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Bolo de Chocolate Trufado',
     descricao: 'Bolo de chocolate com recheio de trufa e ganache',
     categoria: 'Bolos Especiais',
@@ -302,7 +316,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-004',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Cupcake de Baunilha com Glacê',
     descricao: 'Cupcake fofinho de baunilha com cobertura de glacê real colorido',
     categoria: 'Cupcakes',
@@ -322,7 +336,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-005',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Cupcake de Chocolate com Nutella',
     descricao: 'Cupcake de chocolate recheado com Nutella e cobertura de brigadeiro',
     categoria: 'Cupcakes',
@@ -342,7 +356,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-006',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Torta de Limão Siciliano',
     descricao: 'Torta cremosa de limão siciliano com base de biscoito e merengue italiano',
     categoria: 'Tortas',
@@ -362,7 +376,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-007',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Torta Holandesa',
     descricao: 'Torta gelada com creme holandês, biscoito e cobertura de chocolate',
     categoria: 'Tortas',
@@ -381,7 +395,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-008',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Brownie Fudge com Nozes',
     descricao: 'Brownie denso e úmido com pedaços de nozes e calda de chocolate amargo',
     categoria: 'Brownie & Cookies',
@@ -401,7 +415,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-009',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Cookie de Chocolate Duplo',
     descricao: 'Cookie artesanal com gotas de chocolate ao leite e chocolate amargo',
     categoria: 'Brownie & Cookies',
@@ -421,7 +435,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-010',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Pão de Mel com Chocolate Belga',
     descricao: 'Pão de mel recheado com doce de leite e banhado em chocolate belga 70%',
     categoria: 'Docinhos',
@@ -441,7 +455,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-011',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Brigadeiro Gourmet (caixa 12 un)',
     descricao: 'Brigadeiros gourmet em 4 sabores: tradicional, pistache, maracujá e morango',
     categoria: 'Docinhos',
@@ -460,7 +474,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-012',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Cheesecake de Frutas Vermelhas',
     descricao: 'Cheesecake cremoso com calda de frutas vermelhas frescas e base amanteigada',
     categoria: 'Tortas',
@@ -480,7 +494,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-013',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Bolo Naked Cake Floral',
     descricao: 'Bolo naked cake de baunilha com flores comestíveis e creme de mascarpone',
     categoria: 'Bolos Especiais',
@@ -501,7 +515,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-014',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Muffin de Blueberry',
     descricao: 'Muffin americano com blueberries frescas e crumble de açúcar cristal',
     categoria: 'Cupcakes',
@@ -522,7 +536,7 @@ export const mockProdutos: Produto[] = [
   },
   {
     id: 'prod-015',
-    empresaId: 'emp-001',
+    empresaId: '1',
     nome: 'Kit Festa Personalizado (porções)',
     descricao: 'Kit com 50 docinhos sortidos, bolo de 2 andares e 12 cupcakes temáticos para festas',
     categoria: 'Kits & Festas',
@@ -545,7 +559,7 @@ export const mockProdutos: Produto[] = [
 
   // 🏭 Indústria — produtos fabricados (emp-002) — Anexo II 4,5%
   {
-    id: 'prod-i01', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i01', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Janela de Correr 2 Folhas (1,20 × 1,00m)',
     descricao: 'Janela de alumínio anodizado com 2 folhas de correr e vidro temperado 8mm',
     categoria: 'Janelas', margemLucro: 25, descontoMaximo: 8, ativo: true,
@@ -563,7 +577,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-07-01T09:00:00Z'
   },
   {
-    id: 'prod-i02', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i02', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Janela Maxim-ar (0,60 × 0,60m)',
     descricao: 'Janela basculante maxim-ar em alumínio com vidro temperado',
     categoria: 'Janelas', margemLucro: 28, descontoMaximo: 5, ativo: true,
@@ -579,7 +593,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-07-15T09:00:00Z'
   },
   {
-    id: 'prod-i03', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i03', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Porta de Alumínio com Vidro (2,10 × 0,90m)',
     descricao: 'Porta de abrir em alumínio com fechadura multiponto e vidro temperado',
     categoria: 'Portas', margemLucro: 24, descontoMaximo: 8, ativo: true,
@@ -596,7 +610,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-08-02T09:00:00Z'
   },
   {
-    id: 'prod-i04', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i04', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Portão de Correr (3,00 × 2,00m)',
     descricao: 'Portão de correr em chapa de aço galvanizado com pintura eletrostática',
     categoria: 'Portões', margemLucro: 22, descontoMaximo: 10, ativo: true,
@@ -611,7 +625,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-08-20T09:00:00Z'
   },
   {
-    id: 'prod-i05', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i05', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Box de Banheiro Temperado',
     descricao: 'Box de banheiro em vidro temperado 8mm com perfis de alumínio',
     categoria: 'Vidros', margemLucro: 30, descontoMaximo: 5, ativo: true,
@@ -625,7 +639,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-09-10T09:00:00Z'
   },
   {
-    id: 'prod-i06', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i06', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Fachada Glazing Estrutural (por m²)',
     descricao: 'Fachada envidraçada estrutural com vidro temperado e fixação em silicone estrutural',
     categoria: 'Fachadas', margemLucro: 20, descontoMaximo: 5, ativo: false,
@@ -641,7 +655,7 @@ export const mockProdutos: Produto[] = [
 
   // 🛠️ Serviços — NexaTech (emp-003) — Anexo III 6% (Fator R ≥ 28%)
   {
-    id: 'prod-s01', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s01', empresaId: '3', tipo: 'SERVICO',
     nome: 'Desenvolvimento de Sistema Web (pacote 200h)',
     descricao: 'Projeto de desenvolvimento full-stack com equipe multidisciplinar',
     categoria: 'Desenvolvimento', margemLucro: 40, descontoMaximo: 8, ativo: true,
@@ -656,7 +670,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-10-01T09:00:00Z'
   },
   {
-    id: 'prod-s02', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s02', empresaId: '3', tipo: 'SERVICO',
     nome: 'Consultoria e Diagnóstico Técnico',
     descricao: 'Análise de arquitetura, code review e plano de modernização',
     categoria: 'Consultoria', margemLucro: 45, descontoMaximo: 5, ativo: true,
@@ -669,7 +683,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-11-01T09:00:00Z'
   },
   {
-    id: 'prod-s03', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s03', empresaId: '3', tipo: 'SERVICO',
     nome: 'Sustentação Mensal (AMS)',
     descricao: 'Manutenção evolutiva e corretiva mensal com SLA e ambiente em nuvem',
     categoria: 'Sustentação', margemLucro: 35, descontoMaximo: 5, ativo: true,
@@ -682,7 +696,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-11-15T09:00:00Z'
   },
   {
-    id: 'prod-s04', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s04', empresaId: '3', tipo: 'SERVICO',
     nome: 'Desenvolvimento de App Mobile',
     descricao: 'Aplicativo iOS/Android com backend, design e gestão de projeto',
     categoria: 'Desenvolvimento', margemLucro: 42, descontoMaximo: 8, ativo: true,
@@ -696,7 +710,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-01-10T09:00:00Z'
   },
   {
-    id: 'prod-s05', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s05', empresaId: '3', tipo: 'SERVICO',
     nome: 'Auditoria de Segurança (Pentest)',
     descricao: 'Teste de intrusão, análise de vulnerabilidades e relatório executivo',
     categoria: 'Segurança', margemLucro: 48, descontoMaximo: 5, ativo: true,
@@ -709,7 +723,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-02-20T09:00:00Z'
   },
   {
-    id: 'prod-s06', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s06', empresaId: '3', tipo: 'SERVICO',
     nome: 'Site Institucional / Landing Page',
     descricao: 'Site responsivo com design, desenvolvimento e SEO técnico',
     categoria: 'Web', margemLucro: 40, descontoMaximo: 10, ativo: true,
@@ -724,7 +738,7 @@ export const mockProdutos: Produto[] = [
 
   // 🏭 Indústria — produtos adicionais (emp-002)
   {
-    id: 'prod-i07', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i07', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Guarda-corpo de Vidro (por metro)',
     descricao: 'Guarda-corpo em vidro laminado com perfil de alumínio',
     categoria: 'Vidros', margemLucro: 28, descontoMaximo: 5, ativo: true,
@@ -737,7 +751,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-11-05T09:00:00Z'
   },
   {
-    id: 'prod-i08', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i08', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Cobertura de Policarbonato (por m²)',
     descricao: 'Cobertura em policarbonato alveolar com estrutura de aço',
     categoria: 'Coberturas', margemLucro: 26, descontoMaximo: 8, ativo: true,
@@ -751,7 +765,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2023-12-01T09:00:00Z'
   },
   {
-    id: 'prod-i09', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i09', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Divisória de Vidro Temperado',
     descricao: 'Divisória de ambientes em vidro temperado com perfis de alumínio',
     categoria: 'Vidros', margemLucro: 30, descontoMaximo: 5, ativo: true,
@@ -764,7 +778,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-01-15T09:00:00Z'
   },
   {
-    id: 'prod-i10', empresaId: 'emp-002', tipo: 'PRODUTO',
+    id: 'prod-i10', empresaId: '2', tipo: 'PRODUTO',
     nome: 'Grade de Proteção (por m²)',
     descricao: 'Grade de proteção em tubo de aço com pintura eletrostática',
     categoria: 'Portões', margemLucro: 32, descontoMaximo: 10, ativo: true,
@@ -779,7 +793,7 @@ export const mockProdutos: Produto[] = [
 
   // 🛠️ Serviços — NexaTech — serviços adicionais (emp-003) — Anexo III
   {
-    id: 'prod-s07', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s07', empresaId: '3', tipo: 'SERVICO',
     nome: 'Treinamento e Capacitação Técnica',
     descricao: 'Workshop presencial de capacitação em tecnologia para a equipe do cliente',
     categoria: 'Consultoria', margemLucro: 50, descontoMaximo: 5, ativo: true,
@@ -792,7 +806,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-04-01T09:00:00Z'
   },
   {
-    id: 'prod-s08', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s08', empresaId: '3', tipo: 'SERVICO',
     nome: 'Migração para Cloud',
     descricao: 'Migração de infraestrutura legada para nuvem com arquitetura escalável',
     categoria: 'Infraestrutura', margemLucro: 44, descontoMaximo: 8, ativo: true,
@@ -805,7 +819,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-04-20T09:00:00Z'
   },
   {
-    id: 'prod-s09', empresaId: 'emp-003', tipo: 'SERVICO',
+    id: 'prod-s09', empresaId: '3', tipo: 'SERVICO',
     nome: 'Integração de Sistemas (API)',
     descricao: 'Desenvolvimento de integrações entre sistemas via APIs REST/GraphQL',
     categoria: 'Desenvolvimento', margemLucro: 42, descontoMaximo: 5, ativo: true,
@@ -820,7 +834,7 @@ export const mockProdutos: Produto[] = [
 
   // 🛠️ Serviços enxuta — CodeLab (emp-004) — Anexo V 15,5% (Fator R < 28%)
   {
-    id: 'prod-c01', empresaId: 'emp-004', tipo: 'SERVICO',
+    id: 'prod-c01', empresaId: '4', tipo: 'SERVICO',
     nome: 'MVP de Startup (pacote)',
     descricao: 'Desenvolvimento de produto mínimo viável com time enxuto e freelancers',
     categoria: 'Desenvolvimento', margemLucro: 38, descontoMaximo: 8, ativo: true,
@@ -834,7 +848,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-03-01T09:00:00Z'
   },
   {
-    id: 'prod-c02', empresaId: 'emp-004', tipo: 'SERVICO',
+    id: 'prod-c02', empresaId: '4', tipo: 'SERVICO',
     nome: 'Manutenção sob Demanda',
     descricao: 'Pacote de horas de manutenção corretiva e evolutiva sob demanda',
     categoria: 'Sustentação', margemLucro: 35, descontoMaximo: 5, ativo: true,
@@ -847,7 +861,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-03-20T09:00:00Z'
   },
   {
-    id: 'prod-c03', empresaId: 'emp-004', tipo: 'SERVICO',
+    id: 'prod-c03', empresaId: '4', tipo: 'SERVICO',
     nome: 'Integração de Sistemas',
     descricao: 'Integração entre plataformas com apoio de especialista terceirizado',
     categoria: 'Desenvolvimento', margemLucro: 40, descontoMaximo: 5, ativo: true,
@@ -860,7 +874,7 @@ export const mockProdutos: Produto[] = [
     createdAt: '2024-04-05T09:00:00Z'
   },
   {
-    id: 'prod-c04', empresaId: 'emp-004', tipo: 'SERVICO',
+    id: 'prod-c04', empresaId: '4', tipo: 'SERVICO',
     nome: 'Landing Page de Alta Conversão',
     descricao: 'Landing page otimizada para conversão com testes A/B',
     categoria: 'Web', margemLucro: 42, descontoMaximo: 8, ativo: true,
@@ -900,7 +914,7 @@ export const mockPermissoes: Permissao[] = [
  * de dono ou compartilhamento. É o único perfil com `escopoGlobal`.
  */
 export const perfilAdminGlobal: Perfil = {
-  id: 'perfil-00',
+  id: '1',
   nome: 'ADMIN',
   descricao: 'Administrador global — vê e opera todas as empresas (suporte)',
   permissoes: mockPermissoes,
@@ -909,37 +923,41 @@ export const perfilAdminGlobal: Perfil = {
 
 /** Dono da empresa: acesso total, porém **restrito às empresas dele**. */
 export const perfilProprietario: Perfil = {
-  id: 'perfil-01',
+  id: '2',
   nome: 'PROPRIETARIO',
   descricao: 'Proprietário — acesso total às empresas que possui',
   permissoes: mockPermissoes,
+  escopoGlobal: false,
 }
 
 export const perfilGerente: Perfil = {
-  id: 'perfil-02',
+  id: '3',
   nome: 'GERENTE',
   descricao: 'Gerente — leitura e edição de produtos, materiais e relatórios',
   permissoes: mockPermissoes.filter(p =>
     ['PRODUTO_READ','PRODUTO_WRITE','MATERIAL_READ','MATERIAL_WRITE','DESPESA_READ','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
-  )
+  ),
+  escopoGlobal: false,
 }
 
 export const perfilVendedor: Perfil = {
-  id: 'perfil-03',
+  id: '4',
   nome: 'VENDEDOR',
   descricao: 'Vendedor — apenas visualização de produtos e preços',
   permissoes: mockPermissoes.filter(p =>
     ['PRODUTO_READ','RELATORIO_READ'].includes(p.chave)
-  )
+  ),
+  escopoGlobal: false,
 }
 
 export const perfilContador: Perfil = {
-  id: 'perfil-04',
+  id: '5',
   nome: 'CONTADOR',
   descricao: 'Contador — acesso a impostos, despesas e relatórios',
   permissoes: mockPermissoes.filter(p =>
     ['IMPOSTO_READ','IMPOSTO_WRITE','DESPESA_READ','DESPESA_WRITE','RELATORIO_READ','EMPRESA_READ'].includes(p.chave)
-  )
+  ),
+  escopoGlobal: false,
 }
 
 export const mockPerfis: Perfil[] = [
@@ -960,95 +978,79 @@ export const mockPerfis: Perfil[] = [
  */
 export const mockUsuarios: Usuario[] = [
   {
-    id: 'usr-000',
+    id: '1',
     nome: 'Edvaldo Santiago',
     email: 'admin@markup.com.br',
     ativo: true,
     // ADMIN global não precisa de vínculo: o escopo global já autoriza tudo
     empresas: [],
-    perfilGlobal: perfilAdminGlobal,
-    createdAt: '2023-01-01T08:00:00Z'
+    perfilGlobal: perfilAdminGlobal
   },
   {
-    id: 'usr-001',
+    id: '2',
     nome: 'Ana Paula Santos',
     email: 'ana@docesdaana.com.br',
     ativo: true,
     empresas: [
-      { empresaId: 'emp-001', perfilId: perfilProprietario.id, perfil: perfilProprietario },
+      { empresaId: '1', perfilId: perfilProprietario.id, perfil: perfilProprietario },
       // compartilhada: convidada como contadora na NexaTech
-      { empresaId: 'emp-003', perfilId: perfilContador.id, perfil: perfilContador },
-    ],
-    createdAt: '2024-01-15T10:00:00Z'
+      { empresaId: '3', perfilId: perfilContador.id, perfil: perfilContador },
+    ]
   },
   {
-    id: 'usr-002',
+    id: '3',
     nome: 'Marcos Souza',
     email: 'marcos@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-001', perfilId: perfilGerente.id, perfil: perfilGerente }],
-    createdAt: '2024-02-20T14:00:00Z'
+    empresas: [{ empresaId: '1', perfilId: perfilGerente.id, perfil: perfilGerente }]
   },
   {
-    id: 'usr-003',
+    id: '4',
     nome: 'Carla Lima',
     email: 'carla@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-001', perfilId: perfilVendedor.id, perfil: perfilVendedor }],
-    createdAt: '2024-03-10T09:00:00Z'
+    empresas: [{ empresaId: '1', perfilId: perfilVendedor.id, perfil: perfilVendedor }]
   },
   {
-    id: 'usr-004',
+    id: '5',
     nome: 'Ricardo Alves',
     email: 'contador@contabilidade.com.br',
     ativo: false,
-    empresas: [{ empresaId: 'emp-001', perfilId: perfilContador.id, perfil: perfilContador }],
-    createdAt: '2024-04-01T11:00:00Z'
+    empresas: [{ empresaId: '1', perfilId: perfilContador.id, perfil: perfilContador }]
   },
   {
-    id: 'usr-005',
+    id: '6',
     nome: 'Roberto Menezes',
     email: 'roberto@metalforte.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-002', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
-    createdAt: '2023-06-10T08:00:00Z'
+    empresas: [{ empresaId: '2', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
   },
   {
-    id: 'usr-006',
+    id: '7',
     nome: 'Juliana Ferraz',
     email: 'juliana@nexatech.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-003', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
-    createdAt: '2023-09-20T09:00:00Z'
+    empresas: [{ empresaId: '3', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
   },
   {
-    id: 'usr-007',
+    id: '8',
     nome: 'Diego Prado',
     email: 'diego@codelab.com.br',
     ativo: true,
-    empresas: [{ empresaId: 'emp-004', perfilId: perfilProprietario.id, perfil: perfilProprietario }],
-    createdAt: '2024-02-01T09:00:00Z'
+    empresas: [{ empresaId: '4', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
   },
 ]
 
-/**
- * Perfil efetivo da sessão: o global (ADMIN) prevalece; senão o do 1º vínculo.
- * Simplificação do protótipo — perfil por empresa fica para quando o backend
- * expuser o vínculo ativo.
- */
-export function perfilDaSessao(usuario: Usuario): Perfil {
-  return usuario.perfilGlobal ?? usuario.empresas[0]?.perfil ?? perfilVendedor
-}
 
 // ─── Realismo: alíquota efetiva por faixa de faturamento ──────────────────────
 // O DAS é único por empresa (baseado no RBT12), não por produto. Aqui aplicamos a
 // alíquota EFETIVA aproximada da faixa de faturamento de cada empresa, sobrescrevendo
 // a alíquota nominal de 1ª faixa usada inline nos produtos acima.
 const aliquotaEfetivaPorEmpresa: Record<string, number> = {
-  'emp-001': 7.8,   // Confeitaria — Anexo II, faixa 3 (~R$ 624 mil/ano)
-  'emp-002': 12.3,  // Indústria — Anexo II, faixa 5 (~R$ 3,6 mi/ano)
-  'emp-003': 14.4,  // NexaTech — Anexo III, faixa 5 (~R$ 1,9 mi/ano), Fator R ≥ 28%
-  'emp-004': 19.3,  // CodeLab — Anexo V, faixa 4 (~R$ 1,44 mi/ano), Fator R < 28%
+  '1': 7.8,   // Confeitaria — Anexo II, faixa 3 (~R$ 624 mil/ano)
+  '2': 12.3,  // Indústria — Anexo II, faixa 5 (~R$ 3,6 mi/ano)
+  '3': 14.4,  // NexaTech — Anexo III, faixa 5 (~R$ 1,9 mi/ano), Fator R ≥ 28%
+  '4': 19.3,  // CodeLab — Anexo V, faixa 4 (~R$ 1,44 mi/ano), Fator R < 28%
 }
 for (const p of mockProdutos) {
   const aliq = aliquotaEfetivaPorEmpresa[p.empresaId]

@@ -1,30 +1,48 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseInput from '@/components/ui/BaseInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
-const form = reactive({ email: 'ana@docesdaana.com.br', senha: '123456' })
+const form = reactive({ email: '', senha: '' })
 const error = ref('')
+const aviso = ref('')
+
+/**
+ * Quem chega aqui com `?expirada=1` foi trazido pela perda de sessão (REQ-03),
+ * não por escolha própria. Sem esta mensagem, o usuário é devolvido ao login no
+ * meio de uma ação e não entende o que aconteceu.
+ */
+onMounted(() => {
+  if (route.query.expirada) aviso.value = 'Sua sessão expirou. Entre novamente.'
+})
 
 async function handleLogin() {
   error.value = ''
+  aviso.value = ''
   const ok = await auth.login(form.email, form.senha)
   if (ok) {
     router.push('/dashboard')
   } else {
-    error.value = 'E-mail não encontrado ou usuário inativo.'
+    // A mensagem vem do store, que a traduziu do erro do backend — credencial
+    // inválida, usuário inativo e servidor fora do ar não podem virar o mesmo
+    // texto genérico (REQ-13).
+    error.value = auth.erro ?? 'Não foi possível entrar.'
   }
 }
 
 /**
- * Cada atalho entra com um escopo diferente (R09) — trocar de usuário muda as
- * empresas do seletor e os itens do menu.
+ * Atalhos de **desenvolvimento**: preenchem só o e-mail — a senha é digitada,
+ * porque agora a autenticação é real. Some do build de produção (`import.meta.env.DEV`);
+ * uma lista de contas conhecidas numa tela de login pública seria um convite.
  */
+const emDesenvolvimento = import.meta.env.DEV
+
 const demoUsers = [
   { label: 'ADMIN global', email: 'admin@markup.com.br', dica: 'vê as 4 empresas' },
   { label: 'Ana (dona)', email: 'ana@docesdaana.com.br', dica: 'Doces da Ana + NexaTech' },
@@ -76,6 +94,12 @@ const demoUsers = [
         />
 
         <Transition name="slide-up">
+          <div v-if="aviso" class="login-aviso">
+            <span>⏱</span> {{ aviso }}
+          </div>
+        </Transition>
+
+        <Transition name="slide-up">
           <div v-if="error" class="login-error">
             <span>⚠</span> {{ error }}
           </div>
@@ -86,9 +110,9 @@ const demoUsers = [
         </BaseButton>
       </form>
 
-      <!-- Atalhos demo -->
-      <div class="demo-panel">
-        <p class="demo-panel__label">Acesso rápido (demo)</p>
+      <!-- Atalhos de desenvolvimento: só preenchem o e-mail -->
+      <div v-if="emDesenvolvimento" class="demo-panel">
+        <p class="demo-panel__label">Preencher e-mail (dev)</p>
         <div class="demo-panel__btns">
           <button
             v-for="u in demoUsers"
@@ -196,6 +220,19 @@ const demoUsers = [
   background: #fef2f2;
   border: 1px solid #fca5a5;
   color: var(--color-danger);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  font-size: .875rem;
+}
+
+/* Sessão expirada não é erro do usuário: informa, sem alarme vermelho. */
+.login-aviso {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);
   font-size: .875rem;

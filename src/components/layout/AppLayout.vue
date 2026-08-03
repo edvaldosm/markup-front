@@ -1,13 +1,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
 import { useEmpresaStore } from '@/stores/empresa'
+import { guardaNavegacao } from '@/router'
 import { segmentoConfig } from '@/config/segmentos'
 
 const route = useRoute()
+const router = useRouter()
 const empresaStore = useEmpresaStore()
+
+/**
+ * Trocar de empresa pode trocar o perfil (REQ-09) e, com ele, o que o usuário
+ * pode abrir. Se a rota atual deixar de ser permitida, ele vai para o dashboard
+ * (REQ-09a) — não fica olhando uma tela que o servidor passará a negar.
+ *
+ * A decisão é reexecutada pelo **mesmo guard** da navegação: duplicar a regra de
+ * permissão aqui é como as duas versões passam a divergir.
+ */
+watch(() => empresaStore.empresaAtivaId, (nova, anterior) => {
+  if (!nova || nova === anterior) return
+  const destino = guardaNavegacao(route)
+  if (destino !== true) router.push(destino)
+})
 
 /** Colapso da sidebar no desktop */
 const sidebarOpen = ref(true)

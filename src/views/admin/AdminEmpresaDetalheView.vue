@@ -100,8 +100,8 @@ const fatorR = computed(() => {
         <p class="ficha__sub">{{ dados.empresa.cnpj }} · {{ seg.nome }}</p>
         <div class="ficha__tags">
           <BaseBadge color="gray">{{ semUnderscore(dados.empresa.regimeTributario) }}</BaseBadge>
-          <BaseBadge v-if="dados.empresa.anexoSimples" color="gray">
-            {{ dados.empresa.anexoSimples.replace('_', ' ') }}
+          <BaseBadge v-if="dados.empresa.anexoCadastrado" color="gray">
+            {{ dados.empresa.anexoCadastrado.replace('_', ' ') }}
           </BaseBadge>
           <BaseBadge color="gray">{{ dados.equipe.length }} usuário(s)</BaseBadge>
         </div>

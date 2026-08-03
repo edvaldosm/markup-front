@@ -14,10 +14,11 @@ dist-ssr
 coverage
 *.local
 
-# Variáveis de ambiente — nunca commitar credenciais
+# Variáveis de ambiente — nunca commitar credenciais.
+# `.env.development` é a exceção deliberada: só tem o endereço do backend local,
+# e mantê-lo fora do repo obrigaria cada dev a recriá-lo para o app subir.
 .env
 .env.local
-.env.development
 .env.production
 .env.*.local
 

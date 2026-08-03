@@ -6,7 +6,7 @@ import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
 import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
 import FatorRNote from './FatorRNote.vue'
-import type { Empresa, SegmentoNegocio } from '@/types'
+import type { Empresa, EmpresaEntrada, SegmentoNegocio } from '@/types'
 
 const emit = defineEmits<{ close: []; created: [empresa: Empresa] }>()
 
@@ -14,12 +14,12 @@ const empresaStore = useEmpresaStore()
 const { calcularFatorR } = useMarkupCalculator()
 const { formatPercent } = useCurrency()
 
-const form = reactive<Omit<Empresa, 'id' | 'createdAt' | 'donoUsuarioId'>>({
+const form = reactive<EmpresaEntrada>({
   razaoSocial: '',
   cnpj: '',
   segmento: 'CONFEITARIA',
   regimeTributario: 'SIMPLES_NACIONAL',
-  anexoSimples: 'ANEXO_II',
+  anexoCadastrado: 'ANEXO_II',
   faturamentoMedioMensal: 0,
   folhaPagamentoMensal: 0,
 })
@@ -44,26 +44,32 @@ const anexos = ['ANEXO_I', 'ANEXO_II', 'ANEXO_III', 'ANEXO_IV', 'ANEXO_V'] as co
 function onSegmento(seg: SegmentoNegocio) {
   form.segmento = seg
   if (ehSimples.value) {
-    form.anexoSimples = seg === 'SERVICOS' ? 'ANEXO_III' : 'ANEXO_II'
+    form.anexoCadastrado = seg === 'SERVICOS' ? 'ANEXO_III' : 'ANEXO_II'
   }
 }
 
 async function salvar() {
   erros.value = []
   if (!form.razaoSocial.trim()) erros.value.push('Razão social é obrigatória.')
-  if (!form.cnpj.trim()) erros.value.push('CNPJ é obrigatório.')
+  if (!form.cnpj?.trim()) erros.value.push('CNPJ é obrigatório.')
   if (form.faturamentoMedioMensal <= 0) erros.value.push('Informe o faturamento médio mensal.')
   if (erros.value.length) return
 
   salvando.value = true
   // `donoUsuarioId` é definido pelo store a partir do usuário logado (R09)
-  const payload: Omit<Empresa, 'id' | 'createdAt' | 'donoUsuarioId'> = {
+  const payload: EmpresaEntrada = {
     ...form,
-    anexoSimples: ehSimples.value ? form.anexoSimples : undefined,
+    anexoCadastrado: ehSimples.value ? form.anexoCadastrado : undefined,
     folhaPagamentoMensal: ehServico.value ? form.folhaPagamentoMensal : undefined,
   }
   const nova = await empresaStore.criarEmpresa(payload)
   salvando.value = false
+  if (!nova) {
+    // O servidor recusou: a mensagem já está no store, a modal fica aberta
+    // para o usuário corrigir em vez de fechar como se tivesse salvo.
+    erros.value = [empresaStore.erro ?? 'Não foi possível salvar a empresa.']
+    return
+  }
   emit('created', nova)
   emit('close')
 }
@@ -114,7 +120,7 @@ async function salvar() {
         </div>
         <div class="field" v-if="ehSimples">
           <label class="field__label">Anexo Simples</label>
-          <select v-model="form.anexoSimples" class="input">
+          <select v-model="form.anexoCadastrado" class="input">
             <option v-for="a in anexos" :key="a" :value="a">{{ a.replace('_', ' ') }}</option>
           </select>
         </div>

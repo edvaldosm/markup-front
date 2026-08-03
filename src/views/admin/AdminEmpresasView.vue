@@ -29,7 +29,7 @@ const filtradas = computed(() => {
     const casaSegmento = !filtroSegmento.value || empresa.segmento === filtroSegmento.value
     const casaTermo = !termo
       || empresa.razaoSocial.toLowerCase().includes(termo)
-      || empresa.cnpj.includes(termo)
+      || (empresa.cnpj?.includes(termo) ?? false)
       || (dono?.nome.toLowerCase().includes(termo) ?? false)
       || (dono?.email.toLowerCase().includes(termo) ?? false)
     return casaSegmento && casaTermo
@@ -91,8 +91,8 @@ const regime = (chave: string) => chave.replace(/_/g, ' ').toLowerCase()
             </td>
             <td>
               <span class="cell-regime">{{ regime(linha.empresa.regimeTributario) }}</span>
-              <span v-if="linha.empresa.anexoSimples" class="cell-sub">
-                {{ linha.empresa.anexoSimples.replace('_', ' ') }}
+              <span v-if="linha.empresa.anexoCadastrado" class="cell-sub">
+                {{ linha.empresa.anexoCadastrado.replace('_', ' ') }}
               </span>
             </td>
             <td>

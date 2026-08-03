@@ -11,7 +11,8 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { montarAppComo, entrarComo, aguardar } from './app-harness'
+import { montarAppComo, entrarComo, aguardar, prepararAmbiente } from './app-harness'
+import { SENHA_PADRAO, type ServidorFalso } from './servidor-falso'
 import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useProdutosStore } from '@/stores/produtos'
@@ -51,7 +52,7 @@ const personas: Persona[] = [
     nome: 'Edvaldo (ADMIN global)',
     email: 'admin@markup.com.br',
     perfil: 'ADMIN',
-    empresas: ['emp-001', 'emp-002', 'emp-003', 'emp-004'],
+    empresas: ['1', '2', '3', '4'],
     permitidas: [...TODAS, ...ADMIN],
     bloqueadas: [],
   },
@@ -59,7 +60,7 @@ const personas: Persona[] = [
     nome: 'Ana (dona + convidada)',
     email: 'ana@docesdaana.com.br',
     perfil: 'PROPRIETARIO',
-    empresas: ['emp-001', 'emp-003'],
+    empresas: ['1', '3'],
     permitidas: TODAS,
     bloqueadas: [...ADMIN],
   },
@@ -67,7 +68,7 @@ const personas: Persona[] = [
     nome: 'Roberto (dono da MetalForte)',
     email: 'roberto@metalforte.com.br',
     perfil: 'PROPRIETARIO',
-    empresas: ['emp-002'],
+    empresas: ['2'],
     permitidas: TODAS,
     bloqueadas: [...ADMIN],
   },
@@ -75,7 +76,7 @@ const personas: Persona[] = [
     nome: 'Juliana (dona da NexaTech)',
     email: 'juliana@nexatech.com.br',
     perfil: 'PROPRIETARIO',
-    empresas: ['emp-003'],
+    empresas: ['3'],
     permitidas: TODAS,
     bloqueadas: [...ADMIN],
   },
@@ -83,7 +84,7 @@ const personas: Persona[] = [
     nome: 'Marcos (gerente)',
     email: 'marcos@docesdaana.com.br',
     perfil: 'GERENTE',
-    empresas: ['emp-001'],
+    empresas: ['1'],
     permitidas: semAsRotas(['/impostos', '/usuarios', '/perfis']),
     bloqueadas: ['/impostos', '/usuarios', '/perfis', ...ADMIN],
   },
@@ -91,7 +92,7 @@ const personas: Persona[] = [
     nome: 'Carla (vendedora)',
     email: 'carla@docesdaana.com.br',
     perfil: 'VENDEDOR',
-    empresas: ['emp-001'],
+    empresas: ['1'],
     permitidas: ['/produtos', '/precificacao', '/relatorios'],
     bloqueadas: ['/empresa', '/materiais', '/despesas', '/impostos', '/fator-r',
                  '/usuarios', '/perfis', ...ADMIN],
@@ -123,11 +124,16 @@ function nomesExclusivosDeOutras(empresaAtiva: string): string[] {
   )
 }
 
+let servidor: ServidorFalso
+
 beforeEach(() => {
+  // Os stores ainda no mock (catálogo) simulam latência com `setTimeout`; sessão
+  // e empresas já vêm do servidor falso, que responde na hora.
   vi.useFakeTimers()
-  setActivePinia(createPinia())
+  servidor = prepararAmbiente()
 })
 afterEach(() => {
+  servidor.restaurar()
   vi.useRealTimers()
 })
 
@@ -237,13 +243,13 @@ describe('isolamento de dados por empresa (R02/R09)', () => {
     const produtos = useProdutosStore()
     await aguardar(produtos.fetchProdutos())
 
-    expect(empresaStore.empresaAtivaId).toBe('emp-001')
+    expect(empresaStore.empresaAtivaId).toBe('1')
     const daConfeitaria = produtos.produtos.map(p => p.id)
     expect(daConfeitaria.length).toBeGreaterThan(0)
-    expect(produtos.produtos.every(p => p.empresaId === 'emp-001')).toBe(true)
+    expect(produtos.produtos.every(p => p.empresaId === '1')).toBe(true)
 
-    expect(empresaStore.selecionarEmpresa('emp-003')).toBe(true)
-    expect(produtos.produtos.every(p => p.empresaId === 'emp-003')).toBe(true)
+    expect(empresaStore.selecionarEmpresa('3')).toBe(true)
+    expect(produtos.produtos.every(p => p.empresaId === '3')).toBe(true)
     // nenhum produto da confeitaria sobrou
     expect(produtos.produtos.some(p => daConfeitaria.includes(p.id))).toBe(false)
   })
@@ -258,7 +264,7 @@ describe('isolamento de dados por empresa (R02/R09)', () => {
 
     expect(usuarios.usuarios.length).toBeGreaterThan(0)
     for (const u of usuarios.usuarios) {
-      expect(u.empresas.some(v => v.empresaId === 'emp-002')).toBe(true)
+      expect(u.empresas.some(v => v.empresaId === '2')).toBe(true)
     }
     // a equipe da Doces da Ana não aparece para o dono da MetalForte
     expect(usuarios.usuarios.map(u => u.email)).not.toContain('carla@docesdaana.com.br')
@@ -271,7 +277,7 @@ describe('troca de usuário não vaza contexto', () => {
   it('sair de um dono e entrar como outro troca todo o conjunto', async () => {
     const app = await montarAppComo('ana@docesdaana.com.br')
     const empresaStore = useEmpresaStore()
-    expect(empresaStore.empresas.map(e => e.id).sort()).toEqual(['emp-001', 'emp-003'])
+    expect(empresaStore.empresas.map(e => e.id).sort()).toEqual(['1', '3'])
     app.desmontar()
 
     // nova sessão, outro dono
@@ -279,7 +285,7 @@ describe('troca de usuário não vaza contexto', () => {
     const app2 = await montarAppComo('roberto@metalforte.com.br')
     const empresaStore2 = useEmpresaStore()
 
-    expect(empresaStore2.empresas.map(e => e.id)).toEqual(['emp-002'])
+    expect(empresaStore2.empresas.map(e => e.id)).toEqual(['2'])
     expect(app2.texto()).not.toContain('Doces da Ana')
     app2.desmontar()
   })
@@ -287,7 +293,7 @@ describe('troca de usuário não vaza contexto', () => {
   it('usuário inativo não consegue entrar', async () => {
     const auth = useAuthStore()
     // Ricardo está com `ativo: false` no cadastro
-    expect(await aguardar(auth.login('contador@contabilidade.com.br', '123456'))).toBe(false)
+    expect(await aguardar(auth.login('contador@contabilidade.com.br', SENHA_PADRAO))).toBe(false)
     expect(auth.user).toBeNull()
   })
 })

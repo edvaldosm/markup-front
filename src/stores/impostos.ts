@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Imposto } from '@/types'
 import { mockImpostos } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
+import { registrarResetDeSessao } from './reset'
 
 export const useImpostosStore = defineStore('impostos', () => {
   const impostos = ref<Imposto[]>([])
@@ -27,5 +28,11 @@ export const useImpostosStore = defineStore('impostos', () => {
     loading.value = false
   }
 
-  return { impostos, loading, fetchImpostos, salvar }
+  function reset(): void {
+    impostos.value = []
+  }
+
+  registrarResetDeSessao(reset)
+
+  return { impostos, loading, fetchImpostos, salvar, reset }
 })

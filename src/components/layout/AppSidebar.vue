@@ -131,7 +131,7 @@ const isActive = (to: string, exata = false) =>
         <Transition name="fade">
           <div v-if="open" class="user-chip__info">
             <span class="user-chip__name">{{ auth.user?.nome }}</span>
-            <span class="user-chip__role">{{ auth.user?.perfil.nome }}</span>
+            <span class="user-chip__role">{{ auth.perfil?.nome }}</span>
           </div>
         </Transition>
       </div>

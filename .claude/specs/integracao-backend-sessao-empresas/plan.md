@@ -57,9 +57,15 @@ catálogo continuam no mock até as fatias 2 e 3.
   - `SegmentoNegocio` ganha `'COMERCIO'` ⇒ `segmentos.ts` ganha a entrada
     correspondente (ícone, cores, rótulos), senão o `Record` fica incompleto e o
     build de tipos falha — que é o comportamento desejado, falha cedo.
-  - `Empresa`: `anexoSimples` → `anexoCadastrado`; remove `createdAt`; adiciona
-    `percentualDespesasFixas: number` (vem calculado, C2/B1) e
-    `despesasFixas: DespesaFixa[]`.
+  - `Empresa`: `anexoSimples` → `anexoCadastrado`; `cnpj` vira opcional (é
+    nulável no schema); remove `createdAt`; adiciona `percentualDespesasFixas`
+    (vem calculado, C2/B1). **`despesasFixas` não é espelhado nesta fatia**: a
+    query `minhasEmpresas` não pede o campo e o front continua lendo as despesas
+    pelo store próprio; incluí-lo agora obrigaria o mock a manter um array
+    duplicado. Entra na fatia 2, junto do store de despesas.
+  - Novo `EmpresaEntrada` (espelho de `EmpresaInput`): o que o front envia ao
+    salvar, sem os campos que o servidor decide (`donoUsuarioId`) ou calcula
+    (`percentualDespesasFixas`).
   - `Usuario`: remove `createdAt` e `avatarUrl`. O avatar passa a ser derivado
     das iniciais do nome no componente que o exibe — dado de apresentação não
     vem do backend (B7).

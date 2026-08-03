@@ -24,10 +24,10 @@ const form = ref<{
   cnpj: string
   segmento: Empresa['segmento']
   regimeTributario: Empresa['regimeTributario']
-  anexoSimples: NonNullable<Empresa['anexoSimples']>
+  anexoCadastrado: NonNullable<Empresa['anexoCadastrado']>
   faturamentoMedioMensal: number
   folhaPagamentoMensal: number
-}>({ razaoSocial: '', cnpj: '', segmento: 'CONFEITARIA', regimeTributario: 'SIMPLES_NACIONAL', anexoSimples: 'ANEXO_II', faturamentoMedioMensal: 0, folhaPagamentoMensal: 0 })
+}>({ razaoSocial: '', cnpj: '', segmento: 'CONFEITARIA', regimeTributario: 'SIMPLES_NACIONAL', anexoCadastrado: 'ANEXO_II', faturamentoMedioMensal: 0, folhaPagamentoMensal: 0 })
 const salvando = ref(false)
 const salvo = ref(false)
 
@@ -41,10 +41,10 @@ watch(() => store.empresa, (emp) => {
   if (emp) {
     form.value = {
       razaoSocial: emp.razaoSocial,
-      cnpj: emp.cnpj,
+      cnpj: emp.cnpj ?? '',
       segmento: emp.segmento,
       regimeTributario: emp.regimeTributario,
-      anexoSimples: emp.anexoSimples ?? 'ANEXO_II',
+      anexoCadastrado: emp.anexoCadastrado ?? 'ANEXO_II',
       faturamentoMedioMensal: emp.faturamentoMedioMensal,
       folhaPagamentoMensal: emp.folhaPagamentoMensal ?? 0,
     }
@@ -105,7 +105,7 @@ const segmentos = [
               </div>
               <div class="field" v-if="form.regimeTributario === 'SIMPLES_NACIONAL'">
                 <label class="field__label">Anexo Simples</label>
-                <select v-model="form.anexoSimples" class="input">
+                <select v-model="form.anexoCadastrado" class="input">
                   <option v-for="a in anexos" :key="a" :value="a">{{ a.replace('_', ' ') }}</option>
                 </select>
               </div>
@@ -164,7 +164,7 @@ const segmentos = [
             <div class="indicator">
               <span class="indicator__label">Regime</span>
               <BaseBadge color="green">{{ store.empresa?.regimeTributario ?? '—' }}</BaseBadge>
-              <span v-if="store.empresa?.anexoSimples" class="indicator__sub">{{ store.empresa.anexoSimples.replace('_',' ') }}</span>
+              <span v-if="store.empresa?.anexoCadastrado" class="indicator__sub">{{ store.empresa.anexoCadastrado.replace('_',' ') }}</span>
             </div>
             <div class="indicator" v-if="ehServico">
               <span class="indicator__label">Fator R</span>

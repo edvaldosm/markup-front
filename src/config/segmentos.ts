@@ -84,6 +84,26 @@ export const SEGMENTOS: Record<SegmentoNegocio, SegmentoConfig> = {
       unidadePrincipal: 'H',
     },
   },
+  COMERCIO: {
+    chave: 'COMERCIO',
+    nome: 'Comércio',
+    icone: '🏬',
+    descricao: 'Revenda de mercadorias (varejo e atacado)',
+    cor: '#d97706',       // âmbar
+    corSuave: '#fef3c7',
+    gradiente: ['#fbbf24', '#d97706'],
+    rotulos: {
+      // Comércio revende: o custo é o de aquisição, não uma composição de
+      // insumos. A "ficha" existe para casos de kit/cesta, com uma linha só.
+      produto: 'Mercadoria',
+      produtos: 'Mercadorias',
+      material: 'Custo de aquisição',
+      materialPlural: 'Custos de aquisição',
+      materiais: 'Mercadorias & Custos de aquisição',
+      fichaTecnica: 'Composição da Mercadoria',
+      unidadePrincipal: 'UN',
+    },
+  },
 }
 
 export function segmentoConfig(seg: SegmentoNegocio | undefined): SegmentoConfig {

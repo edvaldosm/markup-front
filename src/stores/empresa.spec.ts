@@ -1,20 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
+/**
+ * Store de empresa contra o servidor falso.
+ *
+ * A diferença em relação à versão do protótipo: o conjunto autorizado **não é
+ * mais calculado aqui**. Estes testes provam que o front reflete o que o
+ * servidor devolveu — e que não inventa nada quando o servidor não responde.
+ */
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useEmpresaStore } from './empresa'
 import { useAuthStore } from './auth'
 import { mockEmpresas } from '@/mock/data'
+import { prepararAmbiente, entrarComo } from '@/test/app-harness'
+import { SENHA_PADRAO, type ServidorFalso } from '@/test/servidor-falso'
 
-/** Faz login pelo store real (mock resolve em ~600ms) */
-async function entrarComo(email: string) {
-  const auth = useAuthStore()
-  const ok = await auth.login(email, '123456')
-  expect(ok).toBe(true)
-  return auth
-}
+let servidor: ServidorFalso
 
 describe('store empresa — minhasEmpresas (R09)', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    servidor = prepararAmbiente()
+  })
+
+  afterEach(() => {
+    servidor.restaurar()
   })
 
   it('carrega apenas as empresas autorizadas ao usuário logado', async () => {
@@ -22,7 +28,7 @@ describe('store empresa — minhasEmpresas (R09)', () => {
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
-    expect(store.empresas.map(e => e.id)).toEqual(['emp-002'])
+    expect(store.empresas.map(e => e.id)).toEqual(['2'])
     expect(store.empresas.length).toBeLessThan(mockEmpresas.length)
   })
 
@@ -31,7 +37,7 @@ describe('store empresa — minhasEmpresas (R09)', () => {
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
-    expect(store.empresas.map(e => e.id).sort()).toEqual(['emp-001', 'emp-003'])
+    expect(store.empresas.map(e => e.id).sort()).toEqual(['1', '3'])
   })
 
   it('ADMIN global recebe todas', async () => {
@@ -47,18 +53,18 @@ describe('store empresa — minhasEmpresas (R09)', () => {
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
-    expect(store.empresaAtivaId).toBe('emp-003')
+    expect(store.empresaAtivaId).toBe('3')
     expect(store.empresa?.razaoSocial).toContain('NexaTech')
   })
 
-  it('recusa selecionar empresa fora do conjunto autorizado', async () => {
+  it('recusa selecionar empresa fora do conjunto devolvido pelo servidor', async () => {
     await entrarComo('roberto@metalforte.com.br')
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
-    const aceitou = store.selecionarEmpresa('emp-001') // empresa da Ana
+    const aceitou = store.selecionarEmpresa('1') // empresa da Ana
     expect(aceitou).toBe(false)
-    expect(store.empresaAtivaId).toBe('emp-002') // permanece na dele
+    expect(store.empresaAtivaId).toBe('2') // permanece na dele
   })
 
   it('aceita selecionar empresa autorizada', async () => {
@@ -66,20 +72,20 @@ describe('store empresa — minhasEmpresas (R09)', () => {
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
-    expect(store.selecionarEmpresa('emp-003')).toBe(true)
-    expect(store.empresaAtivaId).toBe('emp-003')
+    expect(store.selecionarEmpresa('3')).toBe(true)
+    expect(store.empresaAtivaId).toBe('3')
   })
 
-  it('sem login, nenhuma empresa é carregada', async () => {
+  it('sem login, o servidor recusa e nada é carregado', async () => {
     const store = useEmpresaStore()
     await store.fetchEmpresas()
 
     expect(store.empresas).toEqual([])
-    expect(store.empresaAtivaId).toBe('')
     expect(store.empresa).toBeNull()
+    expect(store.erro).toMatch(/sess/i)
   })
 
-  it('empresa criada tem como dono o usuário logado', async () => {
+  it('empresa criada tem como dono o usuário logado — decidido pelo servidor', async () => {
     const auth = await entrarComo('juliana@nexatech.com.br')
     const store = useEmpresaStore()
     await store.fetchEmpresas()
@@ -92,14 +98,15 @@ describe('store empresa — minhasEmpresas (R09)', () => {
       faturamentoMedioMensal: 10000,
     })
 
-    expect(nova.donoUsuarioId).toBe(auth.user!.id)
-    expect(store.empresaAtivaId).toBe(nova.id)
+    expect(nova).not.toBeNull()
+    expect(nova!.donoUsuarioId).toBe(auth.user!.id)
+    expect(store.empresaAtivaId).toBe(nova!.id)
     // e continua visível para ela num novo fetch
     await store.fetchEmpresas()
-    expect(store.empresas.map(e => e.id)).toContain(nova.id)
+    expect(store.empresas.map(e => e.id)).toContain(nova!.id)
 
-    // limpa o "banco" mock para não vazar entre testes
-    mockEmpresas.splice(mockEmpresas.findIndex(e => e.id === nova.id), 1)
+    // limpa o "banco" do servidor falso para não vazar entre testes
+    mockEmpresas.splice(mockEmpresas.findIndex(e => e.id === nova!.id), 1)
   })
 
   it('reset limpa o contexto ao trocar de usuário', async () => {
@@ -117,16 +124,83 @@ describe('store empresa — minhasEmpresas (R09)', () => {
     await entrarComo('ana@docesdaana.com.br')
     const store = useEmpresaStore()
     await store.fetchEmpresas()
-    expect(store.empresas.map(e => e.id)).toContain('emp-001')
+    expect(store.empresas.map(e => e.id)).toContain('1')
 
-    // logout + login como outro dono
     const auth = useAuthStore()
-    auth.logout()
-    store.reset()
+    await auth.logout()
+    // o logout já esvazia os stores registrados: nada de `store.reset()` manual
+    expect(store.empresas).toEqual([])
+
     await entrarComo('roberto@metalforte.com.br')
     await store.fetchEmpresas()
 
-    expect(store.empresas.map(e => e.id)).toEqual(['emp-002'])
-    expect(store.empresaAtivaId).toBe('emp-002')
+    expect(store.empresas.map(e => e.id)).toEqual(['2'])
+    expect(store.empresaAtivaId).toBe('2')
+  })
+})
+
+describe('empresa ativa — persistência e falha de servidor', () => {
+  beforeEach(() => {
+    servidor = prepararAmbiente()
+  })
+
+  afterEach(() => {
+    servidor.restaurar()
+  })
+
+  it('empresa ativa guardada sobrevive ao recarregamento (REQ-07)', async () => {
+    await entrarComo('ana@docesdaana.com.br')
+    const store = useEmpresaStore()
+    await store.fetchEmpresas()
+    store.selecionarEmpresa('3')
+
+    // simula o F5: Pinia novo, mesmo navegador (localStorage preservado)
+    const { setActivePinia, createPinia } = await import('pinia')
+    setActivePinia(createPinia())
+    await entrarComo('ana@docesdaana.com.br')
+    const novoStore = useEmpresaStore()
+    await novoStore.fetchEmpresas()
+
+    expect(novoStore.empresaAtivaId).toBe('3')
+  })
+
+  it('empresa guardada que deixou de ser autorizada cai na primeira (REQ-07)', async () => {
+    await entrarComo('ana@docesdaana.com.br')
+    const store = useEmpresaStore()
+    await store.fetchEmpresas()
+    store.selecionarEmpresa('3')
+
+    // outro usuário na mesma aba: a empresa guardada não é dele
+    const { setActivePinia, createPinia } = await import('pinia')
+    setActivePinia(createPinia())
+    await entrarComo('roberto@metalforte.com.br')
+    const outro = useEmpresaStore()
+    await outro.fetchEmpresas()
+
+    expect(outro.empresaAtivaId).toBe('2')
+  })
+
+  it('servidor fora do ar não vira "você não tem empresas" (REQ-13)', async () => {
+    await entrarComo('ana@docesdaana.com.br')
+    const store = useEmpresaStore()
+    servidor.derrubar()
+
+    await store.fetchEmpresas()
+
+    expect(store.empresas).toEqual([])
+    expect(store.erro).toMatch(/servidor/i)
+  })
+
+  it('senha errada não autentica', async () => {
+    const auth = useAuthStore()
+    expect(await auth.login('ana@docesdaana.com.br', 'senha-errada')).toBe(false)
+    expect(auth.user).toBeNull()
+    expect(auth.erro).toMatch(/senha/i)
+  })
+
+  it('usuário inativo não entra nem com a senha certa (REQ-05)', async () => {
+    const auth = useAuthStore()
+    expect(await auth.login('contador@contabilidade.com.br', SENHA_PADRAO)).toBe(false)
+    expect(auth.user).toBeNull()
   })
 })

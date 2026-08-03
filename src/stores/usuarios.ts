@@ -4,6 +4,7 @@ import type { Usuario, Perfil } from '@/types'
 import { mockUsuarios, mockPerfis, perfilVendedor } from '@/mock/data'
 import { mockQuery } from '@/graphql/client'
 import { useEmpresaStore } from './empresa'
+import { registrarResetDeSessao } from './reset'
 
 export const useUsuariosStore = defineStore('usuarios', () => {
   const empresaStore = useEmpresaStore()
@@ -37,7 +38,6 @@ export const useUsuariosStore = defineStore('usuarios', () => {
       const novo: Usuario = {
         ...usuario,
         id: `usr-${Date.now()}`,
-        createdAt: new Date().toISOString(),
         // nunca cair no ADMIN global como default: usuário novo entra no perfil mais restrito
         empresas: usuario.empresas.length
           ? usuario.empresas
@@ -60,5 +60,12 @@ export const useUsuariosStore = defineStore('usuarios', () => {
     loading.value = false
   }
 
-  return { usuarios, perfis, loading, fetchUsuarios, salvarUsuario, salvarPerfil }
+  function reset(): void {
+    todosUsuarios.value = []
+    perfis.value = []
+  }
+
+  registrarResetDeSessao(reset)
+
+  return { usuarios, perfis, loading, fetchUsuarios, salvarUsuario, salvarPerfil, reset }
 })
