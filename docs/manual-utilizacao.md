@@ -44,14 +44,40 @@ PV = CP / [1 − (Impostos% + Despesas Fixas% + Margem de Lucro% + Desconto Máx
 | **ML** | Margem de Lucro desejada, definida por produto |
 | **D** | Desconto Máximo que a equipe de vendas pode conceder sem corroer a margem |
 
+O diagrama abaixo mostra como cada componente entra na fórmula, do custo até o preço final:
+
+```mermaid
+flowchart LR
+    CP["Custo Base (CP)"]
+    IMP["Impostos %"]
+    DF["Despesas Fixas %"]
+    ML["Margem de Lucro %"]
+    D["Desconto Máximo %"]
+    SOMA["Soma dos percentuais"]
+    DIV["Divisor = 1 − Soma / 100"]
+    PV["Preço de Venda (PV)"]
+
+    IMP --> SOMA
+    DF --> SOMA
+    ML --> SOMA
+    D --> SOMA
+    SOMA --> DIV
+    CP --> PV
+    DIV --> PV
+```
+
 O sistema é organizado por **segmento de negócio** — Confeitaria 🧁, Indústria 🏭 ou Serviços 🛠️ — que muda apenas os rótulos das telas (ex.: "Ingrediente" vs "Matéria-prima" vs "Custo direto"), mas não a fórmula.
 
 O fluxo de trabalho recomendado para colocar a empresa em produção é:
 
-```
-1. Cadastrar a Empresa  →  2. Configurar Impostos  →  3. Lançar Despesas Fixas
-   →  4. Cadastrar Materiais  →  5. Cadastrar Produtos (ficha técnica)
-   →  6. Consultar a Precificação  →  7. Configurar Usuários e Perfis
+```mermaid
+flowchart LR
+    A["1. Cadastrar\nEmpresa"] --> B["2. Configurar\nImpostos"]
+    B --> C["3. Lançar\nDespesas Fixas"]
+    C --> D["4. Cadastrar\nMateriais"]
+    D --> E["5. Cadastrar\nProdutos"]
+    E --> F["6. Consultar\nPrecificação"]
+    F --> G["7. Configurar\nUsuários e Perfis"]
 ```
 
 Este manual segue exatamente essa ordem.
@@ -67,6 +93,15 @@ Este manual segue exatamente essa ordem.
 3. Clique em **"Entrar no sistema"**.
 4. Se as credenciais estiverem incorretas ou o usuário estiver **inativo**, aparece a mensagem: *"E-mail não encontrado ou usuário inativo."*
 5. Ao autenticar com sucesso, você é redirecionado para o **Dashboard**.
+
+```mermaid
+flowchart TD
+    A[Acessar a URL do sistema] --> B[Preencher e-mail e senha]
+    B --> C{Credenciais válidas\ne usuário ativo?}
+    C -- Não --> D["Mensagem: e-mail não encontrado\nou usuário inativo"]
+    D --> B
+    C -- Sim --> E[Redireciona para o Dashboard]
+```
 
 > **Nota de treinamento (ambiente de demonstração):** a tela de login possui um painel **"Acesso rápido (demo)"** com atalhos que preenchem o e-mail automaticamente para simular diferentes perfis — por exemplo, um ADMIN global que vê todas as empresas, um proprietário que só vê a própria empresa, um gerente com menu reduzido e um vendedor com menu mínimo. Use esses atalhos para entender como o RBAC (seção 14) muda o que cada pessoa enxerga.
 
@@ -90,6 +125,16 @@ Se o seu usuário tem acesso a mais de uma empresa (por ser dono de várias, ou 
 2. Um menu suspenso lista todas as empresas às quais você tem acesso, com um ✓ na empresa ativa.
 3. Clique em outra empresa para trocar o contexto — todos os dados das telas (produtos, materiais, despesas, etc.) passam a refletir a empresa selecionada.
 4. No fim da lista há o botão **"+ Nova empresa"**, que abre o formulário de cadastro (ver seção 4.2).
+
+```mermaid
+flowchart TD
+    A[Clicar no seletor de empresa no topo] --> B[Menu suspenso lista as empresas acessíveis]
+    B --> C{A empresa desejada\nestá na lista?}
+    C -- Sim --> D[Clicar na empresa]
+    D --> E["Contexto muda: produtos, materiais\ne despesas passam a refletir essa empresa"]
+    C -- Não --> F["Clicar em + Nova empresa"]
+    F --> G["Abre o formulário de cadastro (seção 4.2)"]
+```
 
 > Usuários com perfil **ADMIN** (escopo global) enxergam todas as empresas cadastradas na base, independentemente de serem donos ou não. Os demais usuários só veem as empresas que **possuem** (cadastraram) ou que foram **compartilhadas** com eles.
 
@@ -120,6 +165,22 @@ Passos:
 3. Clique em **"Salvar Alterações"**.
 4. Uma mensagem **"✓ Dados salvos com sucesso"** confirma a gravação.
 
+```mermaid
+flowchart TD
+    A["Menu: Configurações > Empresa"] --> B["Preencher Razão Social, CNPJ,\nSegmento e Regime Tributário"]
+    B --> C{Regime = Simples\nNacional?}
+    C -- Sim --> D[Selecionar Anexo Simples]
+    C -- Não --> E[Prosseguir]
+    D --> F[Informar Faturamento Médio Mensal]
+    E --> F
+    F --> G{Segmento = Serviços?}
+    G -- Sim --> H[Informar Folha de Pagamento Mensal]
+    H --> I["Sistema calcula o Fator R\ne o Anexo em tempo real"]
+    G -- Não --> J["Clicar em Salvar Alterações"]
+    I --> J
+    J --> K["✓ Dados salvos com sucesso"]
+```
+
 Na coluna lateral direita, o card **"Indicadores"** mostra em tempo real:
 - Faturamento Médio (por mês)
 - **% Despesas Fixas** sobre o faturamento (fica em destaque/aviso se passar de 20%)
@@ -145,6 +206,23 @@ Use quando a mesma conta de usuário administra mais de um negócio (multiempres
 4. Se faltar um campo obrigatório, o sistema lista os erros em um quadro vermelho antes de salvar (ex.: *"Razão social é obrigatória."*, *"CNPJ é obrigatório."*, *"Informe o faturamento médio mensal."*).
 5. Clique em **"Criar Empresa"**.
 6. A nova empresa passa a aparecer no seletor de empresas e você já pode alternar para ela.
+
+```mermaid
+flowchart TD
+    A["Seletor de empresa > + Nova empresa"] --> B["Escolher Segmento:\nConfeitaria / Indústria / Serviços"]
+    B --> C[Sistema sugere um Anexo Simples típico]
+    C --> D["Preencher Razão Social* e CNPJ*"]
+    D --> E[Informar Faturamento Médio Mensal*]
+    E --> F{Segmento = Serviços?}
+    F -- Sim --> G[Informar Folha de Pagamento Mensal]
+    F -- Não --> H[Prosseguir]
+    G --> I{Campos obrigatórios\npreenchidos?}
+    H --> I
+    I -- Não --> J[Exibe lista de erros]
+    J --> D
+    I -- Sim --> K["Clicar em Criar Empresa"]
+    K --> L[Nova empresa aparece no seletor]
+```
 
 > O usuário que cria a empresa se torna automaticamente o seu **dono** (`donoUsuarioId`). Só o dono, um colaborador explicitamente convidado, ou um ADMIN global, conseguem acessá-la depois.
 
@@ -173,6 +251,15 @@ A tela exibe:
    - **Descrição**
    - Marcar/desmarcar **"Imposto ativo"**
 3. Clique em **"Salvar"**.
+
+```mermaid
+flowchart TD
+    A["Menu: Cadastros > Impostos"] --> B["Clicar em + Novo Imposto"]
+    B --> C["Preencher Nome, Chave, Alíquota % e Descrição"]
+    C --> D["Marcar/desmarcar Imposto ativo"]
+    D --> E["Clicar em Salvar"]
+    E --> F["Imposto disponível para vincular a produtos"]
+```
 
 ### 5.3 Editando um imposto existente
 
@@ -206,6 +293,16 @@ As Despesas Fixas (aluguel, energia, pró-labore, contador etc.) não entram dir
    - Marcar **"Despesa ativa"** (só despesas ativas entram no rateio)
 3. Clique em **"Salvar"**.
 
+```mermaid
+flowchart TD
+    A["Menu: Cadastros > Despesas Fixas"] --> B["Clicar em + Nova Despesa"]
+    B --> C["Preencher Descrição, Categoria e Valor Mensal"]
+    C --> D["Marcar Despesa ativa"]
+    D --> E["Clicar em Salvar"]
+    E --> F["Sistema recalcula:\n% DF = Total Despesas / Faturamento × 100"]
+    F --> G["% DF entra no divisor de TODOS os produtos"]
+```
+
 ### 6.3 Editando ou removendo uma despesa
 
 - Clique em **"Editar"** na linha da despesa para ajustar valor, categoria ou status.
@@ -236,6 +333,15 @@ Os materiais são os itens que compõem o **Custo Base (CP)** de cada produto.
    - **Fornecedor** (opcional)
    - **Estoque atual** (opcional — não se aplica bem a "hora técnica" em serviços)
 3. Clique em **"Salvar"**.
+
+```mermaid
+flowchart TD
+    A["Menu: Cadastros > Materiais"] --> B["Clicar em + Novo Material"]
+    B --> C["Preencher Nome, Unidade e Custo Unitário"]
+    C --> D["Preencher Fornecedor e Estoque (opcional)"]
+    D --> E["Clicar em Salvar"]
+    E --> F["Material disponível na Ficha Técnica dos Produtos"]
+```
 
 > Em empresas de **Serviços**, o "material" mais comum é a **hora técnica** (unidade `H`) de cada função — ex.: "Hora — Desenvolvedor Sênior", "Hora — UX/UI Designer" — com tipo `MAO_DE_OBRA`. Custos diretos (deslocamento, licença de software, ambiente cloud) usam tipo `INSUMO`.
 
@@ -281,6 +387,20 @@ A tela lista os produtos em cards, com busca por nome, filtro por categoria e, e
 6. Validações antes de salvar: o **Nome** é obrigatório e é preciso ter **ao menos um material** na ficha técnica — caso contrário o sistema mostra os erros em destaque e não permite salvar.
 7. Clique em **"Criar Produto"**.
 
+```mermaid
+flowchart TD
+    A["Menu: Cadastros > Produtos"] --> B["Clicar em + Novo Produto"]
+    B --> C["Preencher Nome*, Descrição e Categoria"]
+    C --> D["Definir Margem de Lucro % e Desconto Máximo %"]
+    D --> E["Adicionar Insumos: Material + Quantidade"]
+    E --> F["Vincular Impostos ao produto"]
+    F --> G{Nome preenchido e\npelo menos 1 insumo?}
+    G -- Não --> H["Exibe erros de validação"]
+    H --> E
+    G -- Sim --> I["Clicar em Criar Produto"]
+    I --> J["Produto disponível na tela de Precificação"]
+```
+
 ### 8.3 Editando um produto
 
 Abra o produto (clique no card ou vá ao detalhe) e clique em **"Editar Produto"** — o mesmo formulário é reaberto pré-preenchido.
@@ -306,6 +426,16 @@ Esta é a tela central do sistema: mostra, produto a produto, **como o preço de
      - Desconto Máximo (reserva)
      - Lucro Líquido
 
+```mermaid
+flowchart TD
+    A["Menu: Principal > Precificação"] --> B["Selecionar um Produto cadastrado"]
+    B --> C["Sistema busca o Custo Base (soma dos materiais)"]
+    C --> D["Sistema soma: Impostos % + Despesas Fixas % + Margem de Lucro % + Desconto Máximo %"]
+    D --> E["Calcula o Divisor = 1 − Soma / 100"]
+    E --> F["PV = Custo Base ÷ Divisor"]
+    F --> G["Exibe fórmula visual e composição do preço (barra colorida)"]
+```
+
 Isso permite visualizar, de forma didática, **quanto de cada real cobrado vai para custo, imposto, despesa fixa, reserva de desconto e lucro**.
 
 ### 9.2 Simulação Manual
@@ -323,6 +453,14 @@ Ao lado da calculadora por produto, a **Simulação Manual** permite testar a f�
    - O **Preço de Venda** resultante
    - A **soma dos percentuais** e o **divisor**
 
+```mermaid
+flowchart TD
+    A["Informar CP, Impostos %, DF %, ML % e Desconto %"] --> B["Somar os 4 percentuais"]
+    B --> C["Divisor = 1 − Soma / 100"]
+    C --> D["PV = CP ÷ Divisor"]
+    D --> E["Resultado atualiza em tempo real a cada digitação"]
+```
+
 > **Exemplo didático (valores padrão da simulação):** CP = R$ 12,00, Impostos = 4,5%, DF = 15%, ML = 30%, Desconto = 5%. Soma = 54,5% → Divisor = 1 − 0,545 = 0,455 → PV = 12 / 0,455 ≈ **R$ 26,37**.
 
 ---
@@ -332,6 +470,18 @@ Ao lado da calculadora por produto, a **Simulação Manual** permite testar a f�
 Clique em qualquer produto na tela de Produtos (ou em "Ver ficha técnica →") para abrir a **página de detalhe** (rota `/produtos/:id`).
 
 Esta página reúne tudo sobre o produto:
+
+```mermaid
+flowchart TD
+    A["Clicar no produto na tela de Produtos"] --> B["Abre a página de Detalhe"]
+    B --> C["Consulta Ficha Técnica e Custo Base"]
+    C --> D["Consulta Impostos Vinculados"]
+    D --> E["Consulta a Faixa de Negociação\n(preço de tabela → piso do desconto)"]
+    E --> F{Deseja gerar\num documento?}
+    F -- Sim --> G["Clicar em Gerar PDF"]
+    G --> H["Backend gera a Ficha Técnica em PDF"]
+    F -- Não --> I["Editar a Margem de Lucro inline, se necessário"]
+```
 
 ### 10.1 Ficha Técnica
 
@@ -375,6 +525,15 @@ Fator R (%) = Folha de Pagamento Mensal / Faturamento Médio Mensal × 100
 - **Fator R ≥ 28%** → tributa pelo **Anexo III** (alíquota inicial de 6%) — mais vantajoso.
 - **Fator R < 28%** → tributa pelo **Anexo V** (alíquota inicial de 15,5%).
 
+```mermaid
+flowchart TD
+    A["Empresa é do segmento Serviços\ne regime Simples Nacional?"] -->|Não| B["Fator R não se aplica"]
+    A -->|Sim| C["Calcular Fator R = Folha de Pagamento / Faturamento × 100"]
+    C --> D{Fator R ≥ 28%?}
+    D -- Sim --> E["Anexo III — alíquota inicial 6%"]
+    D -- Não --> F["Anexo V — alíquota inicial 15,5%"]
+```
+
 ### 11.1 Simulador de Fator R
 
 Se a empresa ativa é de Serviços, a tela mostra:
@@ -406,6 +565,18 @@ Três relatórios estão disponíveis por abas:
 2. **Despesas Fixas** — lista de despesas com valor, % do faturamento e status, mais o total geral.
 3. **Custo de Materiais** — lista de materiais com custo unitário, fornecedor, estoque e um alerta visual (**"Baixo"**) quando o estoque estiver ≤ 5 unidades.
 
+```mermaid
+flowchart TD
+    A["Menu: Análise > Relatórios"] --> B["Selecionar a aba do relatório"]
+    B --> C["Precificação Completa"]
+    B --> D["Despesas Fixas"]
+    B --> E["Custo de Materiais"]
+    C --> F["Clicar em Exportar PDF"]
+    D --> F
+    E --> F
+    F --> G["Documento gerado pelo backend"]
+```
+
 Clique em **"📄 Exportar PDF"** no canto superior direito para gerar o documento correspondente à aba selecionada.
 
 ---
@@ -429,6 +600,16 @@ Abaixo, a tabela **"Visão Geral — Permissões por Perfil"** resume, por perfi
    - **Perfil de Acesso** — selecione um dos perfis cadastrados (ver seção 14)
    - **Usuário ativo** (checkbox)
 3. Clique em **"Salvar"**.
+
+```mermaid
+flowchart TD
+    A["Menu: Configurações > Usuários"] --> B["Clicar em + Novo Usuário"]
+    B --> C["Preencher Nome Completo e E-mail"]
+    C --> D["Selecionar Perfil de Acesso"]
+    D --> E["Marcar Usuário ativo"]
+    E --> F["Clicar em Salvar"]
+    F --> G["Usuário pode logar com as permissões do perfil selecionado"]
+```
 
 ### 13.3 Editando um usuário
 
@@ -454,6 +635,14 @@ O sistema usa **RBAC** (controle de acesso baseado em papéis): cada usuário te
 | **VENDEDOR** | Por empresa | Apenas leitura de Produtos e Relatórios — menu mínimo |
 | **CONTADOR** | Por empresa | Impostos (leitura/edição), Despesas (leitura/edição), Relatórios e leitura da Empresa |
 
+```mermaid
+flowchart LR
+    U["Usuário"] -->|possui um vínculo em cada empresa| V["Vínculo Usuário↔Empresa"]
+    V -->|associado a um| P["Perfil"]
+    P -->|concede| PM["Permissões (ex.: PRODUTO_READ, EMPRESA_WRITE)"]
+    PM -->|libera acesso a| M["Módulos/Telas: Produtos, Materiais,\nDespesas, Impostos, Relatórios,\nUsuários, Empresa, Perfis"]
+```
+
 ### 14.2 Consultando a Matriz de Permissões
 
 A tela exibe:
@@ -467,6 +656,23 @@ Use a matriz para responder perguntas como *"o Vendedor consegue editar despesas
 - Cada item do menu lateral está associado a uma permissão (`meta.permissao` da rota). Se o perfil do usuário não tiver aquela permissão, **o item nem aparece no menu**, e se o usuário tentar acessar a URL diretamente, é redirecionado de volta ao Dashboard.
 - Isso é apenas uma conveniência de interface — **a autoridade final é sempre o backend**, que valida a mesma permissão em cada operação.
 
+```mermaid
+flowchart TD
+    A["Usuário tenta acessar uma rota"] --> B{Rota é pública?}
+    B -- Sim --> C["Permite o acesso"]
+    B -- Não --> D{Usuário está\nautenticado?}
+    D -- Não --> E["Redireciona para o Login"]
+    D -- Sim --> F{Rota exige escopo\nADMIN global?}
+    F -- Sim --> G{Usuário é\nADMIN global?}
+    G -- Não --> H["Redireciona para o Dashboard"]
+    G -- Sim --> C
+    F -- Não --> I{Rota exige uma\npermissão RBAC?}
+    I -- Sim --> J{Perfil possui\na permissão?}
+    J -- Não --> H
+    J -- Sim --> C
+    I -- Não --> C
+```
+
 ### 14.4 Multiempresa e compartilhamento
 
 Um usuário pode ter **múltiplos vínculos** — ele pode ser dono de uma empresa e, ao mesmo tempo, ter sido **convidado/compartilhado** em outra empresa com um perfil diferente (por exemplo, ser Proprietário na própria confeitaria e atuar como Contador em uma empresa de terceiros). Cada vínculo é independente e define o perfil (e portanto as permissões) daquele usuário **naquela empresa específica**.
@@ -478,6 +684,14 @@ Um usuário pode ter **múltiplos vínculos** — ele pode ser dono de uma empre
 Visível apenas para usuários com perfil de **escopo global** (ADMIN) — aparece como o grupo **"Gestão do Site"** no fim do menu lateral, com identidade visual própria (ícone ⚙ e cores neutras).
 
 > Diferente das demais seções, o acesso aqui **não depende de uma permissão RBAC específica**, e sim do **escopo global** do perfil — mesmo um usuário PROPRIETARIO (que tem todas as permissões dentro das suas empresas) não enxerga este módulo.
+
+```mermaid
+flowchart TD
+    A["Login como usuário ADMIN global"] --> B["Menu lateral exibe o grupo Gestão do Site"]
+    B --> C["Visão Geral: estatísticas de toda a base"]
+    B --> D["Empresas: lista todas, gerencia equipes"]
+    B --> E["Usuários Globais: filtra, ativa/desativa"]
+```
 
 ### 15.1 Visão Geral (rota `/admin`)
 
