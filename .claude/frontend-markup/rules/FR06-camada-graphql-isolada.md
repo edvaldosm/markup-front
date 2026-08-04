@@ -1,76 +1,59 @@
-# Rule FR06 — Camada GraphQL isolada e cálculo migra para o backend
+# Rule FR06 — Camada GraphQL isolada, zero cálculo no front
 
 **Categoria:** Integração / Fronteira
-**Origem:** `src/graphql/client.ts`, `src/composables/useMarkup.ts`
+**Origem:** `src/graphql/client.ts`
 
-> ⚠️ **Emenda pendente — esta regra está parcialmente desatualizada desde
-> 2026-08-03.** A fatia 1 da integração
-> ([integracao-backend-sessao-empresas](../../specs/integracao-backend-sessao-empresas/spec.md))
-> decidiu que **não existe flag de runtime**: sessão e empresas falam com o
-> backend sempre, e o mock sobrevive apenas como fixture de teste.
-> `MOCK_MODE`/`mockQuery` continuam no código só pelas telas das fatias 2–3,
-> marcados `@deprecated`. **Reescrever esta regra ao fim da fatia 3**, quando
-> `src/mock/` for apagado — antes disso o texto abaixo ainda descreve o que as
-> telas não migradas fazem.
+> **Reescrita em 2026-08-04**, ao concluir `integracao-backend-gestao-site`:
+> `src/mock/` foi apagada do repositório. Esta regra descrevia até então um
+> protótipo com flag `MOCK_MODE` alternando entre mock e backend — essa
+> alternativa não existe mais. O texto abaixo descreve o estado final.
 
 ## Regra
 
-Todo acesso a dados passa pela camada `src/graphql/` (`client.ts`), controlada
-pela flag `MOCK_MODE`:
+Todo acesso a dados passa pela camada `src/graphql/` (`client.ts`): Apollo
+Client apontando para `GQL_ENDPOINT` (`VITE_GQL_ENDPOINT`, default
+`http://localhost:8080/graphql`). Não existe caminho alternativo, não existe
+flag de runtime, não existe cálculo de domínio no front — **cálculo tem uma
+sede só, o backend** (B1, Artigo III v2.5.0).
 
-- **`MOCK_MODE = true` (protótipo):** dados vêm de `src/mock/data.ts` via
-  `mockQuery`; o cálculo roda localmente em `useMarkupCalculator`.
-- **`MOCK_MODE = false` (produção):** Apollo Client apontando para
-  `GQL_ENDPOINT` (`VITE_GQL_ENDPOINT`, default `http://localhost:8080/graphql`).
+"Zero cálculo" cobre mais do que fórmula de precificação: nenhum **número
+derivado** nasce no front — soma, contagem monetária, percentual, diferença —
+mesmo quando parece só reorganizar dado já visível na tela. Exceção explícita:
+paginação, ordenação e formatação (`Intl`, [[FR05-formatacao-intl]]) continuam
+do front, porque não produzem número nem decisão nova, só reorganizam ou
+reescrevem o que já veio pronto do servidor.
 
-O cálculo local é **provisório e datado**: existe só para o protótipo navegar
-sem backend. Ele **não** é a fonte de verdade — a fonte é
-[[R01-calculo-no-backend]] + [[catalogo-calculos-validacoes]].
+**O que não é cálculo, mesmo parecendo:** resolver uma referência por id contra
+uma lista já buscada (ex.: cruzar `Usuario.empresas[].empresaId` com
+`todasEmpresas` para montar uma tabela) é o uso que o próprio contrato pede
+quando declara um campo como id solto em vez de objeto embutido — não é uma
+segunda fonte de verdade, é ler a resposta.
 
-## Inventário da migração
+## O que ainda não existe no backend
 
-Ao ligar o backend, isto **sai do front**:
+Duas superfícies ficam **desativadas**, com aviso (`IndisponivelBackend.vue`),
+até o contrato crescer — nunca com fórmula reimplementada como substituto:
 
-| Função em `useMarkup.ts` | Vira | Backend |
-|--------------------------|------|---------|
-| `calcularCustoBase` | `ResultadoPrecificacao.custoBase` | C1 |
-| `calcularPercentualDF` | `.percentualDespesasFixas` | C2 |
-| soma de alíquotas | `.percentualImpostos` | C3 |
-| divisor e PV | `.divisorMarkup`, `.precoVenda` | C5, C6 |
-| `breakdown` | `.breakdown` | C7 |
-| `calcularFatorR` | `.fatorR` | C8 · [[R10-fator-r-anexo-simples]] |
-| `resolverAnexo` / `FATOR_R_LIMITE` | `.anexoAplicado` | C9 · [[R10-fator-r-anexo-simples]] |
-| `calcularFaixaNegociacao` | `.faixaNegociacao` | C10, C11, C12 (guarda V9) |
-
-| `gerarRelatorioPdf` (mock: `window.print()`) | `POST /api/relatorios/{tipo}` | módulo `reports` · [[R12-relatorios-no-backend]] |
-
-Isto **permanece** no front:
-
-- `useCurrency` — formatação `Intl` pt-BR ([[FR05-formatacao-intl]]); o backend
-  devolve número cru e nunca formata (backend [[R07-fora-do-backend]]).
-- Ordenação de tabela, paginação e estado de tela.
-
-### Como migrar
-
-1. `MOCK_MODE = false` e Apollo configurado.
-2. Telas passam a consumir `precificarProduto` / `precificarTodos`.
-3. `useMarkupCalculator` é **removido** — não fica como fallback. Dois caminhos
-   de cálculo é como os números divergem.
-4. `ResultadoPrecificacao` do front vira espelho do tipo do schema.
-
-## Divergências conhecidas a resolver na migração
-
-O protótipo e o backend **não** são equivalentes hoje — ao migrar, vale a regra
-do backend:
-
-- **Material órfão:** o front ignora em silêncio (`if (!mat) return acc`),
-  subestimando o custo. No backend é erro — [[R11-guardas-de-calculo]] (V6).
-- **Divisor ≤ 0:** o front devolve `precoVenda = 0`; o backend **lança
-  exceção** — [[R03-divisor-markup-positivo]] (V1).
+- **Fator R por empresa** (estado salvo) e **simulação "e se"** — não há
+  `Empresa.fatorR` nem endpoint de simulação stateless. Afeta `EmpresaView`,
+  `EmpresaFormModal`, `FatorRView` (a tela inteira), o modo manual de
+  `PrecificacaoView`, e `AdminEmpresaDetalheView`.
+- **Agregados que a tela mostrava somando localmente**: total de despesas em
+  reais, custo total de materiais, percentual de faturamento por despesa
+  (linha a linha), contagem de empresas por segmento, contagem de usuários
+  inativos. Pendências registradas em
+  [integracao-backend-precificacao/spec.md](../../specs/integracao-backend-precificacao/spec.md#pendências-para-o-markup-back).
+- **Relatório em PDF** — o backend não tem o módulo `com.markup.reports`
+  (B12/F11). `gerarRelatorioPdf` cai num erro claro, não em `window.print()`.
 
 ## Por quê
 
-Mantém o protótipo navegável sem backend e deixa a troca numa única flag, sem
-espalhar `fetch` pelas telas. Mais importante: registra que o cálculo no front
-tem data de validade — sem isso ele vira uma segunda fonte de verdade, e duas
-fontes de verdade para preço significam dois preços. Ver [[camada-graphql-mock]].
+Duas fontes de verdade para preço significam dois preços — e o mesmo vale para
+qualquer número que o usuário decide algo em cima dele (Fator R decide o
+anexo tributário; um total errado de despesas decide se o rateio parece alto
+demais). A auditoria que motivou esta reescrita
+(`integracao-backend-precificacao/spec.md`) achou fórmula de domínio rodando
+sobre dado real em telas já ligadas ao backend — o risco não é teórico.
+
+Ver também [[R01-calculo-no-backend]], [[R11-guardas-de-calculo]],
+[[R12-relatorios-no-backend]].

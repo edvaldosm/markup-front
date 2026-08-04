@@ -77,8 +77,8 @@ function inicialAvatar(nome: string) {
           <span class="user-card__nome">{{ u.nome }}</span>
           <span class="user-card__email">{{ u.email }}</span>
           <div class="user-card__tags">
-            <BaseBadge v-for="emp in u.empresas" :key="emp.perfilId" color="green">
-              {{ emp.perfil?.nome ?? emp.perfilId }}
+            <BaseBadge v-for="emp in u.empresas" :key="emp.perfil.id" color="green">
+              {{ emp.perfil.nome }}
             </BaseBadge>
             <BaseBadge :color="u.ativo ? 'green' : 'gray'">{{ u.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
           </div>
@@ -101,7 +101,7 @@ function inicialAvatar(nome: string) {
         <tbody>
           <tr v-for="perfil in store.perfis" :key="perfil.id">
             <td><BaseBadge color="purple">{{ perfil.nome }}</BaseBadge></td>
-            <td>{{ store.usuarios.filter(u => u.empresas.some(e => e.perfilId === perfil.id)).length }}</td>
+            <td>{{ store.usuarios.filter(u => u.empresas.some(e => e.perfil.id === perfil.id)).length }}</td>
             <td>
               <div class="perms-wrap">
                 <BaseBadge v-for="p in perfil.permissoes.slice(0,4)" :key="p.id" color="gray">{{ p.chave }}</BaseBadge>

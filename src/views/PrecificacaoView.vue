@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { useMateriaisStore } from '@/stores/materiais'
 import { useProdutosStore } from '@/stores/produtos'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { usePrecificacaoStore } from '@/stores/precificacao'
+import { useCurrency } from '@/composables/useCurrency'
 import BaseCard from '@/components/ui/BaseCard.vue'
+import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 import type { Produto } from '@/types'
 
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const materiaisStore = useMateriaisStore()
 const produtosStore = useProdutosStore()
-const { calcularPrecificacao } = useMarkupCalculator()
+const precificacaoStore = usePrecificacaoStore()
 const { formatCurrency, formatPercent } = useCurrency()
+
+/**
+ * A "simulação manual" que existia aqui reimplementava PV = CP / divisor com
+ * números digitados na hora — a mesma fórmula de `CalculadoraDeMarkup.java`,
+ * fora do backend. Sem endpoint de simulação stateless (pendência registrada
+ * em `integracao-backend-precificacao/spec.md`), o modo fica desativado em vez
+ * de continuar calculando por conta própria (Artigo III v2.5.0).
+ */
+const MOTIVO_SIMULACAO = 'Simulação manual exige um endpoint de simulação sem cálculo local — pendência registrada para o backend.'
 
 onMounted(async () => {
   await Promise.all([
@@ -33,26 +44,14 @@ const produto = computed<Produto | undefined>(() =>
   produtosStore.produtos.find(p => p.id === produtoSelecionadoId.value)
 )
 
-const resultado = computed(() => {
-  if (!produto.value || !empresaStore.empresa) return null
-  return calcularPrecificacao(produto.value, empresaStore.empresa)
-})
+/** Preço, breakdown e faixa — inteiramente do backend (C1–C12). */
+const resultado = computed(() =>
+  produtoSelecionadoId.value ? precificacaoStore.resultadoDe(produtoSelecionadoId.value) : null
+)
 
-// Modo simulação manual
-const simManual = ref({ cp: 12, impostos: 4.5, df: 15, ml: 30, desconto: 5 })
-const resultadoManual = computed(() => {
-  const { cp, impostos, df, ml, desconto } = simManual.value
-  const soma = impostos + df + ml + desconto
-  const divisor = 1 - soma / 100
-  const pv = divisor > 0 ? cp / divisor : 0
-  return { soma, divisor, pv, breakdown: {
-    custoRecuperado: cp,
-    valorImpostos: pv * (impostos / 100),
-    valorDespesasFixas: pv * (df / 100),
-    valorDesconto: pv * (desconto / 100),
-    lucroLiquido: pv * (ml / 100),
-  }}
-})
+watch(produtoSelecionadoId, (id) => {
+  if (id) precificacaoStore.buscarProduto(id)
+}, { immediate: true })
 </script>
 
 <template>
@@ -101,7 +100,7 @@ const resultadoManual = computed(() => {
             <h4 class="breakdown__title">Composição do Preço</h4>
             <div class="breakdown-bar">
               <div class="breakdown-bar__segment breakdown-bar__segment--cp"
-                :style="`width: ${(resultado.breakdown.custoRecuperado / resultado.precoVenda * 100).toFixed(1)}%`" />
+                :style="`width: ${(100 - resultado.somaTotalPercentuais).toFixed(1)}%`" />
               <div class="breakdown-bar__segment breakdown-bar__segment--imposto"
                 :style="`width: ${resultado.percentualImpostos}%`" />
               <div class="breakdown-bar__segment breakdown-bar__segment--df"
@@ -116,7 +115,7 @@ const resultadoManual = computed(() => {
                 <div class="breakdown-item__dot breakdown-item__dot--cp" />
                 <span>Custo de Produção</span>
                 <strong>{{ formatCurrency(resultado.breakdown.custoRecuperado) }}</strong>
-                <span class="breakdown-item__pct">{{ formatPercent(resultado.breakdown.custoRecuperado / resultado.precoVenda * 100) }}</span>
+                <span class="breakdown-item__pct">{{ formatPercent(100 - resultado.somaTotalPercentuais) }}</span>
               </div>
               <div class="breakdown-item">
                 <div class="breakdown-item__dot breakdown-item__dot--imposto" />
@@ -152,47 +151,9 @@ const resultadoManual = computed(() => {
         </div>
       </BaseCard>
 
-      <!-- Simulação Manual -->
-      <BaseCard title="Simulação Manual" subtitle="Insira os valores para simular">
-        <div class="sim-form">
-          <div class="field">
-            <label class="field__label">Custo Base — CP (R$)</label>
-            <input v-model.number="simManual.cp" type="number" step="0.01" class="sim-input" />
-          </div>
-          <div class="field">
-            <label class="field__label">Impostos (%)</label>
-            <input v-model.number="simManual.impostos" type="number" step="0.1" class="sim-input" />
-          </div>
-          <div class="field">
-            <label class="field__label">Despesas Fixas — DF (%)</label>
-            <input v-model.number="simManual.df" type="number" step="0.1" class="sim-input" />
-          </div>
-          <div class="field">
-            <label class="field__label">Margem de Lucro — ML (%)</label>
-            <input v-model.number="simManual.ml" type="number" step="0.1" class="sim-input" />
-          </div>
-          <div class="field">
-            <label class="field__label">Desconto Máximo (%)</label>
-            <input v-model.number="simManual.desconto" type="number" step="0.1" class="sim-input" />
-          </div>
-        </div>
-
-        <div class="sim-resultado">
-          <div class="sim-resultado__formula">
-            <span class="sim-formula-label">PV = CP / Divisor</span>
-            <span class="sim-formula-eq">
-              {{ formatCurrency(simManual.cp) }} / {{ resultadoManual.divisor.toFixed(4) }}
-            </span>
-          </div>
-          <div class="sim-resultado__pv">
-            <span class="sim-pv-label">Preço de Venda</span>
-            <span class="sim-pv-value">{{ formatCurrency(resultadoManual.pv) }}</span>
-          </div>
-          <div class="sim-resultado__info">
-            Soma dos percentuais: <strong>{{ formatPercent(resultadoManual.soma) }}</strong> |
-            Divisor: <strong>{{ resultadoManual.divisor.toFixed(4) }}</strong>
-          </div>
-        </div>
+      <!-- Simulação Manual: desativada, ver MOTIVO_SIMULACAO -->
+      <BaseCard title="Simulação Manual" subtitle="Aguardando capacidade do backend">
+        <IndisponivelBackend :motivo="MOTIVO_SIMULACAO" tamanho="bloco" />
       </BaseCard>
     </div>
   </div>

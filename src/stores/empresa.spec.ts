@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useEmpresaStore } from './empresa'
 import { useAuthStore } from './auth'
-import { mockEmpresas } from '@/mock/data'
+import { mockEmpresas } from '@/test/fixtures'
 import { prepararAmbiente, entrarComo } from '@/test/app-harness'
 import { SENHA_PADRAO, type ServidorFalso } from '@/test/servidor-falso'
 

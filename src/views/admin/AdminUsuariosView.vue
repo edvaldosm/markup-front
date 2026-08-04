@@ -63,15 +63,15 @@ const iniciais = (nome: string) =>
       <div class="toolbar__info">
         <h2 class="section-title">Usuários da base</h2>
         <p class="section-sub">
-          {{ totalItens }} de {{ store.metricas.totalUsuarios }} usuários ·
-          {{ store.metricas.usuariosAtivos }} ativos
+          {{ totalItens }} de {{ store.metricas?.totalUsuarios ?? '—' }} usuários ·
+          {{ store.metricas?.usuariosAtivos ?? '—' }} ativos
         </p>
       </div>
       <div class="toolbar__filtros">
         <input v-model="busca" class="input" placeholder="Buscar por nome ou e-mail…" />
         <select v-model="filtroEmpresa" class="input input--select">
           <option value="">Todas as empresas</option>
-          <option v-for="e in store.empresas" :key="e.id" :value="e.id">{{ e.razaoSocial }}</option>
+          <option v-for="e in store.empresas" :key="e.empresa.id" :value="e.empresa.id">{{ e.empresa.razaoSocial }}</option>
         </select>
         <select v-model="filtroPerfil" class="input input--select">
           <option value="">Todos os perfis</option>

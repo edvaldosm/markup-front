@@ -1,7 +1,12 @@
 <script setup lang="ts">
+/**
+ * `value`/`sub` aceitam texto direto **ou** um slot nomeado — o slot existe
+ * para casos como `IndisponivelBackend`, onde o card não tem um número a
+ * mostrar (Artigo III v2.5.0) e precisa de markup, não só string.
+ */
 defineProps<{
   label: string
-  value: string
+  value?: string
   sub?: string
   icon?: string
   color?: 'green' | 'blue' | 'orange' | 'red' | 'purple'
@@ -14,8 +19,8 @@ defineProps<{
     <div class="stat-card__icon" v-if="icon">{{ icon }}</div>
     <div class="stat-card__content">
       <p class="stat-card__label">{{ label }}</p>
-      <p class="stat-card__value">{{ value }}</p>
-      <p v-if="sub" class="stat-card__sub">{{ sub }}</p>
+      <p class="stat-card__value"><slot name="value">{{ value }}</slot></p>
+      <p v-if="sub || $slots.sub" class="stat-card__sub"><slot name="sub">{{ sub }}</slot></p>
     </div>
   </div>
 </template>

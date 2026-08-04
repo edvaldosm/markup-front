@@ -6,7 +6,8 @@ import { useMateriaisStore } from '@/stores/materiais'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { useImpostosStore } from '@/stores/impostos'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { usePrecificacaoStore } from '@/stores/precificacao'
+import { useCurrency } from '@/composables/useCurrency'
 import { gerarRelatorioPdf } from '@/graphql/relatorios'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
@@ -22,7 +23,7 @@ const materiaisStore = useMateriaisStore()
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const impostosStore = useImpostosStore()
-const { calcularPrecificacao, calcularFaixaNegociacao } = useMarkupCalculator()
+const precificacaoStore = usePrecificacaoStore()
 const { formatCurrency, formatPercent } = useCurrency()
 const seg = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 
@@ -35,25 +36,23 @@ onMounted(async () => {
     empresaStore.fetchEmpresa(),
     despesasStore.fetchDespesas(),
     impostosStore.fetchImpostos(),
+    precificacaoStore.buscarProduto(id),
   ])
 })
 
 const produto = computed(() => produtosStore.getProduto(id))
 
-const resultado = computed(() => {
-  if (!produto.value || !empresaStore.empresa) return null
-  return calcularPrecificacao(produto.value, empresaStore.empresa)
-})
+/** Preço, breakdown e faixa de negociação — inteiramente do backend (C1–C12). */
+const resultado = computed(() => precificacaoStore.resultadoDe(id))
 
-/** Do preço de tabela ao piso do desconto máximo (C10–C12) */
-const faixa = computed(() =>
-  resultado.value ? calcularFaixaNegociacao(resultado.value) : null
-)
+/** Do preço de tabela ao piso do desconto máximo — já vem dentro do resultado */
+const faixa = computed(() => resultado.value?.faixaNegociacao ?? null)
 
 /**
  * O documento é gerado pelo **módulo de relatórios do backend** (JasperReports,
  * Artigo B12); o front só pede e baixa ([[FR11-relatorio-vem-do-backend]]).
- * Em `MOCK_MODE` o cliente cai na impressão da tela — stopgap do protótipo.
+ * O módulo ainda não existe no backend — a chamada falha com mensagem clara
+ * (`erroPdf`), nunca com impressão local como consolo.
  */
 const gerandoPdf = ref(false)
 const erroPdf = ref<string | null>(null)
@@ -110,7 +109,11 @@ async function salvarMargem() {
   // Mutation propria: reenviar o produto inteiro para mudar um numero deixaria
   // a ficha em memoria sobrescrever a que esta no servidor.
   const salvo = await produtosStore.ajustarMargem(produto.value.id, margemEdit.value)
-  if (salvo) editandoMargem.value = false
+  if (salvo) {
+    editandoMargem.value = false
+    // A margem muda o preço: busca de novo em vez de deixar o preço velho na tela.
+    await precificacaoStore.buscarProduto(id)
+  }
 }
 </script>
 
@@ -143,6 +146,7 @@ async function salvarMargem() {
     </div>
 
     <p v-if="erroPdf" class="erro-pdf no-print">{{ erroPdf }}</p>
+    <p v-if="precificacaoStore.erroProduto" class="erro-pdf no-print">{{ precificacaoStore.erroProduto }}</p>
 
     <div class="detalhe__grid">
       <!-- Ficha Técnica -->

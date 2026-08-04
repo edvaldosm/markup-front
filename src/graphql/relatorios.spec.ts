@@ -10,7 +10,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   gerarRelatorioPdf, baixarRelatorioDoBackend, nomeArquivoDe, REPORT_ENDPOINT,
 } from './relatorios'
-import { MOCK_MODE } from './client'
 
 /** Clicar numa âncora de download faria o jsdom tentar navegar — stub global */
 let clickSpy: ReturnType<typeof vi.spyOn>
@@ -45,21 +44,16 @@ describe('endpoint e nome do arquivo', () => {
   })
 })
 
-describe('modo protótipo (MOCK_MODE)', () => {
-  it('imprime a tela em vez de chamar o backend', async () => {
-    expect(MOCK_MODE, 'o protótipo roda em MOCK_MODE').toBe(true)
-
+describe('gerarRelatorioPdf — sem modo alternativo', () => {
+  it('delega direto ao backend; sem módulo Jasper, o erro (404) sobe claro', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404, blob: async () => new Blob() })))
     const print = vi.fn()
     vi.stubGlobal('print', print)
-    const fetchSpy = vi.fn()
-    vi.stubGlobal('fetch', fetchSpy)
 
-    const r = await gerarRelatorioPdf('FICHA_TECNICA_PRODUTO', { produtoId: 'prod-c01' })
-
-    expect(print).toHaveBeenCalledOnce()
-    expect(fetchSpy).not.toHaveBeenCalled()
-    expect(r.origem).toBe('impressao-local')
-    expect(r.nomeArquivo).toContain('ficha-tecnica-prod-c01')
+    await expect(gerarRelatorioPdf('FICHA_TECNICA_PRODUTO', { produtoId: 'prod-c01' }))
+      .rejects.toThrow('(404)')
+    // Nunca cai em impressão local como consolo — o módulo não existe, ponto.
+    expect(print).not.toHaveBeenCalled()
   })
 })
 
@@ -86,7 +80,7 @@ describe('download do módulo de relatórios do backend', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt-123')
     expect((init.headers as Record<string, string>).Accept).toBe('application/pdf')
     expect(JSON.parse(String(init.body))).toEqual({ produtoId: 'prod-c01' })
-    expect(r.origem).toBe('backend-jasper')
+    expect(r.nomeArquivo).toContain('ficha-tecnica-prod-c01')
   })
 
   it('entrega o arquivo ao usuário e libera o object URL', async () => {

@@ -2,10 +2,11 @@
 /**
  * Faixa de negociação: do preço de tabela (desconto 0%) ao piso (desconto
  * máximo). Serve ao vendedor — quanto ele pode conceder sem furar a margem.
- * Cálculo em `calcularFaixaNegociacao` (C10–C12).
+ * Cálculo (C10–C12) do backend, dentro de `ResultadoPrecificacao.faixaNegociacao`
+ * (`precificarProduto`/`precificarTodos`) — este componente só exibe.
  */
 import { computed } from 'vue'
-import { useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import type { FaixaNegociacao } from '@/types'
 

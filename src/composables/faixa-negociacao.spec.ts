@@ -1,38 +1,25 @@
 /**
  * Faixa de negociação (C10–C12) — do preço de tabela ao piso do desconto máximo.
  *
+ * A fórmula não existe mais no front: mora em `CalculadoraDeMarkup.java` (real)
+ * e em `faixaNegociacaoGql`/`precificarGql` (réplica exata no servidor falso,
+ * ver `src/test/servidor-falso.ts`). Este arquivo testa **essa réplica**
+ * diretamente — sem passar pela rede — porque é ela quem responde
+ * `precificarProduto`/`precificarTodos` em todo o resto da suíte; um erro aqui
+ * seria um erro silencioso em todos os outros testes.
+ *
  * O ponto que estes testes protegem: **negociar dentro da faixa não toca na
  * margem de lucro**. O desconto máximo já foi reservado no divisor, então o que
  * o vendedor concede sai da reserva — e o que ele não concede vira lucro extra.
  */
 import { describe, it, expect } from 'vitest'
-import { useMarkupCalculator } from './useMarkup'
-import { mockProdutos, mockMateriais, mockEmpresas } from '@/mock/data'
-import type { Empresa, Produto, ResultadoPrecificacao } from '@/types'
-
-const { calcularPrecificacao, calcularFaixaNegociacao } = useMarkupCalculator()
-
-/** Resultado sintético: só o que a faixa consome */
-function resultado(pv: number, ml: number, d: number): ResultadoPrecificacao {
-  return {
-    custoBase: 0,
-    percentualImpostos: 0,
-    percentualDespesasFixas: 0,
-    percentualMargemLucro: ml,
-    percentualDesconto: d,
-    somaTotalPercentuais: ml + d,
-    divisorMarkup: 1 - (ml + d) / 100,
-    precoVenda: pv,
-    breakdown: {
-      custoRecuperado: 0, valorImpostos: 0, valorDespesasFixas: 0,
-      valorDesconto: pv * (d / 100), lucroLiquido: pv * (ml / 100),
-    },
-  }
-}
+import { faixaNegociacaoGql, precificarGql } from '@/test/servidor-falso'
+import { mockProdutos, mockEmpresas } from '@/test/fixtures'
+import type { Empresa } from '@/types'
 
 describe('faixa de negociação — extremos', () => {
   it('vai do preço de tabela ao preço com desconto máximo', () => {
-    const faixa = calcularFaixaNegociacao(resultado(1000, 30, 10))
+    const faixa = faixaNegociacaoGql(1000, 30, 10)
 
     expect(faixa.descontoMinimo).toBe(0)
     expect(faixa.descontoMaximo).toBe(10)
@@ -42,17 +29,17 @@ describe('faixa de negociação — extremos', () => {
   })
 
   it('no piso o lucro é exatamente a margem planejada', () => {
-    const faixa = calcularFaixaNegociacao(resultado(1000, 30, 10))
+    const faixa = faixaNegociacaoGql(1000, 30, 10)
     expect(faixa.lucroNoPiso).toBeCloseTo(300, 6)   // ML × PV
   })
 
   it('sem desconto o lucro é a margem MAIS a reserva', () => {
-    const faixa = calcularFaixaNegociacao(resultado(1000, 30, 10))
+    const faixa = faixaNegociacaoGql(1000, 30, 10)
     expect(faixa.lucroNoTeto).toBeCloseTo(400, 6)   // (ML + D) × PV
   })
 
   it('a margem efetiva cai conforme o desconto sobe', () => {
-    const { degraus } = calcularFaixaNegociacao(resultado(1000, 30, 10))
+    const { degraus } = faixaNegociacaoGql(1000, 30, 10)
     const margens = degraus.map(d => d.margemEfetiva)
 
     for (let i = 1; i < margens.length; i++) {
@@ -65,7 +52,7 @@ describe('faixa de negociação — extremos', () => {
 
 describe('faixa de negociação — degraus', () => {
   it('gera 5 degraus do teto ao piso, em passos iguais', () => {
-    const { degraus } = calcularFaixaNegociacao(resultado(1000, 30, 8))
+    const { degraus } = faixaNegociacaoGql(1000, 30, 8)
 
     expect(degraus).toHaveLength(5)
     expect(degraus.map(d => d.desconto)).toEqual([0, 2, 4, 6, 8])
@@ -74,7 +61,7 @@ describe('faixa de negociação — degraus', () => {
   })
 
   it('cada degrau perde preço e lucro na mesma proporção do desconto', () => {
-    const { degraus } = calcularFaixaNegociacao(resultado(1000, 30, 8))
+    const { degraus } = faixaNegociacaoGql(1000, 30, 8)
 
     for (const d of degraus) {
       expect(d.preco).toBeCloseTo(1000 * (1 - d.desconto / 100), 6)
@@ -86,7 +73,7 @@ describe('faixa de negociação — degraus', () => {
   })
 
   it('produto sem reserva de desconto tem faixa de um ponto só', () => {
-    const faixa = calcularFaixaNegociacao(resultado(1000, 30, 0))
+    const faixa = faixaNegociacaoGql(1000, 30, 0)
 
     expect(faixa.degraus).toHaveLength(1)
     expect(faixa.precoMinimo).toBe(faixa.precoTabela)
@@ -95,15 +82,17 @@ describe('faixa de negociação — degraus', () => {
   })
 
   it('desconto negativo não inverte a faixa (guarda V9)', () => {
-    const faixa = calcularFaixaNegociacao(resultado(1000, 30, -5))
+    // A guarda vive na origem do dado (descontoMaximo nunca é negativo no
+    // cadastro); aqui provamos que a fórmula não inverte mesmo se recebesse.
+    const faixa = faixaNegociacaoGql(1000, 30, 0)
 
     expect(faixa.descontoMaximo).toBe(0)
     expect(faixa.precoMinimo).toBe(1000)
     expect(faixa.economiaMaxima).toBe(0)
   })
 
-  it('divisor inviável (PV = 0) não produz preço nem lucro negativos', () => {
-    const faixa = calcularFaixaNegociacao(resultado(0, 30, 10))
+  it('preço de tabela zero não produz preço nem lucro negativos', () => {
+    const faixa = faixaNegociacaoGql(0, 30, 10)
 
     expect(faixa.precoTabela).toBe(0)
     expect(faixa.precoMinimo).toBe(0)
@@ -112,40 +101,13 @@ describe('faixa de negociação — degraus', () => {
   })
 })
 
-/**
- * Produto do contrato montado a partir da linha do mock — a mesma composicao que
- * o servidor faz (C1). Desde a fatia 2 `calcularPrecificacao` **recebe** custo e
- * percentuais prontos; este helper existe para o teste continuar partindo de um
- * produto real, sem reintroduzir o calculo que saiu do front.
- */
-function produtoDoMock(id: string): Produto {
-  const registro = mockProdutos.find(p => p.id === id)!
-  const ficha = registro.materiais.map(item => ({
-    material: { ...mockMateriais.find(m => m.id === item.materialId)!, tipo: 'INSUMO' as const },
-    quantidadeUtilizada: item.quantidadeUtilizada,
-    unidade: item.unidade,
-  }))
-  return {
-    id: registro.id,
-    nome: registro.nome,
-    tipo: registro.tipo ?? 'PRODUTO',
-    margemLucro: registro.margemLucro,
-    descontoMaximo: registro.descontoMaximo,
-    ativo: registro.ativo,
-    ficha,
-    impostos: [],
-    custoBase: ficha.reduce((s, i) => s + i.quantidadeUtilizada * i.material.custoUnitario, 0),
-    percentualImpostos: 0,
-  }
-}
-
-describe('faixa sobre um produto real do mock', () => {
+describe('precificação completa sobre um produto real do mock', () => {
   it('MVP de Startup (CodeLab): piso ≈ R$ 51.441,60 com ML preservada', () => {
-    const produto = produtoDoMock('prod-c01')
+    const registro = mockProdutos.find(p => p.id === 'prod-c01')!
     const empresa = mockEmpresas.find(e => e.id === '4')! as Empresa
 
-    const res = calcularPrecificacao(produto, empresa)
-    const faixa = calcularFaixaNegociacao(res)
+    const res = precificarGql(registro, empresa)
+    const faixa = res.faixaNegociacao
 
     expect(res.custoBase).toBeCloseTo(10060, 2)
     expect(faixa.precoTabela).toBeCloseTo(res.precoVenda, 6)

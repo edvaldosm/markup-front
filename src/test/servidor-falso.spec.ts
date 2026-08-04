@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { apolloClient } from '@/graphql/client'
 import { MATERIAIS, PRODUTOS, DESPESAS_FIXAS } from '@/graphql/operations/catalogo'
 import { prepararAmbiente, entrarComo } from './app-harness'
-import { mockMateriais, mockProdutos } from '@/mock/data'
+import { mockMateriais, mockProdutos } from '@/test/fixtures'
 import { type ServidorFalso } from './servidor-falso'
 
 let servidor: ServidorFalso

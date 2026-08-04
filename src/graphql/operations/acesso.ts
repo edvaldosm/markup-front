@@ -94,7 +94,7 @@ export const ME = gql`
  * Já vem filtrada pelo servidor (B9) — o front não decide mais quais empresas o
  * usuário vê. `percentualDespesasFixas` é calculado lá (C2/B1) e chega pronto.
  */
-const CAMPOS_EMPRESA = gql`
+export const CAMPOS_EMPRESA = gql`
   fragment CamposEmpresa on Empresa {
     id
     razaoSocial

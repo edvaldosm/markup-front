@@ -3,18 +3,26 @@ import { ref, computed, onMounted, watch } from 'vue'
 import type { Empresa } from '@/types'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import { segmentoConfig } from '@/config/segmentos'
 import FatorRNote from '@/components/ui/FatorRNote.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
+import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 
 const store = useEmpresaStore()
 const despesasStore = useDespesasStore()
-const { calcularFatorR } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
+
+/**
+ * Fator R não tem campo no contrato (nem persistido, nem simulado) — só existe
+ * dentro de `ResultadoPrecificacao`, por produto. Pendência registrada em
+ * `integracao-backend-precificacao/spec.md`. Sem fórmula local no lugar
+ * (Artigo III v2.5.0): o formulário para de prever o anexo em tempo real.
+ */
+const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
 const seg = computed(() => segmentoConfig(store.empresa?.segmento))
 
 onMounted(() => Promise.all([store.fetchEmpresa(), despesasStore.fetchDespesas()]))
@@ -32,10 +40,6 @@ const salvando = ref(false)
 const salvo = ref(false)
 
 const ehServico = computed(() => form.value.segmento === 'SERVICOS')
-const fatorR = computed(() => {
-  if (form.value.faturamentoMedioMensal <= 0) return 0
-  return (form.value.folhaPagamentoMensal / form.value.faturamentoMedioMensal) * 100
-})
 
 watch(() => store.empresa, (emp) => {
   if (emp) {
@@ -120,8 +124,7 @@ const segmentos = [
               <input v-model.number="form.folhaPagamentoMensal" type="number" step="100" class="input" />
               <p class="field__hint">
                 Salários + pró-labore + encargos. Numerador do <strong>Fator R</strong>.
-                Atual: <strong>{{ formatPercent(fatorR) }}</strong> →
-                {{ fatorR >= 28 ? 'Anexo III (6%) ✓' : 'Anexo V (15,5%) — abaixo de 28%' }}
+                Atual: <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
               </p>
             </div>
 
@@ -168,8 +171,7 @@ const segmentos = [
             </div>
             <div class="indicator" v-if="ehServico">
               <span class="indicator__label">Fator R</span>
-              <span class="indicator__value" :class="{ 'text-warning': fatorR < 28 }">{{ formatPercent(fatorR) }}</span>
-              <span class="indicator__sub">{{ fatorR >= 28 ? 'Anexo III (6%)' : 'Anexo V (15,5%)' }}</span>
+              <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
             </div>
           </div>
         </BaseCard>

@@ -26,9 +26,10 @@ const Raiz = defineComponent({ name: 'RaizTeste', render: () => h(RouterView) })
 /**
  * Deixa promises e timers pendentes resolverem.
  *
- * As respostas do servidor falso são imediatas, mas os stores ainda não
- * migrados usam `mockQuery` com `setTimeout` — por isso os timers continuam
- * sendo avançados aqui. Some quando o mock sair, na fatia 3.
+ * As respostas do servidor falso são imediatas; o avanço de timers só importa
+ * para quem liga `vi.useFakeTimers()` por conta própria (ex.: testes de
+ * expiração de sessão). `mockQuery` não existe mais — `assentar` já não
+ * depende dele, mas continua útil como ponto único de "deixa tudo acontecer".
  */
 export async function assentar() {
   // Só avança timers quando o teste os simula: `runAllTimersAsync` lança se os

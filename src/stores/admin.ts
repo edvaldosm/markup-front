@@ -1,30 +1,46 @@
+/**
+ * Store do **módulo de Gestão do Site** (spec `integracao-backend-gestao-site`).
+ *
+ * É a **única** store que não filtra por empresa ativa: o gestor precisa da
+ * base inteira. Por isso todo caminho de entrada — carga e cada ação — checa o
+ * escopo global antes de tocar em qualquer dado; para quem não é ADMIN, esta
+ * store é um conjunto vazio e um punhado de `false`. O backend continua sendo
+ * a autoridade (R02/R05/R09): aqui a UI só deixa de oferecer o que o servidor
+ * negaria.
+ *
+ * `empresas` guarda `EmpresaAdmin[]` **como o servidor devolve** — dono e
+ * equipe já compostos por `todasEmpresas`/`empresaAdmin`. Não existe mais uma
+ * junção local cruzando `Empresa[]` com `Usuario[]`: essa junção calculava
+ * "quem é o dono" e "quem está na equipe" a partir de duas listas soltas, e o
+ * servidor faz isso com uma fonte só (Artigo III v2.5.0).
+ *
+ * `usuariosAdmin` continua cruzando `usuarios` com `empresas` por
+ * `empresaId` — mas isso não é o mesmo tipo de conta: é resolver uma
+ * referência (`UsuarioEmpresa.empresaId`) contra uma lista já buscada, que é
+ * o uso que o próprio contrato pede (ver comentário em `VinculoEmpresa`).
+ */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Empresa, Perfil, Usuario, VinculoEmpresa, SegmentoNegocio } from '@/types'
-import { mockEmpresas, mockUsuarios, mockPerfis } from '@/mock/data'
-import { mockQuery } from '@/graphql/client'
+import type { Empresa, EmpresaAdmin, MetricasBase, Perfil, Usuario } from '@/types'
+import { apolloClient } from '@/graphql/client'
+import {
+  TODAS_EMPRESAS, EMPRESA_ADMIN, TODOS_USUARIOS, METRICAS_DA_BASE,
+  VINCULAR_USUARIO, DESVINCULAR_USUARIO, DEFINIR_PERFIL_NO_VINCULO, DEFINIR_USUARIO_ATIVO,
+} from '@/graphql/operations/admin'
+import { mensagemDeErro } from '@/graphql/erros'
 import { podeAcessarModuloAdmin } from '@/auth/autorizacao'
 import { useAuthStore } from './auth'
 import { registrarResetDeSessao } from './reset'
 
-/** Um membro da equipe de uma empresa: quem é, com que perfil e se é o dono */
-export interface MembroEquipe {
-  usuario: Usuario
-  perfil: Perfil | null
-  dono: boolean
-}
-
-/** Empresa vista pelo gestor do site: cadastro + dono + equipe com acesso */
-export interface EmpresaAdmin {
-  empresa: Empresa
-  dono: Usuario | null
-  equipe: MembroEquipe[]
-}
-
-/** Uma empresa na qual o usuário entra, e com que perfil */
+/**
+ * Uma empresa na qual o usuário entra, e com que perfil.
+ *
+ * `perfil` é sempre presente: `UsuarioEmpresa.perfil` é obrigatório no
+ * contrato (não existe vínculo sem perfil).
+ */
 export interface AcessoDoUsuario {
   empresa: Empresa
-  perfil: Perfil | null
+  perfil: Perfil
   dono: boolean
 }
 
@@ -36,59 +52,96 @@ export interface UsuarioAdmin {
   acessos: AcessoDoUsuario[]
 }
 
-/**
- * Store do **módulo de Gestão do Site** (spec `modulo-gestao-site`).
- *
- * É a **única** store que não filtra por empresa ativa: o gestor precisa da base
- * inteira. Por isso todo caminho de entrada — carga e cada ação — checa o escopo
- * global antes de tocar em qualquer dado. Para quem não é ADMIN, esta store é um
- * conjunto vazio e um punhado de `false`.
- *
- * O backend continua sendo a autoridade (R02/R05/R09): aqui a UI só deixa de
- * oferecer o que o servidor negaria.
- */
 export const useAdminStore = defineStore('admin', () => {
   const auth = useAuthStore()
 
-  const empresas = ref<Empresa[]>([])
+  const empresas = ref<EmpresaAdmin[]>([])
   const usuarios = ref<Usuario[]>([])
   const perfis = ref<Perfil[]>([])
+  const metricas = ref<MetricasBase | null>(null)
   const loading = ref(false)
   const carregado = ref(false)
+  const erro = ref<string | null>(null)
 
   /** A sessão atual é a do gestor do site? */
   const souGestor = computed(() => podeAcessarModuloAdmin(auth.perfil))
 
-  function limpar() {
+  function limpar(): void {
     empresas.value = []
     usuarios.value = []
     perfis.value = []
+    metricas.value = null
     carregado.value = false
+    erro.value = null
   }
 
-  // A base inteira da Gestão do Site não pode sobreviver ao logout (REQ-04)
+  // A base inteira da Gestão do Site não pode sobreviver ao logout (REQ-04 da fatia 1)
   registrarResetDeSessao(limpar)
 
-  /**
-   * Carrega a base inteira. Com o backend ligado, vira `todasEmpresas` +
-   * `todosUsuarios` (queries de escopo global, F6).
-   */
-  async function fetchTudo() {
+  /** Carrega a base inteira: `todasEmpresas` + `todosUsuarios` + `metricasDaBase`. */
+  async function fetchTudo(): Promise<void> {
     if (!souGestor.value) {
       limpar()
       return
     }
     loading.value = true
-    const [e, u, p] = await Promise.all([
-      mockQuery([...mockEmpresas]),
-      mockQuery([...mockUsuarios]),
-      mockQuery([...mockPerfis]),
-    ])
-    empresas.value = e.data
-    usuarios.value = u.data
-    perfis.value = p.data
-    carregado.value = true
-    loading.value = false
+    erro.value = null
+    try {
+      const [respEmpresas, respUsuarios, respMetricas] = await Promise.all([
+        apolloClient.query({ query: TODAS_EMPRESAS, fetchPolicy: 'network-only' }),
+        apolloClient.query({ query: TODOS_USUARIOS, fetchPolicy: 'network-only' }),
+        apolloClient.query({ query: METRICAS_DA_BASE, fetchPolicy: 'network-only' }),
+      ])
+      empresas.value = [...respEmpresas.data.todasEmpresas]
+      usuarios.value = [...respUsuarios.data.todosUsuarios]
+      metricas.value = respMetricas.data.metricasDaBase
+      // Perfis não têm query própria de admin — vêm do cadastro de sistema, já
+      // usado em `usuarios.ts`; aqui só precisamos deles para os formulários
+      // de vínculo, então reaproveitamos o mesmo catálogo via `perfis` global
+      // se já carregado, ou derivamos dos vínculos visíveis.
+      perfis.value = derivarPerfisVisiveis()
+      carregado.value = true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'todasEmpresas')
+      limpar()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * O contrato não tem `perfis` de escopo global dedicado à Gestão do Site — o
+   * conjunto de perfis existentes se descobre pelos vínculos já carregados.
+   * Cobre o caso de uso real (selecionar perfil ao vincular usuário a uma
+   * empresa onde ele já não está); não inventa perfil que não apareça em uso.
+   */
+  function derivarPerfisVisiveis(): Perfil[] {
+    const porId = new Map<string, Perfil>()
+    for (const usuarioAdmin of usuarios.value) {
+      if (usuarioAdmin.perfilGlobal) porId.set(usuarioAdmin.perfilGlobal.id, usuarioAdmin.perfilGlobal)
+      for (const vinculo of usuarioAdmin.empresas) porId.set(vinculo.perfil.id, vinculo.perfil)
+    }
+    for (const empresaAdmin of empresas.value) {
+      for (const membro of empresaAdmin.equipe) {
+        if (membro.perfil) porId.set(membro.perfil.id, membro.perfil)
+      }
+    }
+    return [...porId.values()]
+  }
+
+  async function buscarEmpresaAdmin(empresaId: string): Promise<EmpresaAdmin | null> {
+    if (!souGestor.value) return null
+    try {
+      const { data } = await apolloClient.query({
+        query: EMPRESA_ADMIN,
+        variables: { empresaId },
+        fetchPolicy: 'network-only',
+      })
+      return data.empresaAdmin
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'empresaAdmin')
+      return null
+    }
   }
 
   const perfilPorId = (id: string): Perfil | null =>
@@ -97,166 +150,159 @@ export const useAdminStore = defineStore('admin', () => {
   const usuarioPorId = (id: string): Usuario | null =>
     usuarios.value.find(u => u.id === id) ?? null
 
-  /** Perfil efetivo de um vínculo — o embutido no mock ou o resolvido pelo id */
-  const perfilDoVinculo = (v: VinculoEmpresa): Perfil | null =>
-    v.perfil ?? perfilPorId(v.perfilId)
+  const empresaAdminPorId = (id: string): EmpresaAdmin | null =>
+    empresas.value.find(e => e.empresa.id === id) ?? null
 
-  /** Empresas com dono e equipe resolvidos, prontas para a listagem administrativa */
-  const empresasAdmin = computed<EmpresaAdmin[]>(() =>
-    empresas.value.map(empresa => {
-      const dono = usuarios.value.find(u => u.id === empresa.donoUsuarioId) ?? null
-
-      const equipe: MembroEquipe[] = usuarios.value
-        .filter(u => u.empresas.some(v => v.empresaId === empresa.id))
-        .map(usuario => {
-          const vinculo = usuario.empresas.find(v => v.empresaId === empresa.id)!
-          return {
-            usuario,
-            perfil: perfilDoVinculo(vinculo),
-            dono: usuario.id === empresa.donoUsuarioId,
-          }
-        })
-
-      // Empresa sem vínculo para o próprio dono não deveria existir (R09), mas se
-      // acontecer o gestor precisa enxergar isso em vez de uma equipe sem dono.
-      if (dono && !equipe.some(m => m.dono)) {
-        equipe.unshift({ usuario: dono, perfil: null, dono: true })
-      }
-
-      return { empresa, dono, equipe }
-    })
-  )
-
-  /** Usuários com escopo e acessos resolvidos, prontos para a listagem global */
+  /**
+   * Usuários com escopo e acessos resolvidos, prontos para a listagem global.
+   *
+   * Cruza `usuarios` (de `todosUsuarios`) com `empresas` (de `todasEmpresas`)
+   * por `empresaId` — resolução de referência, não agregação nova: é o uso
+   * que `UsuarioEmpresa.empresaId` (id solto, de propósito) pede.
+   */
   const usuariosAdmin = computed<UsuarioAdmin[]>(() =>
     usuarios.value.map(usuario => ({
       usuario,
       perfilGlobal: usuario.perfilGlobal ?? null,
       acessos: usuario.empresas
         .map(v => {
-          const empresa = empresas.value.find(e => e.id === v.empresaId)
-          if (!empresa) return null
+          const empresaAdmin = empresas.value.find(e => e.empresa.id === v.empresaId)
+          if (!empresaAdmin) return null
           return {
-            empresa,
-            perfil: perfilDoVinculo(v),
-            dono: empresa.donoUsuarioId === usuario.id,
+            empresa: empresaAdmin.empresa,
+            perfil: v.perfil,
+            dono: empresaAdmin.empresa.donoUsuarioId === usuario.id,
           }
         })
         .filter((a): a is AcessoDoUsuario => a !== null),
-    }))
+    })),
   )
 
-  const empresaAdminPorId = (id: string): EmpresaAdmin | null =>
-    empresasAdmin.value.find(e => e.empresa.id === id) ?? null
-
-  /** Indicadores da base — o painel de entrada do gestor */
-  const metricas = computed(() => {
-    const porSegmento = empresas.value.reduce((acc, e) => {
-      acc[e.segmento] = (acc[e.segmento] ?? 0) + 1
-      return acc
-    }, {} as Record<SegmentoNegocio, number>)
-
-    return {
-      totalEmpresas: empresas.value.length,
-      totalUsuarios: usuarios.value.length,
-      usuariosAtivos: usuarios.value.filter(u => u.ativo).length,
-      usuariosInativos: usuarios.value.filter(u => !u.ativo).length,
-      totalVinculos: usuarios.value.reduce((acc, u) => acc + u.empresas.length, 0),
-      faturamentoTotal: empresas.value.reduce((acc, e) => acc + e.faturamentoMedioMensal, 0),
-      porSegmento,
-    }
-  })
-
-  /** Quantos usuários têm cada perfil, contando vínculos + escopo global */
+  /** Quantos usuários têm cada perfil — contagem sobre lista já correta, não agregado novo. */
   const usuariosPorPerfil = computed(() =>
     perfis.value.map(perfil => ({
       perfil,
       total: usuarios.value.filter(u =>
-        u.perfilGlobal?.id === perfil.id || u.empresas.some(v => v.perfilId === perfil.id)
+        u.perfilGlobal?.id === perfil.id || u.empresas.some(v => v.perfil.id === perfil.id),
       ).length,
-    }))
+    })),
   )
 
   // ─── Ações do gestor ────────────────────────────────────────────────────────
-  // Mutam o "banco" mock através dos itens do próprio store (mesmos objetos), de
-  // modo que a mudança sobrevive à navegação — mesma estratégia de `criarEmpresa`.
 
   /** Ativa/desativa o acesso de um usuário. Devolve o novo estado, ou `null` se recusado. */
   async function definirUsuarioAtivo(usuarioId: string, ativo: boolean): Promise<boolean | null> {
     if (!souGestor.value) return null
-    const usuario = usuarioPorId(usuarioId)
-    if (!usuario) return null
-    loading.value = true
-    await mockQuery(null, 250)
-    usuario.ativo = ativo
-    loading.value = false
-    return usuario.ativo
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DEFINIR_USUARIO_ATIVO,
+        variables: { usuarioId, ativo },
+      })
+      // Substitui o elemento, não muta `usuario.ativo` — o objeto veio do
+      // Apollo e é **congelado**; atribuir a uma propriedade dele lança em
+      // modo estrito (o mesmo bug já visto na fatia 1, aqui num lugar novo).
+      const idx = usuarios.value.findIndex(u => u.id === usuarioId)
+      if (idx >= 0) {
+        usuarios.value[idx] = { ...usuarios.value[idx], ativo: data.definirUsuarioAtivo.ativo }
+      }
+      return data.definirUsuarioAtivo.ativo
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'definirUsuarioAtivo')
+      return null
+    }
   }
 
   /** Troca o perfil de um usuário **dentro de uma empresa** (não mexe no escopo global). */
   async function definirPerfilNoVinculo(
-    usuarioId: string, empresaId: string, perfilId: string
+    usuarioId: string, empresaId: string, perfilId: string,
   ): Promise<boolean> {
     if (!souGestor.value) return false
-    const usuario = usuarioPorId(usuarioId)
-    const perfil = perfilPorId(perfilId)
-    const vinculo = usuario?.empresas.find(v => v.empresaId === empresaId)
-    if (!usuario || !perfil || !vinculo) return false
-    loading.value = true
-    await mockQuery(null, 250)
-    vinculo.perfilId = perfil.id
-    vinculo.perfil = perfil
-    loading.value = false
-    return true
+    erro.value = null
+    try {
+      await apolloClient.mutate({
+        mutation: DEFINIR_PERFIL_NO_VINCULO,
+        variables: { usuarioId, empresaId, perfilId },
+      })
+      // A equipe da empresa mudou: recarrega o que exibe isso.
+      await Promise.all([recarregarEmpresas(), recarregarMetricas()])
+      return true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'definirPerfilNoVinculo')
+      return false
+    }
   }
 
-  /** Dá acesso de um usuário existente a uma empresa. Vínculo repetido é recusado. */
+  /** Dá acesso de um usuário existente a uma empresa. Vínculo repetido é recusado pelo servidor. */
   async function vincularUsuario(
-    usuarioId: string, empresaId: string, perfilId: string
+    usuarioId: string, empresaId: string, perfilId: string,
   ): Promise<boolean> {
     if (!souGestor.value) return false
-    const usuario = usuarioPorId(usuarioId)
-    const empresa = empresas.value.find(e => e.id === empresaId)
-    const perfil = perfilPorId(perfilId)
-    if (!usuario || !empresa || !perfil) return false
-    if (usuario.empresas.some(v => v.empresaId === empresaId)) return false
-    loading.value = true
-    await mockQuery(null, 250)
-    usuario.empresas.push({ empresaId, perfilId: perfil.id, perfil })
-    loading.value = false
-    return true
+    erro.value = null
+    try {
+      await apolloClient.mutate({
+        mutation: VINCULAR_USUARIO,
+        variables: { usuarioId, empresaId, perfilId },
+      })
+      await Promise.all([recarregarTodosUsuarios(), recarregarEmpresas(), recarregarMetricas()])
+      return true
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'vincularUsuario')
+      return false
+    }
   }
 
   /**
    * Remove o acesso de um usuário a uma empresa.
    *
-   * O **dono não pode ser desvinculado** da própria empresa (REQ-07): ela ficaria
-   * sem responsável e sairia do conjunto de quem a cadastrou (B9/R09). Trocar de
-   * dono é transferência de propriedade — fora do escopo desta spec.
+   * O **dono não pode ser desvinculado** da própria empresa: ela ficaria sem
+   * responsável (B9/R09). A checagem local aqui é só atalho de UI — evita a
+   * viagem de rede para um caso que o servidor sempre recusaria; quem decide
+   * de verdade é o `catch` abaixo.
    */
   async function desvincularUsuario(usuarioId: string, empresaId: string): Promise<boolean> {
     if (!souGestor.value) return false
-    const usuario = usuarioPorId(usuarioId)
-    const empresa = empresas.value.find(e => e.id === empresaId)
-    if (!usuario || !empresa) return false
-    if (empresa.donoUsuarioId === usuarioId) return false
-    const idx = usuario.empresas.findIndex(v => v.empresaId === empresaId)
-    if (idx < 0) return false
-    loading.value = true
-    await mockQuery(null, 250)
-    usuario.empresas.splice(idx, 1)
-    loading.value = false
-    return true
+    const empresaAdmin = empresaAdminPorId(empresaId)
+    if (empresaAdmin?.empresa.donoUsuarioId === usuarioId) return false
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: DESVINCULAR_USUARIO,
+        variables: { usuarioId, empresaId },
+      })
+      if (data.desvincularUsuario) {
+        await Promise.all([recarregarTodosUsuarios(), recarregarEmpresas(), recarregarMetricas()])
+      }
+      return data.desvincularUsuario
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'desvincularUsuario')
+      return false
+    }
+  }
+
+  async function recarregarEmpresas(): Promise<void> {
+    const { data } = await apolloClient.query({ query: TODAS_EMPRESAS, fetchPolicy: 'network-only' })
+    empresas.value = [...data.todasEmpresas]
+  }
+
+  async function recarregarTodosUsuarios(): Promise<void> {
+    const { data } = await apolloClient.query({ query: TODOS_USUARIOS, fetchPolicy: 'network-only' })
+    usuarios.value = [...data.todosUsuarios]
+  }
+
+  async function recarregarMetricas(): Promise<void> {
+    const { data } = await apolloClient.query({ query: METRICAS_DA_BASE, fetchPolicy: 'network-only' })
+    metricas.value = data.metricasDaBase
   }
 
   return {
     // estado
-    empresas, usuarios, perfis, loading, carregado, souGestor,
+    empresas, usuarios, perfis, metricas, loading, carregado, erro, souGestor,
     // derivados
-    empresasAdmin, usuariosAdmin, empresaAdminPorId, metricas, usuariosPorPerfil,
+    usuariosAdmin, empresaAdminPorId, usuariosPorPerfil,
     perfilPorId, usuarioPorId,
     // ações
-    fetchTudo, limpar,
+    fetchTudo, buscarEmpresaAdmin, limpar,
     definirUsuarioAtivo, definirPerfilNoVinculo, vincularUsuario, desvincularUsuario,
   }
 })

@@ -16,7 +16,7 @@ import { montarAppComo, entrarComo, aguardar, prepararAmbiente } from './app-har
 import { type ServidorFalso } from './servidor-falso'
 import type { VinculoEmpresa } from '@/types'
 import { useAdminStore } from '@/stores/admin'
-import { mockUsuarios, mockEmpresas } from '@/mock/data'
+import { mockUsuarios, mockEmpresas } from '@/test/fixtures'
 
 const GESTOR = 'admin@markup.com.br'
 const ROTAS_ADMIN = ['/admin', '/admin/empresas', '/admin/usuarios']
@@ -95,7 +95,9 @@ describe('acesso ao módulo (REQ-01)', () => {
     expect(store.souGestor).toBe(false)
     expect(store.empresas).toEqual([])
     expect(store.usuarios).toEqual([])
-    expect(store.metricas.totalEmpresas).toBe(0)
+    // Sem escopo global o front nem pede metricasDaBase — null, não zero
+    // inventado: zero seria afirmar "a base tem zero empresas", que é falso.
+    expect(store.metricas).toBeNull()
   })
 
   it('as ações de gestão são recusadas para quem não é gestor', async () => {
@@ -166,16 +168,30 @@ describe('visão global do gestor (REQ-02..REQ-05)', () => {
     const store = useAdminStore()
     await aguardar(store.fetchTudo())
 
-    expect(store.metricas.totalEmpresas).toBe(mockEmpresas.length)
-    expect(store.metricas.totalUsuarios).toBe(mockUsuarios.length)
-    expect(store.metricas.usuariosInativos).toBe(1)
-    expect(store.metricas.totalVinculos).toBe(
+    expect(store.metricas).not.toBeNull()
+    expect(store.metricas!.totalEmpresas).toBe(mockEmpresas.length)
+    expect(store.metricas!.totalUsuarios).toBe(mockUsuarios.length)
+    // `usuariosInativos` não existe em MetricasBase (pendência de contrato,
+    // REQ-05) — não há o que testar aqui até o backend expor o campo.
+    expect(store.metricas!.totalVinculos).toBe(
       mockUsuarios.reduce((acc, u) => acc + u.empresas.length, 0)
     )
     // Ana aparece nas duas empresas em que tem vínculo
     const ana = store.usuariosAdmin.find(u => u.usuario.id === '2')!
     expect(ana.acessos.map(a => a.empresa.id).sort()).toEqual(['1', '3'])
     expect(ana.acessos.find(a => a.empresa.id === '1')!.dono).toBe(true)
+  })
+
+  it('empresas vêm compostas pelo servidor (EmpresaAdmin), não de junção local', async () => {
+    await entrarComo(GESTOR)
+    const store = useAdminStore()
+    await aguardar(store.fetchTudo())
+
+    // `totalUsuarios` só existe se a resposta veio de `todasEmpresas` — uma
+    // junção local (Empresa[] + Usuario[]) não teria esse campo pronto.
+    const doces = store.empresaAdminPorId('1')!
+    expect(doces.totalUsuarios).toBe(doces.equipe.length)
+    expect(doces.dono?.nome).toBe('Ana Paula Santos')
   })
 })
 

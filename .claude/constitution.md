@@ -7,9 +7,15 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.4.0 — 2026-08-01
+- **Versão:** 2.5.0 — 2026-08-03
 
 ### Histórico
+- **2.5.0** — Artigo III ganha a linha **"zero cálculo no front, sem exceção de
+  tamanho"**. Emenda motivada por auditoria que encontrou fórmula de domínio
+  (Fator R) rodando em telas já ligadas a dado real do backend, e agregações
+  simples (soma de despesas, contagem por segmento) tratadas como "só
+  apresentação" quando na prática eram números derivados sem fonte no servidor.
+  Fecha a ambiguidade: tamanho da conta não isenta da regra B1/F6.
 - **2.4.0** — Novos artigos **B12** (relatório é do backend, em módulo exclusivo,
   via JasperReports) e **F11** (o front pede e baixa o documento; não o monta).
   Emenda motivada pelo requisito de gerar relatórios por JasperReports: documento
@@ -85,6 +91,15 @@ Detalhe em `.claude/frontend-markup/rules/`.
 - **Documento também tem sede única: o backend** (B12 + F11). Dados trafegam por
   GraphQL; **binário** sai por REST (`/api/relatorios/{tipo}`), com o mesmo JWT —
   base64 em GraphQL infla o payload e perde `Content-Disposition`.
+- **Zero cálculo no front, sem exceção de tamanho** (emenda 2.5.0). "Cálculo tem
+  uma sede só" (acima) cobre fórmula do domínio; esta linha fecha a lacuna que
+  ficou aberta até 2026-08: **nenhum número derivado** — soma, contagem,
+  percentual, diferença — nasce no front, mesmo quando parece só agregação de
+  tela. Se o backend ainda não expõe o agregado, a tela mostra **indisponível**
+  com o motivo, nunca recalcula para preencher a lacuna. Não se aplica a
+  paginação, ordenação e formatação (`Intl`), que continuam do front por F4/F5 —
+  a diferença é que essas não produzem um número nem uma decisão novos, só
+  reorganizam ou reescrevem o que já veio pronto.
 
 ## Artigo IV — Governança (Spec-Driven Development)
 

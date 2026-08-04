@@ -4,59 +4,52 @@ import { useRouter } from 'vue-router'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { useMateriaisStore } from '@/stores/materiais'
-import { useProdutosStore } from '@/stores/produtos'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { usePrecificacaoStore } from '@/stores/precificacao'
+import { useCurrency } from '@/composables/useCurrency'
 import { segmentoConfig } from '@/config/segmentos'
 import StatCard from '@/components/ui/StatCard.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
+import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 
 const router = useRouter()
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const materiaisStore = useMateriaisStore()
-const produtosStore = useProdutosStore()
-const { calcularPrecificacao, calcularFatorR } = useMarkupCalculator()
+const precificacaoStore = usePrecificacaoStore()
 const { formatCurrency, formatPercent } = useCurrency()
 
 const seg = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 const ehServico = computed(() => empresaStore.empresa?.segmento === 'SERVICOS')
-const fatorR = computed(() => empresaStore.empresa ? calcularFatorR(empresaStore.empresa) : 0)
+
+/**
+ * Fator R da empresa não tem campo no contrato hoje — só existe por produto,
+ * dentro de `ResultadoPrecificacao`. Pendência registrada em
+ * `integracao-backend-precificacao/spec.md`. Enquanto isso, sem fórmula local:
+ * a tela mostra indisponível em vez de inventar a conta (Artigo III v2.5.0).
+ */
+const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
+const MOTIVO_TOTAL_DESPESAS = 'Total consolidado de despesas ainda não é um agregado do contrato — pendência registrada para o backend.'
 
 onMounted(async () => {
   await Promise.all([
     empresaStore.fetchEmpresa(),
     despesasStore.fetchDespesas(),
     materiaisStore.fetchMateriais(),
-    produtosStore.fetchProdutos(),
+    precificacaoStore.buscarTodos(),
   ])
 })
 
-const percentualDF = computed(() => {
-  if (!empresaStore.empresa) return 0
-  // Rateio (C2) vem calculado do servidor — o front lê, nao refaz (B1)
-  return empresaStore.empresa.percentualDespesasFixas
-})
-
-const produtosComPreco = computed(() => {
-  if (!empresaStore.empresa) return []
-  return produtosStore.produtos.map(p => ({
-    ...p,
-    resultado: calcularPrecificacao(p, empresaStore.empresa!)
-  }))
-})
+const percentualDF = computed(() => empresaStore.empresa?.percentualDespesasFixas ?? 0)
 
 const alertas = computed(() => {
   const items: { tipo: 'warning' | 'danger' | 'info'; msg: string }[] = []
   if (percentualDF.value > 25) {
     items.push({ tipo: 'warning', msg: `Despesas Fixas elevadas: ${formatPercent(percentualDF.value)} do faturamento` })
   }
-  const semMargem = produtosStore.produtos.filter(p => p.margemLucro < 20)
+  const semMargem = precificacaoStore.todos.filter(r => r.produto.margemLucro < 20)
   if (semMargem.length > 0) {
     items.push({ tipo: 'warning', msg: `${semMargem.length} ${seg.value.rotulos.produto.toLowerCase()}(s) com margem abaixo de 20%` })
-  }
-  if (ehServico.value && fatorR.value < 28) {
-    items.push({ tipo: 'danger', msg: `Fator R em ${formatPercent(fatorR.value)} (< 28%): tributando no Anexo V (15,5%). Aumentar a folha migra para o Anexo III (6%).` })
   }
   return items
 })
@@ -97,15 +90,16 @@ const alertas = computed(() => {
       />
       <StatCard
         label="Despesas Fixas"
-        :value="formatCurrency(despesasStore.totalMensal)"
-        :sub="`${formatPercent(percentualDF)} do faturamento`"
         icon="📋"
         :color="percentualDF > 25 ? 'orange' : 'blue'"
-      />
+      >
+        <template #value>{{ formatCurrency(despesasStore.totalMensal) }}</template>
+        <template #sub>{{ formatPercent(percentualDF) }} do faturamento</template>
+      </StatCard>
       <StatCard
         :label="`${seg.rotulos.produtos} Ativos`"
-        :value="produtosStore.produtos.filter(p => p.ativo).length.toString()"
-        :sub="`de ${produtosStore.produtos.length} cadastrados`"
+        :value="precificacaoStore.todos.filter(r => r.produto.ativo).length.toString()"
+        :sub="`de ${precificacaoStore.todos.length} cadastrados`"
         icon="🏷️"
         color="purple"
       />
@@ -117,26 +111,22 @@ const alertas = computed(() => {
         icon="🧪"
         color="orange"
       />
-      <StatCard
-        v-else
-        label="Fator R"
-        :value="formatPercent(fatorR)"
-        :sub="fatorR >= 28 ? 'Anexo III (6%) ✓' : 'Anexo V (15,5%)'"
-        icon="🧮"
-        :color="fatorR >= 28 ? 'green' : 'orange'"
-      />
+      <StatCard v-else label="Fator R" icon="🧮" color="orange">
+        <template #value><IndisponivelBackend :motivo="MOTIVO_FATOR_R" /></template>
+      </StatCard>
     </div>
 
     <!-- Produtos e preços -->
     <div class="content-grid">
-      <BaseCard title="Resumo de Precificação" subtitle="Preços calculados com markup atual">
+      <BaseCard title="Resumo de Precificação" subtitle="Preços calculados pelo backend">
         <template #actions>
           <button class="link-btn" @click="router.push('/precificacao')">Ver calculadora →</button>
         </template>
 
-        <div v-if="produtosStore.loading" class="loading-rows">
+        <div v-if="precificacaoStore.loading" class="loading-rows">
           <div class="loading-row" v-for="i in 3" :key="i" />
         </div>
+        <p v-else-if="precificacaoStore.erro" class="erro-precificacao">{{ precificacaoStore.erro }}</p>
 
         <table v-else class="data-table">
           <thead>
@@ -151,19 +141,19 @@ const alertas = computed(() => {
           </thead>
           <tbody>
             <tr
-              v-for="item in produtosComPreco"
-              :key="item.id"
+              v-for="item in precificacaoStore.todos"
+              :key="item.produto.id"
               class="data-table__row"
-              @click="router.push(`/produtos/${item.id}`)"
+              @click="router.push(`/produtos/${item.produto.id}`)"
             >
-              <td class="data-table__name">{{ item.nome }}</td>
-              <td>{{ formatCurrency(item.resultado.custoBase) }}</td>
-              <td>{{ formatPercent(item.margemLucro) }}</td>
-              <td>{{ formatPercent(item.resultado.percentualDespesasFixas) }}</td>
-              <td class="data-table__price">{{ formatCurrency(item.resultado.precoVenda) }}</td>
+              <td class="data-table__name">{{ item.produto.nome }}</td>
+              <td>{{ formatCurrency(item.custoBase) }}</td>
+              <td>{{ formatPercent(item.produto.margemLucro) }}</td>
+              <td>{{ formatPercent(item.percentualDespesasFixas) }}</td>
+              <td class="data-table__price">{{ formatCurrency(item.precoVenda) }}</td>
               <td>
-                <BaseBadge :color="item.ativo ? 'green' : 'gray'">
-                  {{ item.ativo ? 'Ativo' : 'Inativo' }}
+                <BaseBadge :color="item.produto.ativo ? 'green' : 'gray'">
+                  {{ item.produto.ativo ? 'Ativo' : 'Inativo' }}
                 </BaseBadge>
               </td>
             </tr>
@@ -248,6 +238,8 @@ const alertas = computed(() => {
   gap: var(--space-6);
 }
 @media (max-width: 1100px) { .content-grid { grid-template-columns: 1fr; } }
+
+.erro-precificacao { color: var(--color-danger); font-size: .875rem; padding: var(--space-4) 0; }
 
 .data-table {
   width: 100%;

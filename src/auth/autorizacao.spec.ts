@@ -11,7 +11,7 @@ import {
   perfilProprietario,
   perfilVendedor,
   perfilContador,
-} from '@/mock/data'
+} from '@/test/fixtures'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -25,8 +25,8 @@ const ana: Usuario = {
   email: 'ana@docesdaana.com.br',
   ativo: true,
   empresas: [
-    { empresaId: '1', perfilId: perfilProprietario.id, perfil: perfilProprietario },
-    { empresaId: '3', perfilId: perfilContador.id, perfil: perfilContador },
+    { empresaId: '1', perfil: perfilProprietario },
+    { empresaId: '3', perfil: perfilContador },
   ],
 }
 
@@ -35,7 +35,7 @@ const carla: Usuario = {
   nome: 'Carla Lima',
   email: 'carla@docesdaana.com.br',
   ativo: true,
-  empresas: [{ empresaId: '1', perfilId: perfilVendedor.id, perfil: perfilVendedor }],
+  empresas: [{ empresaId: '1', perfil: perfilVendedor }],
 }
 
 /** ADMIN global: nenhum vínculo, mas escopo global */

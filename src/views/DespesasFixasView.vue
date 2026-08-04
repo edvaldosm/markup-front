@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import { usePaginacao } from '@/composables/usePaginacao'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -77,13 +77,9 @@ const categorias = ['ALUGUEL','ENERGIA','GAS','INTERNET','PROLABORE','CONTADOR',
 <template>
   <div class="despesas">
     <div class="stats-row">
-      <StatCard
-        label="Total Mensal"
-        :value="formatCurrency(store.totalMensal)"
-        sub="despesas ativas"
-        icon="📋"
-        color="blue"
-      />
+      <StatCard label="Total Mensal" sub="despesas ativas" icon="📋" color="blue">
+        <template #value>{{ formatCurrency(store.totalMensal) }}</template>
+      </StatCard>
       <StatCard
         label="% do Faturamento"
         :value="formatPercent(percentualDF)"

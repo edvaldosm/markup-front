@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useImpostosStore } from '@/stores/impostos'
-import { useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'

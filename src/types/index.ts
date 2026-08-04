@@ -172,7 +172,13 @@ export interface DespesaFixaEntrada {
   ativa: boolean
 }
 
+/**
+ * Saída de `precificarProduto`/`precificarTodos` — **calculada inteiramente
+ * pelo backend** (`CalculadoraDeMarkup.java`, C1–C12). O front não reimplementa
+ * nenhuma parte disto; ver Artigo III v2.5.0 da Constituição.
+ */
 export interface ResultadoPrecificacao {
+  produto: Produto
   custoBase: number
   percentualImpostos: number
   percentualDespesasFixas: number
@@ -192,6 +198,7 @@ export interface ResultadoPrecificacao {
     valorDesconto: number
     lucroLiquido: number
   }
+  faixaNegociacao: FaixaNegociacao
 }
 
 /** Um ponto da faixa de negociação: quanto se pratica e o que sobra (C10–C12) */
@@ -260,11 +267,15 @@ export interface Perfil {
 }
 
 /** Vínculo explícito usuário↔empresa (no backend: tabela `USUARIO_EMPRESA`) */
+/**
+ * Referência por id de propósito: o objeto `Empresa` completo vem de
+ * `minhasEmpresas`/`todasEmpresas`, para o payload de usuário não arrastar o
+ * cadastro inteiro a cada vínculo. Resolver `empresaId` contra uma lista já
+ * buscada é o uso pretendido do contrato — não é dado faltando.
+ */
 export interface VinculoEmpresa {
   empresaId: string
-  empresa?: Empresa
-  perfilId: string
-  perfil?: Perfil
+  perfil: Perfil
 }
 
 export interface Usuario {
@@ -278,6 +289,36 @@ export interface Usuario {
    * Quando presente, prevalece sobre o perfil dos vínculos.
    */
   perfilGlobal?: Perfil
+}
+
+// ─── Gestão do Site (escopo global — B9/F10) ───────────────────────────────────
+
+/** Um membro da equipe de uma empresa: quem é, com que perfil e se é o dono */
+export interface MembroEquipe {
+  usuario: Usuario
+  /** Nulo quando o vínculo não resolve perfil (estado inconsistente a exibir, não esconder) */
+  perfil: Perfil | null
+  dono: boolean
+}
+
+/**
+ * Empresa vista pelo gestor do site — **composta pelo servidor**
+ * (`todasEmpresas`/`empresaAdmin`), não montada no front cruzando listas.
+ */
+export interface EmpresaAdmin {
+  empresa: Empresa
+  dono: Usuario | null
+  totalUsuarios: number
+  equipe: MembroEquipe[]
+}
+
+/** Indicadores da base — `metricasDaBase`, calculados pelo servidor */
+export interface MetricasBase {
+  totalEmpresas: number
+  totalUsuarios: number
+  usuariosAtivos: number
+  totalVinculos: number
+  faturamentoTotal: number
 }
 
 // ─── GraphQL helpers ──────────────────────────────────────────────────────────

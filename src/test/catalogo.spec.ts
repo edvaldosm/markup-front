@@ -12,7 +12,7 @@ import { useDespesasStore } from '@/stores/despesas'
 import { useUsuariosStore } from '@/stores/usuarios'
 import { useEmpresaStore } from '@/stores/empresa'
 import { prepararAmbiente, entrarComo } from './app-harness'
-import { mockMateriais, mockProdutos, mockUsuarios } from '@/mock/data'
+import { mockMateriais, mockProdutos, mockUsuarios } from '@/test/fixtures'
 import { type ServidorFalso } from './servidor-falso'
 
 let servidor: ServidorFalso

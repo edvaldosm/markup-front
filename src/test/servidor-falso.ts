@@ -23,7 +23,7 @@ import {
   mockMateriais, mockImpostos, mockDespesasFixas, mockProdutos,
   type MaterialRegistro, type ImpostoRegistro, type ProdutoRegistro,
   type DespesaFixaRegistro,
-} from '@/mock/data'
+} from '@/test/fixtures'
 
 /** Senha única das contas de teste — o seed de desenvolvimento usa a mesma. */
 export const SENHA_PADRAO = 'markup123'
@@ -248,6 +248,116 @@ function produtoGql(registro: ProdutoRegistro) {
   }
 }
 
+/** Limite do Fator R (C9/R10) — igual a `PoliticaTributaria.FATOR_R_LIMITE`. */
+const FATOR_R_LIMITE = 28
+const INTERVALOS_FAIXA = 4
+
+/** C8 — folha/faturamento; V2/V4 tratam faturamento ≤ 0 devolvendo zero. */
+function fatorRDe(empresa: Empresa): number {
+  const folha = empresa.folhaPagamentoMensal ?? 0
+  if (empresa.faturamentoMedioMensal <= 0) return 0
+  return (folha / empresa.faturamentoMedioMensal) * 100
+}
+
+/** V5 — Fator R só se aplica a serviços no Simples; fora disso, `null`. */
+function fatorRSeAplica(empresa: Empresa): boolean {
+  return empresa.segmento === 'SERVICOS' && empresa.regimeTributario === 'SIMPLES_NACIONAL'
+}
+
+/** C9 — replica `PoliticaTributaria`: Fator R decide para quem se aplica. */
+function anexoAplicadoDe(empresa: Empresa): string | null {
+  if (fatorRSeAplica(empresa)) {
+    return fatorRDe(empresa) >= FATOR_R_LIMITE ? 'ANEXO_III' : 'ANEXO_V'
+  }
+  return empresa.anexoCadastrado ?? null
+}
+
+/** C10–C12 — replica `FaixaNegociacao.java`, degrau a degrau. */
+export function faixaNegociacaoGql(precoVenda: number, margemLucro: number, descontoMaximo: number) {
+  const precoEm = (desconto: number) => precoVenda - precoVenda * (desconto / 100)
+  const lucroEm = (desconto: number) => precoVenda * ((margemLucro + descontoMaximo - desconto) / 100)
+
+  const intervalos = descontoMaximo === 0 ? 0 : INTERVALOS_FAIXA
+  const degraus = Array.from({ length: intervalos + 1 }, (_, i) => {
+    const desconto = intervalos === 0 ? 0 : (descontoMaximo * i) / intervalos
+    const preco = precoEm(desconto)
+    const lucro = lucroEm(desconto)
+    return {
+      __typename: 'DegrauDesconto',
+      desconto,
+      preco,
+      lucro,
+      margemEfetiva: preco > 0 ? (lucro / preco) * 100 : 0,
+    }
+  })
+
+  return {
+    __typename: 'FaixaNegociacao',
+    descontoMinimo: 0,
+    descontoMaximo,
+    precoTabela: precoVenda,
+    precoMinimo: precoEm(descontoMaximo),
+    economiaMaxima: precoVenda - precoEm(descontoMaximo),
+    lucroNoTeto: lucroEm(0),
+    lucroNoPiso: lucroEm(descontoMaximo),
+    degraus,
+  }
+}
+
+/**
+ * Replica `CalculadoraDeMarkup.precificar` inteira: `PV = CP / (1 - soma/100)`.
+ *
+ * Igual ao backend, não uma versão simplificada — é o que garante que os
+ * testes provem o comportamento real, e não uma segunda fórmula que só existe
+ * nos testes. Lança `ErroDeDominio` em V1 (divisor inviável) e V6 (material
+ * órfão, propagado por `produtoGql`).
+ */
+export function precificarGql(registro: ProdutoRegistro, empresa: Empresa) {
+  const produto = produtoGql(registro)   // lança em V6 (material órfão)
+
+  const impostos = produto.percentualImpostos
+  const despesasFixas = rateioDeDespesas(empresa)
+  const margemLucro = registro.margemLucro
+  const desconto = registro.descontoMaximo
+
+  const soma = impostos + despesasFixas + margemLucro + desconto
+  const divisor = 1 - soma / 100
+  if (divisor <= 0) {
+    throw new ErroDeDominio(
+      `soma dos percentuais alcança ou passa de 100% (${soma}): preço inviável`,
+      'BAD_REQUEST',
+    )
+  }
+
+  const custoBase = produto.custoBase
+  const precoVenda = custoBase / divisor
+  const aplicaFatorR = fatorRSeAplica(empresa)
+
+  return {
+    __typename: 'ResultadoPrecificacao',
+    produto,
+    custoBase,
+    percentualImpostos: impostos,
+    percentualDespesasFixas: despesasFixas,
+    percentualMargemLucro: margemLucro,
+    percentualDesconto: desconto,
+    somaTotalPercentuais: soma,
+    divisorMarkup: divisor,
+    precoVenda,
+    fatorR: aplicaFatorR ? fatorRDe(empresa) : null,
+    anexoAplicado: aplicaFatorR ? anexoAplicadoDe(empresa) : null,
+    breakdown: {
+      __typename: 'Breakdown',
+      custoRecuperado: custoBase,
+      valorImpostos: precoVenda * (impostos / 100),
+      valorDespesasFixas: precoVenda * (despesasFixas / 100),
+      valorDesconto: precoVenda * (desconto / 100),
+      lucroLiquido: precoVenda * (margemLucro / 100),
+    },
+    faixaNegociacao: faixaNegociacaoGql(precoVenda, margemLucro, desconto),
+  }
+}
+
 /** Erro que o servidor falso devolve com a classificação do contrato. */
 class ErroDeDominio extends Error {
   constructor(mensagem: string, readonly classificacao: string) {
@@ -353,6 +463,64 @@ function usuariosVisiveis(usuario: Usuario): Usuario[] {
   if (usuario.perfilGlobal?.escopoGlobal) return [...mockUsuarios]
   const minhas = new Set(empresasDoUsuario(usuario).map(e => e.id))
   return mockUsuarios.filter(u => u.empresas.some(v => minhas.has(v.empresaId)))
+}
+
+/** Escopo global (B9/F10): quem não tem, leva FORBIDDEN — nunca base vazia. */
+function exigirEscopoGlobal(usuario: Usuario): Response | null {
+  if (usuario.perfilGlobal?.escopoGlobal) return null
+  return erroGraphQL('Requer escopo global (Gestão do Site)', 'FORBIDDEN')
+}
+
+/**
+ * Compõe `EmpresaAdmin` no servidor — dono, equipe e `totalUsuarios` prontos.
+ * É a mesma junção que `admin.ts` fazia no cliente antes de migrar; agora
+ * mora aqui, porque é aqui que ela pertence (o front só lê o resultado).
+ */
+function empresaAdminGql(empresa: Empresa) {
+  const dono = mockUsuarios.find(u => u.id === empresa.donoUsuarioId) ?? null
+
+  const equipe = mockUsuarios
+    .filter(u => u.empresas.some(v => v.empresaId === empresa.id))
+    .map(usuario => {
+      const vinculo = usuario.empresas.find(v => v.empresaId === empresa.id)!
+      return {
+        __typename: 'MembroEquipe',
+        usuario: usuarioGql(usuario),
+        perfil: perfilGql(vinculo.perfil),
+        dono: usuario.id === empresa.donoUsuarioId,
+      }
+    })
+
+  // Dono sem vínculo explícito não deveria existir (R09), mas se acontecer o
+  // gestor precisa ver isso, não uma equipe sem dono nenhum.
+  if (dono && !equipe.some(m => m.dono)) {
+    equipe.unshift({
+      __typename: 'MembroEquipe',
+      usuario: usuarioGql(dono),
+      perfil: null,
+      dono: true,
+    })
+  }
+
+  return {
+    __typename: 'EmpresaAdmin',
+    empresa: empresaGql(empresa),
+    dono: dono ? usuarioGql(dono) : null,
+    totalUsuarios: equipe.length,
+    equipe,
+  }
+}
+
+/** `metricasDaBase` — agregados reais, calculados no servidor (aqui é onde se calcula). */
+function metricasDaBaseGql() {
+  return {
+    __typename: 'MetricasBase',
+    totalEmpresas: mockEmpresas.length,
+    totalUsuarios: mockUsuarios.length,
+    usuariosAtivos: mockUsuarios.filter(u => u.ativo).length,
+    totalVinculos: mockUsuarios.reduce((soma, u) => soma + u.empresas.length, 0),
+    faturamentoTotal: mockEmpresas.reduce((soma, e) => soma + e.faturamentoMedioMensal, 0),
+  }
 }
 
 export function instalarServidorFalso(): ServidorFalso {
@@ -500,6 +668,30 @@ export function instalarServidorFalso(): ServidorFalso {
         return comErroDeDominio(() => ({ produto: produtoGql(registro) }))
       }
 
+      // -- Precificacao ------------------------------------------------------
+      // A formula inteira roda aqui, replicando CalculadoraDeMarkup.java: nao
+      // e uma versao simplificada para teste, e a mesma conta (ver precificarGql).
+
+      case 'precificarProduto': {
+        const registro = mockProdutos.find(p => p.id === variaveis.produtoId)
+        if (!registro) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, registro.empresaId)
+        if (alcance instanceof Response) return alcance
+        const empresa = mockEmpresas.find(e => e.id === alcance)!
+        return comErroDeDominio(() => ({ precificarProduto: precificarGql(registro, empresa) }))
+      }
+
+      case 'precificarTodos': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        const empresa = mockEmpresas.find(e => e.id === alcance)!
+        return comErroDeDominio(() => ({
+          precificarTodos: mockProdutos
+            .filter(p => p.empresaId === alcance)
+            .map(registro => precificarGql(registro, empresa)),
+        }))
+      }
+
       // -- Acesso ----------------------------------------------------------
 
       case 'perfis':
@@ -523,7 +715,7 @@ export function instalarServidorFalso(): ServidorFalso {
           nome: String(variaveis.nome),
           email: String(variaveis.email),
           ativo: true,
-          empresas: [{ empresaId: alcance, perfilId: perfil.id, perfil }],
+          empresas: [{ empresaId: alcance, perfil }],
         }
         mockUsuarios.push(convidado)
         return dados({
@@ -557,6 +749,91 @@ export function instalarServidorFalso(): ServidorFalso {
         }
         mockEmpresas.push(nova)
         return dados({ salvarEmpresa: empresaGql(nova) })
+      }
+
+      // -- Gestao do Site (escopo global — B9/F10) --------------------------
+
+      case 'todasEmpresas': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        return dados({ todasEmpresas: mockEmpresas.map(empresaAdminGql) })
+      }
+
+      case 'empresaAdmin': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        const empresa = mockEmpresas.find(e => e.id === String(variaveis.empresaId))
+        if (!empresa) return erroGraphQL('Empresa não encontrada', 'NOT_FOUND')
+        return dados({ empresaAdmin: empresaAdminGql(empresa) })
+      }
+
+      case 'todosUsuarios': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        return dados({ todosUsuarios: mockUsuarios.map(usuarioGql) })
+      }
+
+      case 'metricasDaBase': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        return dados({ metricasDaBase: metricasDaBaseGql() })
+      }
+
+      case 'vincularUsuario': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        const alvo = mockUsuarios.find(u => u.id === String(variaveis.usuarioId))
+        const empresa = mockEmpresas.find(e => e.id === String(variaveis.empresaId))
+        const perfil = mockPerfis.find(p => p.id === String(variaveis.perfilId))
+        if (!alvo || !empresa) return erroGraphQL('Registro não encontrado', 'NOT_FOUND')
+        if (!perfil) return erroGraphQL('Perfil não encontrado', 'NOT_FOUND')
+        if (alvo.empresas.some(v => v.empresaId === empresa.id)) {
+          return erroGraphQL('Usuário já tem acesso a esta empresa', 'BAD_REQUEST')
+        }
+        const vinculo = { empresaId: empresa.id, perfil }
+        alvo.empresas.push(vinculo)
+        return dados({
+          vincularUsuario: { __typename: 'UsuarioEmpresa', empresaId: vinculo.empresaId, perfil: perfilGql(perfil) },
+        })
+      }
+
+      case 'desvincularUsuario': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        const alvo = mockUsuarios.find(u => u.id === String(variaveis.usuarioId))
+        const empresa = mockEmpresas.find(e => e.id === String(variaveis.empresaId))
+        if (!alvo || !empresa) return erroGraphQL('Registro não encontrado', 'NOT_FOUND')
+        // O dono não pode ser desvinculado da própria empresa (R09): ela
+        // ficaria sem responsável. Regra do domínio, não guarda numerada.
+        if (empresa.donoUsuarioId === alvo.id) {
+          return erroGraphQL('O dono não pode ser desvinculado da própria empresa', 'BAD_REQUEST')
+        }
+        const idx = alvo.empresas.findIndex(v => v.empresaId === empresa.id)
+        if (idx < 0) return erroGraphQL('Vínculo não encontrado', 'NOT_FOUND')
+        alvo.empresas.splice(idx, 1)
+        return dados({ desvincularUsuario: true })
+      }
+
+      case 'definirPerfilNoVinculo': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        const alvo = mockUsuarios.find(u => u.id === String(variaveis.usuarioId))
+        const perfil = mockPerfis.find(p => p.id === String(variaveis.perfilId))
+        const vinculo = alvo?.empresas.find(v => v.empresaId === String(variaveis.empresaId))
+        if (!alvo || !perfil || !vinculo) return erroGraphQL('Registro não encontrado', 'NOT_FOUND')
+        vinculo.perfil = perfil
+        return dados({
+          definirPerfilNoVinculo: { __typename: 'UsuarioEmpresa', empresaId: vinculo.empresaId, perfil: perfilGql(perfil) },
+        })
+      }
+
+      case 'definirUsuarioAtivo': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        const alvo = mockUsuarios.find(u => u.id === String(variaveis.usuarioId))
+        if (!alvo) return erroGraphQL('Usuário não encontrado', 'NOT_FOUND')
+        alvo.ativo = Boolean(variaveis.ativo)
+        return dados({ definirUsuarioAtivo: usuarioGql(alvo) })
       }
     }
 

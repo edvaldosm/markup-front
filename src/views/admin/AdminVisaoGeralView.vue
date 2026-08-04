@@ -7,12 +7,12 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
-import { useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
-import type { SegmentoNegocio } from '@/types'
+import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 
 const store = useAdminStore()
 const router = useRouter()
@@ -20,16 +20,23 @@ const { formatCurrency } = useCurrency()
 
 onMounted(() => { if (!store.carregado) store.fetchTudo() })
 
-const segmentos = computed(() =>
-  (Object.entries(store.metricas.porSegmento) as [SegmentoNegocio, number][])
-    .map(([chave, total]) => ({ ...segmentoConfig(chave), total }))
-    .sort((a, b) => b.total - a.total)
-)
+/**
+ * `MetricasBase` não tem `porSegmento` nem `usuariosInativos` — pendências
+ * registradas em `integracao-backend-precificacao/spec.md`. Sem os campos, o
+ * front não recalcula por conta própria (Artigo III v2.5.0): a tela mostra
+ * indisponível em vez de somar `empresas.value` por segmento.
+ */
+const MOTIVO_POR_SEGMENTO = 'Contagem de empresas por segmento ainda não é um campo do contrato — pendência registrada para o backend.'
+const MOTIVO_USUARIOS_INATIVOS = 'Contagem de usuários inativos ainda não é um campo do contrato — pendência registrada para o backend.'
 
-/** Empresas com mais gente dentro — onde o suporte costuma ser demandado */
+/**
+ * Empresas com mais gente dentro — **ordenação**, não agregado novo: o
+ * tamanho de cada equipe já vem pronto em `EmpresaAdmin.totalUsuarios`
+ * (calculado pelo servidor); aqui só se decide a ordem de exibição (F4).
+ */
 const maioresEquipes = computed(() =>
-  [...store.empresasAdmin]
-    .sort((a, b) => b.equipe.length - a.equipe.length)
+  [...store.empresas]
+    .sort((a, b) => b.totalUsuarios - a.totalUsuarios)
     .slice(0, 5)
 )
 </script>
@@ -66,25 +73,26 @@ const maioresEquipes = computed(() =>
     <div class="stats-grid">
       <StatCard
         label="Empresas cadastradas"
-        :value="String(store.metricas.totalEmpresas)"
-        :sub="`${segmentos.length} segmento(s)`"
+        :value="String(store.metricas?.totalEmpresas ?? '—')"
+        sub="Base completa"
         icon="▣"
       />
-      <StatCard
-        label="Usuários na base"
-        :value="String(store.metricas.totalUsuarios)"
-        :sub="`${store.metricas.usuariosAtivos} ativos · ${store.metricas.usuariosInativos} inativos`"
-        icon="◍"
-      />
+      <StatCard label="Usuários na base" icon="◍">
+        <template #value>{{ store.metricas?.totalUsuarios ?? '—' }}</template>
+        <template #sub>
+          {{ store.metricas?.usuariosAtivos ?? '—' }} ativos ·
+          <IndisponivelBackend :motivo="MOTIVO_USUARIOS_INATIVOS" /> inativos
+        </template>
+      </StatCard>
       <StatCard
         label="Vínculos usuário↔empresa"
-        :value="String(store.metricas.totalVinculos)"
+        :value="String(store.metricas?.totalVinculos ?? '—')"
         sub="Acessos concedidos"
         icon="⇄"
       />
       <StatCard
         label="Faturamento médio somado"
-        :value="formatCurrency(store.metricas.faturamentoTotal)"
+        :value="store.metricas ? formatCurrency(store.metricas.faturamentoTotal) : '—'"
         sub="Base declarada pelas empresas"
         icon="▤"
       />
@@ -92,16 +100,7 @@ const maioresEquipes = computed(() =>
 
     <div class="admin-cols">
       <BaseCard title="Empresas por segmento">
-        <ul class="seg-list">
-          <li v-for="seg in segmentos" :key="seg.chave" class="seg-item">
-            <span class="seg-item__icon">{{ seg.icone }}</span>
-            <span class="seg-item__info">
-              <span class="seg-item__nome">{{ seg.nome }}</span>
-              <span class="seg-item__desc">{{ seg.descricao }}</span>
-            </span>
-            <span class="seg-item__total">{{ seg.total }}</span>
-          </li>
-        </ul>
+        <IndisponivelBackend :motivo="MOTIVO_POR_SEGMENTO" tamanho="bloco" />
       </BaseCard>
 
       <BaseCard title="Perfis em uso">

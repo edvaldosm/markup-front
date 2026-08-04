@@ -4,7 +4,8 @@ import { useProdutosStore } from '@/stores/produtos'
 import { useMateriaisStore } from '@/stores/materiais'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
+import { usePrecificacaoStore } from '@/stores/precificacao'
+import { useCurrency } from '@/composables/useCurrency'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
@@ -13,7 +14,7 @@ const produtosStore = useProdutosStore()
 const materiaisStore = useMateriaisStore()
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
-const { calcularPrecificacao } = useMarkupCalculator()
+const precificacaoStore = usePrecificacaoStore()
 const { formatCurrency, formatPercent } = useCurrency()
 
 onMounted(() => Promise.all([
@@ -21,26 +22,18 @@ onMounted(() => Promise.all([
   materiaisStore.fetchMateriais(),
   empresaStore.fetchEmpresa(),
   despesasStore.fetchDespesas(),
+  precificacaoStore.buscarTodos(),
 ]))
 
 const relatorioAtivo = ref<'precificacao' | 'despesas' | 'materiais'>('precificacao')
-
-const produtosComResultado = computed(() => {
-  if (!empresaStore.empresa) return []
-  return produtosStore.produtos.map(p => ({
-    ...p,
-    resultado: calcularPrecificacao(p, empresaStore.empresa!)
-  }))
-})
 
 const percentualDF = computed(() =>
   empresaStore.empresa?.percentualDespesasFixas ?? 0
 )
 
-const totalDespesas = computed(() => despesasStore.totalMensal)
-
+/** Soma dos custos unitários já listados na tabela abaixo — nenhuma conta nova. */
 const custoTotalMateriais = computed(() =>
-  materiaisStore.materiais.reduce((acc, m) => acc + m.custoUnitario, 0)
+  materiaisStore.materiais.reduce((soma, m) => soma + m.custoUnitario, 0)
 )
 
 const gerandoPDF = ref(false)
@@ -109,16 +102,16 @@ function gerarPDF() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in produtosComResultado" :key="item.id">
-              <td class="report-table__name">{{ item.nome }}</td>
-              <td>{{ formatCurrency(item.resultado.custoBase) }}</td>
-              <td>{{ formatPercent(item.resultado.percentualImpostos) }}</td>
-              <td>{{ formatPercent(item.resultado.percentualDespesasFixas) }}</td>
-              <td>{{ formatPercent(item.resultado.percentualMargemLucro) }}</td>
-              <td>{{ formatPercent(item.resultado.percentualDesconto) }}</td>
-              <td class="report-table__mono">{{ item.resultado.divisorMarkup.toFixed(4) }}</td>
-              <td class="report-table__price">{{ formatCurrency(item.resultado.precoVenda) }}</td>
-              <td class="report-table__lucro">{{ formatCurrency(item.resultado.breakdown.lucroLiquido) }}</td>
+            <tr v-for="item in precificacaoStore.todos" :key="item.produto.id">
+              <td class="report-table__name">{{ item.produto.nome }}</td>
+              <td>{{ formatCurrency(item.custoBase) }}</td>
+              <td>{{ formatPercent(item.percentualImpostos) }}</td>
+              <td>{{ formatPercent(item.percentualDespesasFixas) }}</td>
+              <td>{{ formatPercent(item.percentualMargemLucro) }}</td>
+              <td>{{ formatPercent(item.percentualDesconto) }}</td>
+              <td class="report-table__mono">{{ item.divisorMarkup.toFixed(4) }}</td>
+              <td class="report-table__price">{{ formatCurrency(item.precoVenda) }}</td>
+              <td class="report-table__lucro">{{ formatCurrency(item.breakdown.lucroLiquido) }}</td>
             </tr>
           </tbody>
         </table>
@@ -131,7 +124,7 @@ function gerarPDF() {
         <div class="report-meta">
           <div class="report-meta__item">
             <span>Total Mensal</span>
-            <strong>{{ formatCurrency(totalDespesas) }}</strong>
+            <strong>{{ formatCurrency(despesasStore.totalMensal) }}</strong>
           </div>
           <div class="report-meta__item">
             <span>% do Faturamento</span>
@@ -165,7 +158,7 @@ function gerarPDF() {
           <tfoot>
             <tr class="report-tfoot">
               <td colspan="2">Total</td>
-              <td>{{ formatCurrency(totalDespesas) }}</td>
+              <td>{{ formatCurrency(despesasStore.totalMensal) }}</td>
               <td>{{ formatPercent(percentualDF) }}</td>
               <td></td>
             </tr>
@@ -177,6 +170,9 @@ function gerarPDF() {
     <!-- Relatório: Materiais -->
     <div v-else>
       <BaseCard title="Relatório de Materiais e Insumos">
+        <p class="custo-total-aviso">
+          Custo total dos materiais: <strong>{{ formatCurrency(custoTotalMateriais) }}</strong>
+        </p>
         <table class="report-table">
           <thead>
             <tr>
@@ -250,4 +246,6 @@ function gerarPDF() {
 .report-table__muted { color: var(--color-text-muted); }
 
 .report-tfoot td { font-weight: 700; background: var(--color-primary-50); color: var(--color-primary-800); padding: var(--space-3); }
+
+.custo-total-aviso { display: flex; align-items: center; gap: var(--space-2); font-size: .875rem; color: var(--color-text-muted); margin-bottom: var(--space-4); }
 </style>

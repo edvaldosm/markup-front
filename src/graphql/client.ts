@@ -139,20 +139,3 @@ export const apolloClient = new ApolloClient({
   },
 })
 
-// ─── Resíduo do protótipo (fatias 2 e 3) ──────────────────────────────────────
-
-/**
- * @deprecated Só as telas ainda não migradas (catálogo, precificação, Gestão do
- * Site, relatórios) dependem disto. Não é um modo de operação alternativo do
- * caminho novo — sessão e empresas já falam com o backend de verdade. Sai por
- * completo na fatia 3, junto com `src/mock/`.
- */
-export const MOCK_MODE = true
-
-export type QueryResult<T> = Promise<{ data: T; loading: false; error: null }>
-
-/** @deprecated ver `MOCK_MODE`. Simula latência de rede no que ainda é mock. */
-export async function mockQuery<T>(data: T, delayMs = 300): QueryResult<T> {
-  await new Promise(r => setTimeout(r, delayMs))
-  return { data, loading: false, error: null }
-}

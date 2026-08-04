@@ -30,9 +30,11 @@ export const useDespesasStore = defineStore('despesas', () => {
   const erro = ref<string | null>(null)
 
   /**
-   * Soma em reais das despesas ativas — **agregação de exibição**, não cálculo
-   * de domínio: é a mesma lista que está na tela, somada. O que decide preço é o
-   * percentual, e esse vem do servidor.
+   * Soma das despesas ativas — cada parcela já está na tela, uma a uma, com o
+   * valor que o servidor devolveu; somar o que o usuário já vê linha a linha
+   * não é uma segunda fonte de verdade (não decide preço, não é markup, não é
+   * rateio). Diferente de `percentualDespesasFixas` (C2), que é cálculo de
+   * domínio e continua vindo pronto do servidor.
    */
   const totalMensal = computed(() =>
     despesas.value.filter(d => d.ativa).reduce((soma, d) => soma + d.valorMensal, 0),

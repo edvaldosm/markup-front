@@ -1,3 +1,14 @@
+/**
+ * Massa de dados de teste — o "banco" que `servidor-falso.ts` usa para responder
+ * GraphQL. **Não é dado do front**: até a fatia `integracao-backend-catalogo`
+ * este arquivo vivia em `src/mock/` e alimentava telas de verdade; desde que
+ * `admin.ts` (Gestão do Site, a última store real que faltava) migrou para o
+ * backend, `src/mock/` foi apagada e este arquivo passou a morar aqui — em
+ * `src/test/`, onde a natureza dele (fixture, não protótipo) fica explícita.
+ *
+ * O seed de desenvolvimento do markup-back (`V900__dados_do_mock_do_front.sql`)
+ * espelha estes mesmos registros, com o de-para de ids documentado lá.
+ */
 import type {
   Empresa, Imposto, CategoriaDespesa, UnidadeMedida, TipoMaterial, TipoProduto,
   Perfil, Usuario, Permissao
@@ -5,12 +16,10 @@ import type {
 
 // ─── Formato de linha ─────────────────────────────────────────────────────────
 //
-// A partir da fatia 2 da integração, este arquivo é o **banco** do servidor
-// falso, não o formato que o front consome. Por isso os registros mantêm a forma
-// de linha de tabela — com `empresaId` e referências por id — enquanto a
-// composição do objeto do contrato (ficha com o material embutido, impostos
-// resolvidos, `custoBase` calculado) é feita pelo servidor, que é onde ela
-// acontece de verdade.
+// O servidor falso precisa de linhas de tabela (`empresaId`, referências por
+// id), não do formato que o contrato devolve — a composição (ficha com o
+// material embutido, impostos resolvidos, `custoBase` calculado) é trabalho de
+// servidor, e acontece em `servidor-falso.ts`, não aqui.
 
 export interface DespesaFixaRegistro {
   id: string
@@ -1036,9 +1045,9 @@ export const mockUsuarios: Usuario[] = [
     email: 'ana@docesdaana.com.br',
     ativo: true,
     empresas: [
-      { empresaId: '1', perfilId: perfilProprietario.id, perfil: perfilProprietario },
+      { empresaId: '1', perfil: perfilProprietario },
       // compartilhada: convidada como contadora na NexaTech
-      { empresaId: '3', perfilId: perfilContador.id, perfil: perfilContador },
+      { empresaId: '3', perfil: perfilContador },
     ]
   },
   {
@@ -1046,42 +1055,42 @@ export const mockUsuarios: Usuario[] = [
     nome: 'Marcos Souza',
     email: 'marcos@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: '1', perfilId: perfilGerente.id, perfil: perfilGerente }]
+    empresas: [{ empresaId: '1', perfil: perfilGerente }]
   },
   {
     id: '4',
     nome: 'Carla Lima',
     email: 'carla@docesdaana.com.br',
     ativo: true,
-    empresas: [{ empresaId: '1', perfilId: perfilVendedor.id, perfil: perfilVendedor }]
+    empresas: [{ empresaId: '1', perfil: perfilVendedor }]
   },
   {
     id: '5',
     nome: 'Ricardo Alves',
     email: 'contador@contabilidade.com.br',
     ativo: false,
-    empresas: [{ empresaId: '1', perfilId: perfilContador.id, perfil: perfilContador }]
+    empresas: [{ empresaId: '1', perfil: perfilContador }]
   },
   {
     id: '6',
     nome: 'Roberto Menezes',
     email: 'roberto@metalforte.com.br',
     ativo: true,
-    empresas: [{ empresaId: '2', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
+    empresas: [{ empresaId: '2', perfil: perfilProprietario }]
   },
   {
     id: '7',
     nome: 'Juliana Ferraz',
     email: 'juliana@nexatech.com.br',
     ativo: true,
-    empresas: [{ empresaId: '3', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
+    empresas: [{ empresaId: '3', perfil: perfilProprietario }]
   },
   {
     id: '8',
     nome: 'Diego Prado',
     email: 'diego@codelab.com.br',
     ativo: true,
-    empresas: [{ empresaId: '4', perfilId: perfilProprietario.id, perfil: perfilProprietario }]
+    empresas: [{ empresaId: '4', perfil: perfilProprietario }]
   },
 ]
 

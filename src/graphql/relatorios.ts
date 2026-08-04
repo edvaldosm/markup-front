@@ -3,13 +3,12 @@
  *
  * Quem gera relatório é o módulo `com.markup.reports` do backend, com
  * JasperReports (Artigo B12). Aqui só pedimos e entregamos o arquivo ao usuário —
- * nenhuma biblioteca de PDF entra no bundle.
- *
- * Enquanto `MOCK_MODE = true`, cai na impressão do navegador (`window.print()` +
- * a camada `@media print`). É stopgap **datado** do protótipo, igual ao cálculo
- * em `useMarkupCalculator`: sai no dia em que o backend responder.
+ * nenhuma biblioteca de PDF entra no bundle, e nenhum fallback local existe: o
+ * módulo não existe hoje no backend (pendência registrada em
+ * `integracao-backend-precificacao/spec.md`), então a chamada falha com erro
+ * claro — nunca com um documento montado no navegador como consolo.
  */
-import { MOCK_MODE, GQL_ENDPOINT } from './client'
+import { GQL_ENDPOINT } from './client'
 
 /** Espelha o `ReportCatalog` do backend — sem entrada no catálogo, não há relatório */
 export type TipoRelatorio =
@@ -32,11 +31,7 @@ const NOME_ARQUIVO: Record<TipoRelatorio, string> = {
   GESTAO_EMPRESAS_USUARIOS: 'gestao-empresas-usuarios',
 }
 
-/** Por onde o documento saiu — o teste e a UI precisam distinguir */
-export type OrigemRelatorio = 'backend-jasper' | 'impressao-local'
-
 export interface ResultadoRelatorio {
-  origem: OrigemRelatorio
   nomeArquivo: string
 }
 
@@ -53,8 +48,8 @@ export function nomeArquivoDe(tipo: TipoRelatorio, sufixo?: string): string {
 }
 
 /**
- * Baixa o PDF do módulo de relatórios. Exportada em separado para poder ser
- * testada sem depender do valor de `MOCK_MODE`.
+ * Baixa o PDF do módulo de relatórios — a única implementação, exportada em
+ * separado para poder ser testada sem depender de `gerarRelatorioPdf`.
  */
 export async function baixarRelatorioDoBackend(
   tipo: TipoRelatorio,
@@ -71,8 +66,9 @@ export async function baixarRelatorioDoBackend(
     body: JSON.stringify(parametros),
   })
 
-  // 401/403 aqui é a autorização do backend fazendo o trabalho dela (R05/R09):
-  // relatar, nunca cair num PDF montado localmente como consolo.
+  // 401/403 é a autorização do backend fazendo o trabalho dela (R05/R09); 404
+  // é o módulo ainda não existir. Os dois casos: relatar, nunca cair num PDF
+  // montado localmente como consolo.
   if (!resposta.ok) {
     throw new Error(`Falha ao gerar o relatório (${resposta.status})`)
   }
@@ -89,24 +85,17 @@ export async function baixarRelatorioDoBackend(
   link.remove()
   URL.revokeObjectURL(url)
 
-  return { origem: 'backend-jasper', nomeArquivo }
+  return { nomeArquivo }
 }
 
 /**
- * Gera o relatório. Com o backend ligado, pede ao módulo Jasper; em `MOCK_MODE`,
- * imprime a tela.
+ * Gera o relatório. Sem modo alternativo: é sempre o módulo Jasper do backend —
+ * hoje inexistente, então o erro (404) sobe claro em vez de a tela fingir êxito.
  */
 export async function gerarRelatorioPdf(
   tipo: TipoRelatorio,
   parametros: Record<string, string> = {},
   opcoes: OpcoesRelatorio = {},
 ): Promise<ResultadoRelatorio> {
-  if (MOCK_MODE) {
-    window.print()
-    return {
-      origem: 'impressao-local',
-      nomeArquivo: opcoes.nomeArquivo ?? nomeArquivoDe(tipo, parametros.produtoId),
-    }
-  }
   return baixarRelatorioDoBackend(tipo, parametros, opcoes)
 }

@@ -7,7 +7,7 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
-import { useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import { usePaginacao } from '@/composables/usePaginacao'
 import { segmentoConfig, SEGMENTOS } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
@@ -25,7 +25,7 @@ const filtroSegmento = ref<SegmentoNegocio | ''>('')
 
 const filtradas = computed(() => {
   const termo = busca.value.trim().toLowerCase()
-  return store.empresasAdmin.filter(({ empresa, dono }) => {
+  return store.empresas.filter(({ empresa, dono }) => {
     const casaSegmento = !filtroSegmento.value || empresa.segmento === filtroSegmento.value
     const casaTermo = !termo
       || empresa.razaoSocial.toLowerCase().includes(termo)
@@ -51,7 +51,7 @@ const regime = (chave: string) => chave.replace(/_/g, ' ').toLowerCase()
     <div class="toolbar">
       <div class="toolbar__info">
         <h2 class="section-title">Empresas cadastradas</h2>
-        <p class="section-sub">{{ totalItens }} de {{ store.metricas.totalEmpresas }} empresas da base</p>
+        <p class="section-sub">{{ totalItens }} de {{ store.metricas?.totalEmpresas ?? '—' }} empresas da base</p>
       </div>
       <div class="toolbar__filtros">
         <input v-model="busca" class="input" placeholder="Buscar por empresa, CNPJ ou dono…" />

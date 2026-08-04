@@ -2,17 +2,18 @@
 import { reactive, ref, computed } from 'vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { segmentoConfig, SEGMENTOS } from '@/config/segmentos'
-import { useMarkupCalculator, useCurrency } from '@/composables/useMarkup'
 import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
 import FatorRNote from './FatorRNote.vue'
+import IndisponivelBackend from './IndisponivelBackend.vue'
 import type { Empresa, EmpresaEntrada, SegmentoNegocio } from '@/types'
 
 const emit = defineEmits<{ close: []; created: [empresa: Empresa] }>()
 
 const empresaStore = useEmpresaStore()
-const { calcularFatorR } = useMarkupCalculator()
-const { formatPercent } = useCurrency()
+
+/** Mesma pendência de `EmpresaView` — ver ali para o motivo completo. */
+const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
 
 const form = reactive<EmpresaEntrada>({
   razaoSocial: '',
@@ -29,7 +30,6 @@ const erros = ref<string[]>([])
 
 const ehServico = computed(() => form.segmento === 'SERVICOS')
 const ehSimples = computed(() => form.regimeTributario === 'SIMPLES_NACIONAL')
-const fatorR = computed(() => calcularFatorR(form as Empresa))
 
 const segmentos = Object.values(SEGMENTOS)
 const regimes = [
@@ -132,8 +132,7 @@ async function salvar() {
           <label class="field__label">Folha de Pagamento Mensal (R$)</label>
           <input v-model.number="form.folhaPagamentoMensal" type="number" step="100" class="input" />
           <p class="field__hint" v-if="ehSimples">
-            <strong>Fator R:</strong> {{ formatPercent(fatorR) }} →
-            {{ fatorR >= 28 ? 'Anexo III (6%) ✓' : 'Anexo V (15,5%) — abaixo de 28%' }}
+            <strong>Fator R:</strong> <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
           </p>
         </div>
       </div>

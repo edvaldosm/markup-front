@@ -7,17 +7,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
-import { useCurrency } from '@/composables/useMarkup'
+import { useCurrency } from '@/composables/useCurrency'
 import { usePaginacao } from '@/composables/usePaginacao'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
+import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
+
+/** Mesma pendência de `EmpresaView`/`FatorRView` — Fator R por empresa não tem campo no contrato. */
+const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
 
 const route = useRoute()
 const store = useAdminStore()
-const { formatCurrency, formatPercent } = useCurrency()
+const { formatCurrency } = useCurrency()
 
 const empresaId = computed(() => String(route.params.id))
 const dados = computed(() => store.empresaAdminPorId(empresaId.value))
@@ -80,11 +84,8 @@ const iniciais = (nome: string) =>
 
 const semUnderscore = (chave: string) => chave.replace(/_/g, ' ')
 
-const fatorR = computed(() => {
-  const emp = dados.value?.empresa
-  if (!emp?.folhaPagamentoMensal || emp.faturamentoMedioMensal <= 0) return null
-  return (emp.folhaPagamentoMensal / emp.faturamentoMedioMensal) * 100
-})
+/** Fator R só faz sentido exibir para empresas com folha lançada; sem fórmula local (Artigo III v2.5.0). */
+const mostrarFatorR = computed(() => !!dados.value?.empresa.folhaPagamentoMensal)
 </script>
 
 <template>
@@ -115,9 +116,9 @@ const fatorR = computed(() => {
           <dt>Folha mensal</dt>
           <dd>{{ formatCurrency(dados.empresa.folhaPagamentoMensal) }}</dd>
         </div>
-        <div v-if="fatorR !== null">
+        <div v-if="mostrarFatorR">
           <dt>Fator R</dt>
-          <dd>{{ formatPercent(fatorR) }}</dd>
+          <dd><IndisponivelBackend :motivo="MOTIVO_FATOR_R" /></dd>
         </div>
         <div>
           <dt>Dono</dt>

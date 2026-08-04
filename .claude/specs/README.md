@@ -27,14 +27,26 @@ Só specs que tocam o **frontend**. Specs de backend (`backend-java-spring`,
 movidas para `markup-back/.claude/specs/` em 2026-08-03 — o backend já está
 implementado, e manter cópia aqui só criaria duas versões divergindo.
 
-## Features especificadas
+## Roteiro da integração com o backend
+
+Deixou de ser "3 fatias fechadas" a partir de 2026-08-04: a auditoria de
+cálculo zero (ver `integracao-backend-precificacao/spec.md`) achou fórmula de
+domínio e agregação sobrevivendo em telas já ligadas a dado real, então o
+escopo original da "fatia 3" foi dividido — precificação sai sozinha porque o
+backend já a implementa; Gestão do Site, relatórios e assistente vieram depois
+porque cada uma tem uma dependência própria (reescrita grande, módulo do
+backend inexistente, tela nova).
 
 | Feature | Spec | Estado |
 |---------|------|--------|
-| Integração backend — sessão e empresas | [integracao-backend-sessao-empresas/](integracao-backend-sessao-empresas/spec.md) | fatia 1 de 3 — **concluída** |
-| Integração backend — catálogo, usuários e perfis | [integracao-backend-catalogo/](integracao-backend-catalogo/spec.md) | fatia 2 de 3 — **concluída** |
-| Módulo Gestão do Site | [modulo-gestao-site/](modulo-gestao-site/spec.md) | implementado (mock) |
-| Faixa de negociação e PDF | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | implementado (mock) |
+| Integração backend — sessão e empresas | [integracao-backend-sessao-empresas/](integracao-backend-sessao-empresas/spec.md) | **concluída** |
+| Integração backend — catálogo, usuários e perfis | [integracao-backend-catalogo/](integracao-backend-catalogo/spec.md) | **concluída** |
+| Integração backend — precificação e auditoria de cálculo zero | [integracao-backend-precificacao/](integracao-backend-precificacao/spec.md) | **concluída** |
+| Integração backend — Gestão do Site | `integracao-backend-gestao-site/` | próxima — depende da anterior fechar |
+| Módulo de relatórios (Jasper) | `modulo-relatorios-jasper` — spec no repo **markup-back** | **bloqueada**: módulo `com.markup.reports` não existe no backend |
+| Assistente (RAG) | a especificar | tela nova, não remoção de mock |
+| Módulo Gestão do Site (mock) | [modulo-gestao-site/](modulo-gestao-site/spec.md) | baseline do que existe hoje — superado por `integracao-backend-gestao-site` quando essa nascer |
+| Faixa de negociação e PDF (mock) | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | baseline — a faixa já migrou em `integracao-backend-precificacao`; o PDF segue bloqueado |
 
 ## Regras do fluxo
 

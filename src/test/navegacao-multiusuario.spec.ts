@@ -19,7 +19,7 @@ import { useProdutosStore } from '@/stores/produtos'
 import { useMateriaisStore } from '@/stores/materiais'
 import { useDespesasStore } from '@/stores/despesas'
 import { useUsuariosStore } from '@/stores/usuarios'
-import { mockProdutos, mockMateriais, mockDespesasFixas } from '@/mock/data'
+import { mockProdutos, mockMateriais, mockDespesasFixas } from '@/test/fixtures'
 
 // ─── Personas ────────────────────────────────────────────────────────────────
 
