@@ -1,16 +1,10 @@
 import type { Produto, ResultadoPrecificacao, AnexoSimples } from '@/types'
-import type { Empresa, DespesaFixa, Material, FaixaNegociacao, DegrauDesconto } from '@/types'
+import type { Empresa, FaixaNegociacao, DegrauDesconto } from '@/types'
 
 /** Limite do Fator R: folha ≥ 28% da receita → Anexo III (mais barato), senão Anexo V */
 export const FATOR_R_LIMITE = 28
 
 export function useMarkupCalculator() {
-  function calcularPercentualDF(despesas: DespesaFixa[], faturamentoMedio: number): number {
-    if (faturamentoMedio <= 0) return 0
-    const totalDF = despesas.filter(d => d.ativa).reduce((acc, d) => acc + d.valorMensal, 0)
-    return (totalDF / faturamentoMedio) * 100
-  }
-
   /** Fator R (%) = folha de pagamento / faturamento. Base mensal = base anual (razão idêntica). */
   function calcularFatorR(empresa: Empresa): number {
     const folha = empresa.folhaPagamentoMensal ?? 0
@@ -29,23 +23,22 @@ export function useMarkupCalculator() {
     return empresa.anexoCadastrado
   }
 
-  function calcularCustoBase(produto: Produto, materiais: Material[]): number {
-    return produto.materiais.reduce((acc, pm) => {
-      const mat = materiais.find(m => m.id === pm.materialId)
-      if (!mat) return acc
-      return acc + pm.quantidadeUtilizada * mat.custoUnitario
-    }, 0)
-  }
-
+  /**
+   * Preço de venda provisório, a partir de entradas **do servidor**.
+   *
+   * O que era calculado aqui e não é mais: `custoBase` (C1), a soma de alíquotas
+   * (C3) e o rateio de despesas fixas (C2) — os três chegam prontos, do produto
+   * e da empresa. Sobrou a fórmula do divisor, que sai na fatia 3, quando
+   * `precificarProduto` assumir. Até lá este número **não** é o do backend: use
+   * para navegar, não para decidir preço.
+   */
   function calcularPrecificacao(
     produto: Produto,
-    empresa: Empresa,
-    despesas: DespesaFixa[],
-    materiais: Material[]
+    empresa: Empresa
   ): ResultadoPrecificacao {
-    const custoBase = calcularCustoBase(produto, materiais)
-    const percentualImpostos = produto.impostos.reduce((acc, pi) => acc + pi.aliquotaPercentual, 0)
-    const percentualDF = calcularPercentualDF(despesas, empresa.faturamentoMedioMensal)
+    const custoBase = produto.custoBase
+    const percentualImpostos = produto.percentualImpostos
+    const percentualDF = empresa.percentualDespesasFixas
     const percentualML = produto.margemLucro
     const percentualD = produto.descontoMaximo
 
@@ -134,8 +127,7 @@ export function useMarkupCalculator() {
   }
 
   return {
-    calcularPrecificacao, calcularCustoBase, calcularPercentualDF,
-    calcularFatorR, resolverAnexo, calcularFaixaNegociacao,
+    calcularPrecificacao, calcularFatorR, resolverAnexo, calcularFaixaNegociacao,
   }
 }
 

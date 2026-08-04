@@ -7,7 +7,7 @@ import { useEmpresaStore } from '@/stores/empresa'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
-import type { Produto, ProdutoMaterial, ProdutoImposto } from '@/types'
+import type { ItemFichaTecnicaEntrada, Produto, TipoProduto } from '@/types'
 
 const props = defineProps<{
   produto?: Produto  // undefined = novo produto
@@ -27,17 +27,25 @@ onMounted(() => {
 
 // ── Formulário ─────────────────────────────────────────────────────────────
 
+/**
+ * Sem `ativo`: o contrato nao tem o campo em `ProdutoInput` e nao ha mutation de
+ * alternancia. Oferecer o controle seria prometer o que o servidor recusa — a
+ * listagem continua exibindo o estado, so nao deixa edita-lo. Pendencia
+ * registrada para o markup-back.
+ */
 const form = reactive({
   nome: '',
   descricao: '',
   categoria: '',
+  tipo: 'PRODUTO' as TipoProduto,
   margemLucro: 30,
   descontoMaximo: 5,
-  ativo: true,
 })
 
-const materiais = ref<ProdutoMaterial[]>([])
-const impostos = ref<ProdutoImposto[]>([])
+/** Ficha em formato de **entrada**: referencia por id, como o input espera. */
+const ficha = ref<ItemFichaTecnicaEntrada[]>([])
+/** Impostos por referencia: a aliquota e a do cadastro (C3), nao uma copia. */
+const impostoIds = ref<string[]>([])
 
 // Popular ao editar
 watch(() => props.produto, (p) => {
@@ -45,11 +53,16 @@ watch(() => props.produto, (p) => {
     form.nome = p.nome
     form.descricao = p.descricao ?? ''
     form.categoria = p.categoria ?? ''
+    form.tipo = p.tipo
     form.margemLucro = p.margemLucro
     form.descontoMaximo = p.descontoMaximo
-    form.ativo = p.ativo
-    materiais.value = p.materiais.map(m => ({ ...m }))
-    impostos.value = p.impostos.map(i => ({ ...i }))
+    // A ficha vem resolvida do servidor; a edicao volta a referenciar por id
+    ficha.value = p.ficha.map(item => ({
+      materialId: item.material.id,
+      quantidadeUtilizada: item.quantidadeUtilizada,
+      unidade: item.unidade,
+    }))
+    impostoIds.value = p.impostos.map(i => i.id)
   }
 }, { immediate: true })
 
@@ -58,35 +71,39 @@ watch(() => props.produto, (p) => {
 function addMaterial() {
   const primeiro = materiaisStore.materiais[0]
   if (primeiro) {
-    materiais.value.push({ materialId: primeiro.id, quantidadeUtilizada: 1, unidade: primeiro.unidade })
+    ficha.value.push({ materialId: primeiro.id, quantidadeUtilizada: 1, unidade: primeiro.unidade })
   }
 }
 
 function removeMaterial(idx: number) {
-  materiais.value.splice(idx, 1)
+  ficha.value.splice(idx, 1)
 }
 
 function onMaterialChange(idx: number, materialId: string) {
   const mat = materiaisStore.materiais.find(m => m.id === materialId)
-  if (mat) materiais.value[idx].unidade = mat.unidade
+  if (mat) ficha.value[idx].unidade = mat.unidade
+}
+
+function materialDe(materialId: string) {
+  return materiaisStore.materiais.find(m => m.id === materialId)
 }
 
 // ── Impostos ────────────────────────────────────────────────────────────────
 
 function addImposto() {
-  const ativo = impostosStore.impostos.find(i => i.ativo)
-  if (ativo && !impostos.value.some(i => i.impostoId === ativo.id)) {
-    impostos.value.push({ impostoId: ativo.id, aliquotaPercentual: ativo.aliquotaPercentual })
-  }
+  const disponivel = impostosStore.impostos.find(
+    i => i.ativo && !impostoIds.value.includes(i.id),
+  )
+  if (disponivel) impostoIds.value.push(disponivel.id)
 }
 
 function removeImposto(idx: number) {
-  impostos.value.splice(idx, 1)
+  impostoIds.value.splice(idx, 1)
 }
 
-function onImpostoChange(idx: number, impostoId: string) {
-  const imp = impostosStore.impostos.find(i => i.id === impostoId)
-  if (imp) impostos.value[idx].aliquotaPercentual = imp.aliquotaPercentual
+/** Alíquota exibida: sempre a do cadastro, nunca digitada aqui. */
+function aliquotaDe(impostoId: string): number {
+  return impostosStore.impostos.find(i => i.id === impostoId)?.aliquotaPercentual ?? 0
 }
 
 // ── Salvar ──────────────────────────────────────────────────────────────────
@@ -96,20 +113,24 @@ const erros = ref<string[]>([])
 async function salvar() {
   erros.value = []
   if (!form.nome.trim()) erros.value.push('Nome do produto é obrigatório.')
-  if (materiais.value.length === 0) erros.value.push('Adicione ao menos um material na ficha técnica.')
+  if (ficha.value.length === 0) erros.value.push('Adicione ao menos um material na ficha técnica.')
   if (erros.value.length) return
 
-  const produto: Produto = {
-    id: props.produto?.id ?? '',
-    empresaId: props.produto?.empresaId ?? empresaStore.empresaAtivaId,
-    createdAt: props.produto?.createdAt ?? new Date().toISOString(),
+  const salvo = await produtosStore.salvar({
+    id: props.produto?.id,
     ...form,
-    materiais: materiais.value,
-    impostos: impostos.value,
+    ficha: ficha.value,
+    impostoIds: impostoIds.value,
+  })
+
+  if (!salvo) {
+    // O servidor recusou (entrada invalida, material inexistente — guarda V6).
+    // Fechar aqui faria o usuario acreditar que salvou.
+    erros.value = [produtosStore.erro ?? 'Não foi possível salvar o produto.']
+    return
   }
 
-  await produtosStore.salvar(produto)
-  emit('saved', produto)
+  emit('saved', salvo)
   emit('close')
 }
 
@@ -136,12 +157,7 @@ const titulo = computed(() => `${props.produto ? 'Editar' : 'Novo'} ${rotuloProd
             <label class="field__label">Categoria</label>
             <input v-model="form.categoria" class="input" placeholder="Ex: Bolos Clássicos" />
           </div>
-          <div class="field">
-            <label class="toggle-field">
-              <input v-model="form.ativo" type="checkbox" class="toggle-input" />
-              <span>Produto ativo</span>
-            </label>
-          </div>
+          <!-- `ativo` nao e editavel pelo contrato: exibido so na listagem -->
         </div>
       </section>
 
@@ -169,21 +185,21 @@ const titulo = computed(() => `${props.produto ? 'Editar' : 'Novo'} ${rotuloProd
           <BaseButton size="sm" variant="secondary" @click="addMaterial">+ Insumo</BaseButton>
         </div>
 
-        <div v-if="materiais.length" class="ft-list">
+        <div v-if="ficha.length" class="ft-list">
           <div class="ft-list__header">
             <span>Material</span><span>Quantidade</span><span>Unidade</span><span>Custo Unit.</span><span></span>
           </div>
-          <div v-for="(pm, idx) in materiais" :key="idx" class="ft-row">
+          <div v-for="(pm, idx) in ficha" :key="idx" class="ft-row">
             <select v-model="pm.materialId" class="input input--sm" @change="onMaterialChange(idx, pm.materialId)">
               <option v-for="m in materiaisStore.materiais" :key="m.id" :value="m.id">{{ m.nome }}</option>
             </select>
             <input v-model.number="pm.quantidadeUtilizada" type="number" step="0.001" min="0" class="input input--sm" />
             <span class="ft-unidade">
-              {{ materiaisStore.materiais.find(m => m.id === pm.materialId)?.unidade ?? pm.unidade }}
+              {{ materialDe(pm.materialId)?.unidade ?? pm.unidade }}
             </span>
             <span class="ft-custo">
               {{ new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                (materiaisStore.materiais.find(m => m.id === pm.materialId)?.custoUnitario ?? 0) * pm.quantidadeUtilizada
+                (materialDe(pm.materialId)?.custoUnitario ?? 0) * pm.quantidadeUtilizada
               ) }}
             </span>
             <button class="ft-remove" @click="removeMaterial(idx)" title="Remover">×</button>
@@ -199,12 +215,13 @@ const titulo = computed(() => `${props.produto ? 'Editar' : 'Novo'} ${rotuloProd
           <BaseButton size="sm" variant="secondary" @click="addImposto">+ Imposto</BaseButton>
         </div>
 
-        <div v-if="impostos.length" class="imp-list">
-          <div v-for="(pi, idx) in impostos" :key="idx" class="imp-row">
-            <select v-model="pi.impostoId" class="input input--sm" @change="onImpostoChange(idx, pi.impostoId)">
+        <div v-if="impostoIds.length" class="imp-list">
+          <div v-for="(impostoId, idx) in impostoIds" :key="impostoId" class="imp-row">
+            <select v-model="impostoIds[idx]" class="input input--sm">
               <option v-for="i in impostosStore.impostos" :key="i.id" :value="i.id">{{ i.nome }}</option>
             </select>
-            <input v-model.number="pi.aliquotaPercentual" type="number" step="0.01" class="input input--sm" style="max-width:90px" />
+            <!-- Alíquota e do cadastro do imposto, nao um valor por produto -->
+            <span class="imp-aliquota">{{ aliquotaDe(impostoId).toFixed(2) }}</span>
             <span class="imp-pct-label">%</span>
             <button class="ft-remove" @click="removeImposto(idx)" title="Remover">×</button>
           </div>
@@ -301,6 +318,13 @@ const titulo = computed(() => `${props.produto ? 'Editar' : 'Novo'} ${rotuloProd
 .imp-pct-label { font-size: .8125rem; color: var(--color-text-muted); }
 
 /* Erros */
+.imp-aliquota {
+  display: inline-block;
+  min-width: 90px;
+  text-align: right;
+  font-weight: 600;
+}
+
 .erros {
   background: #fef2f2; border: 1px solid #fca5a5;
   border-radius: var(--radius); padding: var(--space-3) var(--space-4);

@@ -35,7 +35,7 @@ const produto = computed<Produto | undefined>(() =>
 
 const resultado = computed(() => {
   if (!produto.value || !empresaStore.empresa) return null
-  return calcularPrecificacao(produto.value, empresaStore.empresa, despesasStore.despesas, materiaisStore.materiais)
+  return calcularPrecificacao(produto.value, empresaStore.empresa)
 })
 
 // Modo simulação manual

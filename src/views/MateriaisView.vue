@@ -10,7 +10,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
-import type { Material } from '@/types'
+import type { Material, MaterialEntrada } from '@/types'
 
 const store = useMateriaisStore()
 const empresaStore = useEmpresaStore()
@@ -41,8 +41,9 @@ const {
 } = usePaginacao(filtrados, { pageSize: 10 })
 
 function novoMaterial() {
+  // Sem `empresaId`: a empresa do registro e decidida pelo servidor a partir do
+  // que o store envia (a empresa ativa), nunca montada no formulario.
   editando.value = {
-    empresaId: empresaStore.empresaAtivaId,
     nome: '',
     unidade: seg.value.rotulos.unidadePrincipal as Material['unidade'],
     custoUnitario: 0,
@@ -57,8 +58,10 @@ function editarMaterial(m: Material) {
 }
 
 async function salvar() {
-  await store.salvar(editando.value as Material)
-  showModal.value = false
+  const salvo = await store.salvar(editando.value as MaterialEntrada)
+  // Fechar a modal com o servidor tendo recusado faria o usuario acreditar que
+  // salvou. A mensagem ja esta no store.
+  if (salvo) showModal.value = false
 }
 
 const unidades: Material['unidade'][] = ['KG', 'G', 'L', 'ML', 'UN', 'CX', 'PCT', 'H', 'PC', 'TON', 'M', 'M2']
@@ -114,7 +117,11 @@ const unidades: Material['unidade'][] = ['KG', 'G', 'L', 'ML', 'UN', 'CX', 'PCT'
               </td>
             </tr>
             <tr v-if="!itensVisiveis.length">
-              <td colspan="6" class="table__empty">Nenhum material encontrado</td>
+              <td v-if="store.erro" colspan="6" class="table__erro">
+                {{ store.erro }}
+                <button class="table__retentar" @click="store.fetchMateriais()">Tentar de novo</button>
+              </td>
+              <td v-else colspan="6" class="table__empty">Nenhum material encontrado</td>
             </tr>
           </tbody>
         </table>
@@ -208,6 +215,19 @@ const unidades: Material['unidade'][] = ['KG', 'G', 'L', 'ML', 'UN', 'CX', 'PCT'
 .table__name { font-weight: 500; color: var(--color-text); }
 .table__muted { color: var(--color-text-muted); font-size: .8125rem; }
 .table__empty { text-align: center; color: var(--color-text-light); padding: var(--space-8) !important; }
+/* Falha de carregamento nao pode parecer ausencia de cadastro (REQ-16) */
+.table__erro { text-align: center; color: var(--color-danger); padding: var(--space-8) !important; }
+.table__retentar {
+  display: block;
+  margin: var(--space-3) auto 0;
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  font-size: .8125rem;
+}
 
 .sentinela-wrapper { border-top: 1px dashed var(--color-border-light); }
 

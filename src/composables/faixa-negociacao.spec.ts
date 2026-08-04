@@ -7,8 +7,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { useMarkupCalculator } from './useMarkup'
-import { mockProdutos, mockMateriais, mockDespesasFixas, mockEmpresas } from '@/mock/data'
-import type { ResultadoPrecificacao } from '@/types'
+import { mockProdutos, mockMateriais, mockEmpresas } from '@/mock/data'
+import type { Empresa, Produto, ResultadoPrecificacao } from '@/types'
 
 const { calcularPrecificacao, calcularFaixaNegociacao } = useMarkupCalculator()
 
@@ -112,14 +112,39 @@ describe('faixa de negociação — degraus', () => {
   })
 })
 
+/**
+ * Produto do contrato montado a partir da linha do mock — a mesma composicao que
+ * o servidor faz (C1). Desde a fatia 2 `calcularPrecificacao` **recebe** custo e
+ * percentuais prontos; este helper existe para o teste continuar partindo de um
+ * produto real, sem reintroduzir o calculo que saiu do front.
+ */
+function produtoDoMock(id: string): Produto {
+  const registro = mockProdutos.find(p => p.id === id)!
+  const ficha = registro.materiais.map(item => ({
+    material: { ...mockMateriais.find(m => m.id === item.materialId)!, tipo: 'INSUMO' as const },
+    quantidadeUtilizada: item.quantidadeUtilizada,
+    unidade: item.unidade,
+  }))
+  return {
+    id: registro.id,
+    nome: registro.nome,
+    tipo: registro.tipo ?? 'PRODUTO',
+    margemLucro: registro.margemLucro,
+    descontoMaximo: registro.descontoMaximo,
+    ativo: registro.ativo,
+    ficha,
+    impostos: [],
+    custoBase: ficha.reduce((s, i) => s + i.quantidadeUtilizada * i.material.custoUnitario, 0),
+    percentualImpostos: 0,
+  }
+}
+
 describe('faixa sobre um produto real do mock', () => {
   it('MVP de Startup (CodeLab): piso ≈ R$ 51.441,60 com ML preservada', () => {
-    const produto = mockProdutos.find(p => p.id === 'prod-c01')!
-    const empresa = mockEmpresas.find(e => e.id === '4')!
-    const despesas = mockDespesasFixas.filter(d => d.empresaId === '4')
-    const materiais = mockMateriais.filter(m => m.empresaId === '4')
+    const produto = produtoDoMock('prod-c01')
+    const empresa = mockEmpresas.find(e => e.id === '4')! as Empresa
 
-    const res = calcularPrecificacao(produto, empresa, despesas, materiais)
+    const res = calcularPrecificacao(produto, empresa)
     const faixa = calcularFaixaNegociacao(res)
 
     expect(res.custoBase).toBeCloseTo(10060, 2)

@@ -18,7 +18,12 @@
  */
 import { vi } from 'vitest'
 import type { Empresa, Perfil, Usuario } from '@/types'
-import { mockEmpresas, mockUsuarios } from '@/mock/data'
+import {
+  mockEmpresas, mockUsuarios, mockPerfis,
+  mockMateriais, mockImpostos, mockDespesasFixas, mockProdutos,
+  type MaterialRegistro, type ImpostoRegistro, type ProdutoRegistro,
+  type DespesaFixaRegistro,
+} from '@/mock/data'
 
 /** Senha única das contas de teste — o seed de desenvolvimento usa a mesma. */
 export const SENHA_PADRAO = 'markup123'
@@ -108,6 +113,21 @@ function usuarioGql(usuario: Usuario) {
 }
 
 /**
+ * C2 — rateio das despesas fixas ativas sobre o faturamento.
+ *
+ * **Calculado na leitura**, como no backend: guardar o valor num campo do
+ * registro faria uma despesa recém-inativada continuar contando no rateio até
+ * alguém lembrar de recalcular. Foi exatamente o que um teste flagrou.
+ */
+function rateioDeDespesas(empresa: Empresa): number {
+  if (empresa.faturamentoMedioMensal <= 0) return 0
+  const ativas = mockDespesasFixas
+    .filter(d => d.empresaId === empresa.id && d.ativa)
+    .reduce((soma, d) => soma + d.valorMensal, 0)
+  return (ativas / empresa.faturamentoMedioMensal) * 100
+}
+
+/**
  * Campo nulável ausente **não** é a mesma coisa que nulo: o GraphQL devolve
  * `null` explícito, e o Apollo trata campo faltando como resposta incompleta —
  * o objeto inteiro volta indefinido do cache. Por isso cada campo do fragmento
@@ -124,9 +144,174 @@ function empresaGql(empresa: Empresa) {
     anexoCadastrado: empresa.anexoCadastrado ?? null,
     faturamentoMedioMensal: empresa.faturamentoMedioMensal,
     folhaPagamentoMensal: empresa.folhaPagamentoMensal ?? null,
-    percentualDespesasFixas: empresa.percentualDespesasFixas ?? 0,
+    percentualDespesasFixas: rateioDeDespesas(empresa),
     donoUsuarioId: empresa.donoUsuarioId,
   }
+}
+
+// ─── Composição do catálogo ───────────────────────────────────────────────────
+//
+// Aqui mora a diferença entre o "banco" (linhas com id) e o contrato (objetos
+// resolvidos). É trabalho de servidor, e por isso acontece do lado do servidor
+// falso: se o mock já entregasse o produto montado, o front seria testado contra
+// um formato que o backend real nunca produz.
+
+function materialGql(registro: MaterialRegistro) {
+  return {
+    __typename: 'Material',
+    id: registro.id,
+    nome: registro.nome,
+    unidade: registro.unidade,
+    custoUnitario: registro.custoUnitario,
+    fornecedor: registro.fornecedor ?? null,
+    // `TipoMaterial!` no contrato: o servidor sempre devolve um valor. INSUMO é o
+    // que o backend assume quando a escrita omite o campo (opcional no input).
+    tipo: registro.tipo ?? 'INSUMO',
+    estoque: registro.estoque ?? null,
+  }
+}
+
+function impostoGql(registro: ImpostoRegistro) {
+  return {
+    __typename: 'Imposto',
+    id: registro.id,
+    chave: registro.chave,
+    nome: registro.nome,
+    descricao: registro.descricao ?? null,
+    aliquotaPercentual: registro.aliquotaPercentual,
+    ativo: registro.ativo,
+  }
+}
+
+function despesaGql(registro: DespesaFixaRegistro) {
+  return {
+    __typename: 'DespesaFixa',
+    id: registro.id,
+    descricao: registro.descricao,
+    valorMensal: registro.valorMensal,
+    categoria: registro.categoria,
+    ativa: registro.ativa,
+  }
+}
+
+/**
+ * Monta o produto do contrato a partir da linha.
+ *
+ * - **ficha**: resolve `materialId` no catálogo. Material inexistente é **erro**
+ *   (guarda V6) — o front antigo ignorava em silêncio e subestimava o custo.
+ * - **custoBase (C1)**: soma de quantidade x custo unitário.
+ * - **percentualImpostos (C3)**: soma simples das alíquotas **dos impostos
+ *   cadastrados**, sem filtrar por `ativo` — igual ao `Produto.java` do backend.
+ *   É aqui que a `aliquotaEfetivaPorEmpresa` do mock deixa de ter efeito: a
+ *   alíquota que vale é a do cadastro, não uma cópia por produto.
+ */
+function produtoGql(registro: ProdutoRegistro) {
+  const ficha = registro.materiais.map(item => {
+    const material = mockMateriais.find(m => m.id === item.materialId)
+    if (!material) {
+      throw new ErroDeDominio(
+        `Material ${item.materialId} não existe no catálogo`, 'BAD_REQUEST',
+      )
+    }
+    return {
+      __typename: 'ItemFichaTecnica',
+      material: materialGql(material),
+      quantidadeUtilizada: item.quantidadeUtilizada,
+      unidade: item.unidade,
+    }
+  })
+
+  const impostos = registro.impostos
+    .map(vinculo => mockImpostos.find(i => i.id === vinculo.impostoId))
+    .filter((i): i is ImpostoRegistro => !!i)
+    .map(impostoGql)
+
+  const custoBase = registro.materiais.reduce((soma, item) => {
+    const material = mockMateriais.find(m => m.id === item.materialId)!
+    return soma + item.quantidadeUtilizada * material.custoUnitario
+  }, 0)
+
+  return {
+    __typename: 'Produto',
+    id: registro.id,
+    nome: registro.nome,
+    descricao: registro.descricao ?? null,
+    categoria: registro.categoria ?? null,
+    tipo: registro.tipo ?? 'PRODUTO',
+    margemLucro: registro.margemLucro,
+    descontoMaximo: registro.descontoMaximo,
+    ativo: registro.ativo,
+    ficha,
+    impostos,
+    custoBase,
+    percentualImpostos: impostos.reduce((soma, i) => soma + i.aliquotaPercentual, 0),
+  }
+}
+
+/** Erro que o servidor falso devolve com a classificação do contrato. */
+class ErroDeDominio extends Error {
+  constructor(mensagem: string, readonly classificacao: string) {
+    super(mensagem)
+  }
+}
+
+/**
+ * Executa uma composição que pode esbarrar numa guarda de domínio (V6, material
+ * órfão) e traduz para erro de contrato — como o `ErrosDeDominioResolver` faz no
+ * backend. Sem isto, a guarda viraria exceção crua e o teste veria "erro de
+ * rede", escondendo o que realmente aconteceu.
+ */
+function comErroDeDominio(montar: () => unknown): Response {
+  try {
+    return dados(montar())
+  } catch (erro) {
+    if (erro instanceof ErroDeDominio) return erroGraphQL(erro.message, erro.classificacao)
+    throw erro
+  }
+}
+
+/** Entrada de `salvarProduto` — espelha `ProdutoInput`. */
+interface EntradaDeProduto {
+  id?: string | null
+  empresaId: string
+  nome: string
+  descricao?: string
+  categoria?: string
+  tipo: ProdutoRegistro['tipo']
+  margemLucro: number
+  descontoMaximo: number
+  ficha: ProdutoRegistro['materiais']
+  impostoIds: string[]
+}
+
+/** Registro do "banco" que carrega a empresa dona da linha. */
+interface RegistroDeEmpresa {
+  id: string
+  empresaId?: string
+}
+
+/**
+ * Grava (cria ou edita) uma linha, garantindo que a edição **não mude a empresa
+ * do registro**: um `id` de outra empresa somado a um `empresaId` autorizado
+ * seria um caminho de escrita cruzada (R02/R09).
+ */
+function gravar<T extends RegistroDeEmpresa>(
+  tabela: T[],
+  entrada: T & { id?: string | null },
+  empresaId: string,
+  prefixo: string,
+): T {
+  if (entrada.id) {
+    const existente = tabela.find(linha => linha.id === entrada.id)
+    if (!existente) throw new ErroDeDominio('Registro não encontrado', 'NOT_FOUND')
+    if (existente.empresaId && existente.empresaId !== empresaId) {
+      throw new ErroDeDominio('Registro de outra empresa', 'FORBIDDEN')
+    }
+    return Object.assign(existente, entrada, { empresaId })
+  }
+  const novo = { ...entrada, id: `${prefixo}-novo-${tabela.length + 1}`, empresaId } as T
+  tabela.push(novo)
+  return novo
 }
 
 /**
@@ -141,6 +326,33 @@ function empresasDoUsuario(usuario: Usuario): Empresa[] {
       emp.donoUsuarioId === usuario.id ||
       usuario.empresas.some(v => v.empresaId === emp.id),
   )
+}
+
+/**
+ * Valida que o usuário alcança a empresa pedida e devolve o id; se não alcança,
+ * devolve a resposta de erro pronta.
+ *
+ * **FORBIDDEN, não lista vazia:** pedir dado de empresa alheia é recusa, não
+ * ausência de resultado. Devolver `[]` diria ao usuário que a empresa não tem
+ * cadastro nenhum, o que é falso e esconde o erro de quem chamou.
+ */
+function exigirAlcance(usuario: Usuario, empresaId: unknown): string | Response {
+  const id = String(empresaId ?? '')
+  if (!id) return erroGraphQL('empresaId é obrigatório', 'BAD_REQUEST')
+  if (!empresasDoUsuario(usuario).some(e => e.id === id)) {
+    return erroGraphQL('Sem acesso a esta empresa', 'FORBIDDEN')
+  }
+  return id
+}
+
+/**
+ * Usuários que este usuário enxerga: o ADMIN global vê a base inteira; os demais
+ * veem quem compartilha ao menos uma empresa com eles.
+ */
+function usuariosVisiveis(usuario: Usuario): Usuario[] {
+  if (usuario.perfilGlobal?.escopoGlobal) return [...mockUsuarios]
+  const minhas = new Set(empresasDoUsuario(usuario).map(e => e.id))
+  return mockUsuarios.filter(u => u.empresas.some(v => minhas.has(v.empresaId)))
 }
 
 export function instalarServidorFalso(): ServidorFalso {
@@ -239,6 +451,91 @@ export function instalarServidorFalso(): ServidorFalso {
       case 'me':
         return dados({ me: usuarioGql(usuario) })
 
+      // -- Catalogo --------------------------------------------------------
+      // Toda consulta exige `empresaId` e e validada contra o alcance do
+      // usuario (R02/R09): id de empresa nao autorizada e FORBIDDEN, nunca
+      // lista vazia -- lista vazia diria "voce nao tem material cadastrado".
+
+      case 'materiais': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        return dados({
+          materiais: mockMateriais.filter(m => m.empresaId === alcance).map(materialGql),
+        })
+      }
+
+      case 'impostos': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        return dados({
+          impostos: mockImpostos
+            .filter(i => !i.empresaId || i.empresaId === alcance)
+            .map(impostoGql),
+        })
+      }
+
+      case 'despesasFixas': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        return dados({
+          despesasFixas: mockDespesasFixas
+            .filter(d => d.empresaId === alcance)
+            .map(despesaGql),
+        })
+      }
+
+      case 'produtos': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        return comErroDeDominio(() => ({
+          produtos: mockProdutos.filter(p => p.empresaId === alcance).map(produtoGql),
+        }))
+      }
+
+      case 'produto': {
+        const registro = mockProdutos.find(p => p.id === variaveis.id)
+        if (!registro) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, registro.empresaId)
+        if (alcance instanceof Response) return alcance
+        return comErroDeDominio(() => ({ produto: produtoGql(registro) }))
+      }
+
+      // -- Acesso ----------------------------------------------------------
+
+      case 'perfis':
+        return dados({ perfis: mockPerfis.map(perfilGql) })
+
+      case 'usuarios':
+        return dados({ usuarios: usuariosVisiveis(usuario).map(usuarioGql) })
+
+      case 'convidarUsuario': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        if (mockUsuarios.some(u => u.email === variaveis.email)) {
+          return erroGraphQL('E-mail ja cadastrado', 'BAD_REQUEST')
+        }
+        const perfil = mockPerfis.find(p => p.id === variaveis.perfilId)
+        if (!perfil) return erroGraphQL('Perfil nao encontrado', 'NOT_FOUND')
+
+        sequencia += 1
+        const convidado: Usuario = {
+          id: `usr-convidado-${sequencia}`,
+          nome: String(variaveis.nome),
+          email: String(variaveis.email),
+          ativo: true,
+          empresas: [{ empresaId: alcance, perfilId: perfil.id, perfil }],
+        }
+        mockUsuarios.push(convidado)
+        return dados({
+          convidarUsuario: {
+            __typename: 'Convidado',
+            // Exibida uma unica vez: o servidor nao a devolve de novo.
+            senhaProvisoria: `prov-${sequencia}`,
+            usuario: usuarioGql(convidado),
+          },
+        })
+      }
+
       case 'minhasEmpresas':
         return dados({ minhasEmpresas: empresasDoUsuario(usuario).map(empresaGql) })
 
@@ -263,7 +560,92 @@ export function instalarServidorFalso(): ServidorFalso {
       }
     }
 
-    return erroGraphQL(`Operação não suportada no servidor falso: ${operacao}`, 'BAD_REQUEST')
+    switch (operacao) {
+      case 'salvarMaterial': {
+        const entrada = variaveis.input as MaterialRegistro & { id?: string | null }
+        const alcance = exigirAlcance(usuario, entrada.empresaId)
+        if (alcance instanceof Response) return alcance
+        const salvo = gravar(mockMateriais, entrada, alcance, 'mat')
+        return dados({ salvarMaterial: materialGql(salvo) })
+      }
+
+      case 'salvarImposto': {
+        const entrada = variaveis.input as ImpostoRegistro & { id?: string | null }
+        const alcance = exigirAlcance(usuario, entrada.empresaId)
+        if (alcance instanceof Response) return alcance
+        const salvo = gravar(mockImpostos, entrada, alcance, 'imp')
+        return dados({ salvarImposto: impostoGql(salvo) })
+      }
+
+      case 'salvarDespesaFixa': {
+        const entrada = variaveis.input as DespesaFixaRegistro & { id?: string | null }
+        const alcance = exigirAlcance(usuario, entrada.empresaId)
+        if (alcance instanceof Response) return alcance
+        const salvo = gravar(mockDespesasFixas, entrada, alcance, 'df')
+        return dados({ salvarDespesaFixa: despesaGql(salvo) })
+      }
+
+      case 'toggleDespesaFixa': {
+        const despesa = mockDespesasFixas.find(d => d.id === variaveis.id)
+        if (!despesa) return erroGraphQL('Despesa nao encontrada', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, despesa.empresaId)
+        if (alcance instanceof Response) return alcance
+        despesa.ativa = Boolean(variaveis.ativa)
+        return dados({ toggleDespesaFixa: despesaGql(despesa) })
+      }
+
+      case 'salvarProduto': {
+        const entrada = variaveis.input as EntradaDeProduto
+        const alcance = exigirAlcance(usuario, entrada.empresaId)
+        if (alcance instanceof Response) return alcance
+
+        const existente = entrada.id ? mockProdutos.find(p => p.id === entrada.id) : undefined
+        if (entrada.id && !existente) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+
+        sequencia += 1
+        const campos = {
+          empresaId: alcance,
+          nome: entrada.nome,
+          descricao: entrada.descricao,
+          categoria: entrada.categoria,
+          tipo: entrada.tipo,
+          margemLucro: entrada.margemLucro,
+          descontoMaximo: entrada.descontoMaximo,
+          materiais: entrada.ficha.map(item => ({
+            materialId: item.materialId,
+            quantidadeUtilizada: item.quantidadeUtilizada,
+            unidade: item.unidade,
+          })),
+          // Referencia ao imposto; a aliquota e a do cadastro, resolvida na
+          // leitura -- nao uma copia guardada por produto.
+          impostos: entrada.impostoIds.map(impostoId => ({ impostoId })),
+        }
+
+        const registro: ProdutoRegistro = existente
+          ? Object.assign(existente, campos)
+          : {
+              id: `prod-novo-${sequencia}`,
+              // `ativo` nao vem do input (o contrato nao o tem): nasce ativo
+              ativo: true,
+              createdAt: new Date().toISOString(),
+              ...campos,
+            }
+        if (!existente) mockProdutos.push(registro)
+
+        return comErroDeDominio(() => ({ salvarProduto: produtoGql(registro) }))
+      }
+
+      case 'ajustarMargem': {
+        const produto = mockProdutos.find(p => p.id === variaveis.produtoId)
+        if (!produto) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, produto.empresaId)
+        if (alcance instanceof Response) return alcance
+        produto.margemLucro = Number(variaveis.margemLucro)
+        return comErroDeDominio(() => ({ ajustarMargem: produtoGql(produto) }))
+      }
+    }
+
+    return erroGraphQL(`Operacao nao suportada no servidor falso: ${operacao}`, 'BAD_REQUEST')
   }) as typeof fetch
 
   return {

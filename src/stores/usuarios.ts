@@ -1,71 +1,99 @@
+/**
+ * Usuários e perfis.
+ *
+ * Duas ausências deliberadas, herdadas do contrato:
+ *
+ * - **Não existe criação direta de usuário.** O cadastro é por convite, e o
+ *   convite devolve uma senha provisória que só aparece uma vez.
+ * - **Não existe escrita de perfil.** `perfil` é dado de sistema, nasce no
+ *   Flyway. Como PROPRIETARIO tem `PERFIL_WRITE` e o perfil é global, permitir
+ *   escrita promoveria qualquer dono a administrador de toda a base.
+ *
+ * Ao contrário do catálogo, `usuarios` não recebe `empresaId`: o escopo é o do
+ * token. A lista da empresa ativa é recorte de exibição, não de autorização —
+ * quem autoriza é o servidor.
+ */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Usuario, Perfil } from '@/types'
-import { mockUsuarios, mockPerfis, perfilVendedor } from '@/mock/data'
-import { mockQuery } from '@/graphql/client'
+import type { Perfil, Usuario } from '@/types'
+import { apolloClient } from '@/graphql/client'
+import { CONVIDAR_USUARIO, PERFIS, USUARIOS } from '@/graphql/operations/usuarios'
+import { mensagemDeErro } from '@/graphql/erros'
 import { useEmpresaStore } from './empresa'
 import { registrarResetDeSessao } from './reset'
+
+export interface Convidado {
+  usuario: Usuario
+  /** Exibida uma única vez: o servidor não a devolve de novo */
+  senhaProvisoria: string
+}
 
 export const useUsuariosStore = defineStore('usuarios', () => {
   const empresaStore = useEmpresaStore()
   const todosUsuarios = ref<Usuario[]>([])
   const perfis = ref<Perfil[]>([])
   const loading = ref(false)
+  const erro = ref<string | null>(null)
 
-  /** Usuários vinculados à empresa ativa (relação N:N usuário↔empresa) */
+  /** Recorte de exibição: quem tem vínculo com a empresa ativa. */
   const usuarios = computed(() =>
-    todosUsuarios.value.filter(u => u.empresas.some(e => e.empresaId === empresaStore.empresaAtivaId))
+    todosUsuarios.value.filter(u =>
+      u.empresas.some(v => v.empresaId === empresaStore.empresaAtivaId),
+    ),
   )
 
-  async function fetchUsuarios() {
+  async function fetchUsuarios(): Promise<void> {
     loading.value = true
-    const [u, p] = await Promise.all([
-      mockQuery([...mockUsuarios]),
-      mockQuery([...mockPerfis])
-    ])
-    todosUsuarios.value = u.data
-    perfis.value = p.data
-    loading.value = false
+    erro.value = null
+    try {
+      const [respostaUsuarios, respostaPerfis] = await Promise.all([
+        apolloClient.query({ query: USUARIOS }),
+        apolloClient.query({ query: PERFIS }),
+      ])
+      todosUsuarios.value = [...respostaUsuarios.data.usuarios]
+      perfis.value = [...respostaPerfis.data.perfis]
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'usuarios')
+      todosUsuarios.value = []
+      perfis.value = []
+    } finally {
+      loading.value = false
+    }
   }
 
-  async function salvarUsuario(usuario: Usuario) {
+  /**
+   * Convida alguém para a **empresa ativa**. Devolve a senha provisória para a
+   * tela exibir uma vez; o store não a guarda, justamente para não haver de onde
+   * exibi-la de novo.
+   */
+  async function convidar(nome: string, email: string, perfilId: string): Promise<Convidado | null> {
     loading.value = true
-    await mockQuery(null, 400)
-    const idx = todosUsuarios.value.findIndex(u => u.id === usuario.id)
-    if (idx >= 0) {
-      todosUsuarios.value[idx] = { ...usuario }
-    } else {
-      const novo: Usuario = {
-        ...usuario,
-        id: `usr-${Date.now()}`,
-        // nunca cair no ADMIN global como default: usuário novo entra no perfil mais restrito
-        empresas: usuario.empresas.length
-          ? usuario.empresas
-          : [{ empresaId: empresaStore.empresaAtivaId, perfilId: perfilVendedor.id }],
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CONVIDAR_USUARIO,
+        variables: { nome, email, perfilId, empresaId: empresaStore.empresaAtivaId },
+      })
+      todosUsuarios.value.push(data.convidarUsuario.usuario)
+      return {
+        usuario: data.convidarUsuario.usuario,
+        senhaProvisoria: data.convidarUsuario.senhaProvisoria,
       }
-      todosUsuarios.value.push(novo)
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'convidarUsuario')
+      return null
+    } finally {
+      loading.value = false
     }
-    loading.value = false
-  }
-
-  async function salvarPerfil(perfil: Perfil) {
-    loading.value = true
-    await mockQuery(null, 300)
-    const idx = perfis.value.findIndex(p => p.id === perfil.id)
-    if (idx >= 0) {
-      perfis.value[idx] = { ...perfil }
-    } else {
-      perfis.value.push({ ...perfil, id: `perfil-${Date.now()}` })
-    }
-    loading.value = false
   }
 
   function reset(): void {
     todosUsuarios.value = []
     perfis.value = []
+    erro.value = null
   }
 
   registrarResetDeSessao(reset)
 
-  return { usuarios, perfis, loading, fetchUsuarios, salvarUsuario, salvarPerfil, reset }
+  return { usuarios, perfis, loading, erro, fetchUsuarios, convidar, reset }
 })

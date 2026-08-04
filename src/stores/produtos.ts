@@ -1,59 +1,100 @@
+/**
+ * Produtos da empresa ativa. Segue o modelo de `materiais.ts`, com duas
+ * particularidades do contrato:
+ *
+ * - **`custoBase` e `percentualImpostos` chegam calculados** (C1/C3). O front
+ *   não os refaz — refazer é como os dois lados passam a mostrar preços
+ *   diferentes para o mesmo produto (B1).
+ * - **`ajustarMargem` é mutation própria.** Mudar um número não deve exigir
+ *   reenviar a ficha técnica inteira: um formulário desatualizado sobrescreveria
+ *   a composição do produto sem ninguém pedir.
+ *
+ * Não há remoção — o contrato não tem, e a função que existia aqui não era
+ * chamada por tela nenhuma.
+ */
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Produto } from '@/types'
-import { mockProdutos } from '@/mock/data'
-import { mockQuery } from '@/graphql/client'
+import { ref } from 'vue'
+import type { Produto, ProdutoEntrada } from '@/types'
+import { apolloClient } from '@/graphql/client'
+import { PRODUTOS, SALVAR_PRODUTO, AJUSTAR_MARGEM } from '@/graphql/operations/catalogo'
+import { mensagemDeErro } from '@/graphql/erros'
+import { recursoDaEmpresaAtiva } from '@/composables/recursoDaEmpresaAtiva'
 import { useEmpresaStore } from './empresa'
 import { registrarResetDeSessao } from './reset'
 
 export const useProdutosStore = defineStore('produtos', () => {
   const empresaStore = useEmpresaStore()
-  const todos = ref<Produto[]>([])
-  const loading = ref(false)
+  const produtos = ref<Produto[]>([])
+  const erro = ref<string | null>(null)
 
-  /** Produtos/serviços da empresa ativa (reativo à troca de empresa) */
-  const produtos = computed(() =>
-    todos.value.filter(p => p.empresaId === empresaStore.empresaAtivaId)
-  )
+  const recurso = recursoDaEmpresaAtiva({
+    buscar: async (empresaId) => {
+      const { data } = await apolloClient.query({ query: PRODUTOS, variables: { empresaId } })
+      return data.produtos as Produto[]
+    },
+    aplicar: (dados) => { produtos.value = [...dados]; erro.value = null },
+    limpar: () => { produtos.value = [] },
+    aoFalhar: (e) => { erro.value = mensagemDeErro(e, 'produtos') },
+  })
 
-  async function fetchProdutos() {
-    loading.value = true
-    const result = await mockQuery([...mockProdutos])
-    todos.value = result.data
-    loading.value = false
+  function absorver(salvo: Produto): void {
+    const idx = produtos.value.findIndex(p => p.id === salvo.id)
+    if (idx >= 0) produtos.value[idx] = salvo
+    else produtos.value.push(salvo)
   }
 
-  async function salvar(produto: Produto) {
-    loading.value = true
-    await mockQuery(null, 400)
-    const idx = todos.value.findIndex(p => p.id === produto.id)
-    if (idx >= 0) {
-      todos.value[idx] = { ...produto }
-    } else {
-      todos.value.push({
-        ...produto,
-        id: `prod-${Date.now()}`,
-        empresaId: empresaStore.empresaAtivaId,
-        createdAt: new Date().toISOString(),
+  async function salvar(dados: Omit<ProdutoEntrada, 'empresaId'>): Promise<Produto | null> {
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: SALVAR_PRODUTO,
+        variables: { input: { ...dados, empresaId: empresaStore.empresaAtivaId } },
       })
+      absorver(data.salvarProduto)
+      return data.salvarProduto
+    } catch (e) {
+      // Inclui a guarda V6 (material da ficha que não existe): o servidor recusa
+      // em vez de calcular um custo menor do que o real.
+      erro.value = mensagemDeErro(e, 'salvarProduto')
+      return null
     }
-    loading.value = false
   }
 
-  async function remover(id: string) {
-    await mockQuery(null, 200)
-    todos.value = todos.value.filter(p => p.id !== id)
+  async function ajustarMargem(produtoId: string, margemLucro: number): Promise<Produto | null> {
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: AJUSTAR_MARGEM,
+        variables: { produtoId, margemLucro },
+      })
+      absorver(data.ajustarMargem)
+      return data.ajustarMargem
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'ajustarMargem')
+      return null
+    }
   }
 
-  function getProduto(id: string) {
-    return todos.value.find(p => p.id === id)
+  function getProduto(id: string): Produto | undefined {
+    return produtos.value.find(p => p.id === id)
   }
 
   function reset(): void {
-    todos.value = []
+    produtos.value = []
+    erro.value = null
   }
 
   registrarResetDeSessao(reset)
 
-  return { produtos, loading, fetchProdutos, salvar, remover, getProduto, reset }
+  return {
+    produtos,
+    erro,
+    loading: recurso.carregando,
+    carregado: recurso.carregado,
+    fetchProdutos: recurso.carregar,
+    salvar,
+    ajustarMargem,
+    getProduto,
+    reset,
+  }
 })

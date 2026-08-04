@@ -31,7 +31,8 @@ implementado, e manter cópia aqui só criaria duas versões divergindo.
 
 | Feature | Spec | Estado |
 |---------|------|--------|
-| Integração backend — sessão e empresas | [integracao-backend-sessao-empresas/](integracao-backend-sessao-empresas/spec.md) | fatia 1 de 3 |
+| Integração backend — sessão e empresas | [integracao-backend-sessao-empresas/](integracao-backend-sessao-empresas/spec.md) | fatia 1 de 3 — **concluída** |
+| Integração backend — catálogo, usuários e perfis | [integracao-backend-catalogo/](integracao-backend-catalogo/spec.md) | fatia 2 de 3 — **concluída** |
 | Módulo Gestão do Site | [modulo-gestao-site/](modulo-gestao-site/spec.md) | implementado (mock) |
 | Faixa de negociação e PDF | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | implementado (mock) |
 

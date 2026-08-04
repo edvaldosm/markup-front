@@ -16,7 +16,7 @@ const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const materiaisStore = useMateriaisStore()
 const produtosStore = useProdutosStore()
-const { calcularPrecificacao, calcularPercentualDF, calcularFatorR } = useMarkupCalculator()
+const { calcularPrecificacao, calcularFatorR } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 
 const seg = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
@@ -34,14 +34,15 @@ onMounted(async () => {
 
 const percentualDF = computed(() => {
   if (!empresaStore.empresa) return 0
-  return calcularPercentualDF(despesasStore.despesas, empresaStore.empresa.faturamentoMedioMensal)
+  // Rateio (C2) vem calculado do servidor — o front lê, nao refaz (B1)
+  return empresaStore.empresa.percentualDespesasFixas
 })
 
 const produtosComPreco = computed(() => {
   if (!empresaStore.empresa) return []
   return produtosStore.produtos.map(p => ({
     ...p,
-    resultado: calcularPrecificacao(p, empresaStore.empresa!, despesasStore.despesas, materiaisStore.materiais)
+    resultado: calcularPrecificacao(p, empresaStore.empresa!)
   }))
 })
 

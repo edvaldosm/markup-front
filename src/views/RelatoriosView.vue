@@ -13,7 +13,7 @@ const produtosStore = useProdutosStore()
 const materiaisStore = useMateriaisStore()
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
-const { calcularPrecificacao, calcularPercentualDF } = useMarkupCalculator()
+const { calcularPrecificacao } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 
 onMounted(() => Promise.all([
@@ -29,12 +29,12 @@ const produtosComResultado = computed(() => {
   if (!empresaStore.empresa) return []
   return produtosStore.produtos.map(p => ({
     ...p,
-    resultado: calcularPrecificacao(p, empresaStore.empresa!, despesasStore.despesas, materiaisStore.materiais)
+    resultado: calcularPrecificacao(p, empresaStore.empresa!)
   }))
 })
 
 const percentualDF = computed(() =>
-  calcularPercentualDF(despesasStore.despesas, empresaStore.empresa?.faturamentoMedioMensal ?? 1)
+  empresaStore.empresa?.percentualDespesasFixas ?? 0
 )
 
 const totalDespesas = computed(() => despesasStore.totalMensal)

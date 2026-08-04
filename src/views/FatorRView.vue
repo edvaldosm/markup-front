@@ -14,7 +14,7 @@ const empresaStore = useEmpresaStore()
 const produtosStore = useProdutosStore()
 const materiaisStore = useMateriaisStore()
 const despesasStore = useDespesasStore()
-const { calcularCustoBase, calcularPercentualDF } = useMarkupCalculator()
+const { } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 
 // Alíquotas nominais de 1ª faixa — usadas para o comparativo didático
@@ -43,8 +43,9 @@ const folhaParaVirar = computed(() => (FATOR_R_LIMITE / 100) * faturamento.value
 
 // Serviço representativo da empresa ativa
 const servicoRef = computed(() => produtosStore.produtos.find(p => p.ativo) ?? produtosStore.produtos[0] ?? null)
-const custoRef = computed(() => servicoRef.value ? calcularCustoBase(servicoRef.value, materiaisStore.materiais) : 0)
-const dfPct = computed(() => calcularPercentualDF(despesasStore.despesas, faturamento.value))
+// C1 vem do servidor, com a ficha ja resolvida — sem cruzar material por id
+const custoRef = computed(() => servicoRef.value?.custoBase ?? 0)
+const dfPct = computed(() => empresaStore.empresa?.percentualDespesasFixas ?? 0)
 
 function pvComAnexo(aliqImposto: number) {
   if (!servicoRef.value) return 0

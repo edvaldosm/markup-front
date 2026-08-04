@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useUsuariosStore } from '@/stores/usuarios'
-import { mockPermissoes } from '@/mock/data'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 
@@ -19,7 +18,23 @@ const moduloColors: Record<string, 'green' | 'blue' | 'orange' | 'purple' | 'red
   'Perfis': 'purple',
 }
 
-const modulos = [...new Set(mockPermissoes.map(p => p.modulo))]
+/**
+ * O catalogo de permissoes e derivado dos **perfis do servidor**, nao de uma
+ * lista propria: o RBAC e dado de sistema (nasce no Flyway), e uma copia no
+ * front ficaria desatualizada sem ninguem perceber.
+ *
+ * Esta tela e **somente leitura**, por decisao do contrato: nao existe mutation
+ * de perfil. Como PROPRIETARIO tem `PERFIL_WRITE` e o perfil e global, permitir
+ * escrita promoveria qualquer dono a administrador de toda a base.
+ */
+const permissoes = computed(() => {
+  const porChave = new Map(
+    store.perfis.flatMap(perfil => perfil.permissoes.map(p => [p.chave, p] as const)),
+  )
+  return [...porChave.values()]
+})
+
+const modulos = computed(() => [...new Set(permissoes.value.map(p => p.modulo))])
 </script>
 
 <template>
@@ -66,7 +81,7 @@ const modulos = [...new Set(mockPermissoes.map(p => p.modulo))]
                 </td>
               </tr>
               <tr
-                v-for="perm in mockPermissoes.filter(p => p.modulo === modulo)"
+                v-for="perm in permissoes.filter(p => p.modulo === modulo)"
                 :key="perm.id"
                 class="matrix__row"
               >

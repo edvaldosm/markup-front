@@ -10,11 +10,10 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
-import type { DespesaFixa } from '@/types'
+import type { DespesaFixa, DespesaFixaEntrada } from '@/types'
 
 const store = useDespesasStore()
 const empresaStore = useEmpresaStore()
-const { calcularPercentualDF } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 
 onMounted(() => Promise.all([store.fetchDespesas(), empresaStore.fetchEmpresa()]))
@@ -22,10 +21,11 @@ onMounted(() => Promise.all([store.fetchDespesas(), empresaStore.fetchEmpresa()]
 const showModal = ref(false)
 const editando = ref<Partial<DespesaFixa>>({})
 
-const percentualDF = computed(() => {
-  if (!empresaStore.empresa) return 0
-  return calcularPercentualDF(store.despesas, empresaStore.empresa.faturamentoMedioMensal)
-})
+/**
+ * Rateio (C2) calculado pelo servidor. Alternar uma despesa recarrega a empresa,
+ * entao este numero se atualiza sozinho — sem o front refazer a conta (B1).
+ */
+const percentualDF = computed(() => empresaStore.empresa?.percentualDespesasFixas ?? 0)
 
 const categoriaLabel: Record<string, string> = {
   ALUGUEL: 'Aluguel', ENERGIA: 'Energia', GAS: 'Gás',
@@ -45,7 +45,7 @@ const {
 } = usePaginacao(todasDespesas, { pageSize: 10 })
 
 function nova() {
-  editando.value = { empresaId: empresaStore.empresaAtivaId, descricao: '', valorMensal: 0, categoria: 'OUTRO', ativa: true }
+  editando.value = { descricao: '', valorMensal: 0, categoria: 'OUTRO', ativa: true }
   showModal.value = true
 }
 
@@ -55,12 +55,20 @@ function editar(d: DespesaFixa) {
 }
 
 async function salvar() {
-  await store.salvar(editando.value as DespesaFixa)
-  showModal.value = false
+  const salva = await store.salvar(editando.value as DespesaFixaEntrada)
+  if (salva) showModal.value = false
 }
 
-async function remover(id: string) {
-  if (confirm('Remover esta despesa?')) await store.remover(id)
+/**
+ * Inativar substitui excluir. Despesa fixa entrou no rateio que formou precos ja
+ * praticados: apaga-la destruiria a explicacao daqueles precos. Inativa sai do
+ * calculo e o historico fica.
+ */
+async function alternar(d: DespesaFixa) {
+  const acao = d.ativa ? 'Inativar' : 'Reativar'
+  if (confirm(`${acao} "${d.descricao}"? Despesa inativa nao entra no rateio.`)) {
+    await store.alternarAtiva(d.id, !d.ativa)
+  }
 }
 
 const categorias = ['ALUGUEL','ENERGIA','GAS','INTERNET','PROLABORE','CONTADOR','OUTRO']
@@ -122,7 +130,9 @@ const categorias = ['ALUGUEL','ENERGIA','GAS','INTERNET','PROLABORE','CONTADOR',
             </td>
             <td class="table__actions">
               <BaseButton size="sm" variant="ghost" @click="editar(d)">Editar</BaseButton>
-              <BaseButton size="sm" variant="danger" @click="remover(d.id)">Remover</BaseButton>
+              <BaseButton size="sm" :variant="d.ativa ? 'danger' : 'secondary'" @click="alternar(d)">
+                {{ d.ativa ? 'Inativar' : 'Reativar' }}
+              </BaseButton>
             </td>
           </tr>
         </tbody>

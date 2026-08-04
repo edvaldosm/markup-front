@@ -1,32 +1,56 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useUsuariosStore } from '@/stores/usuarios'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
-import type { Usuario } from '@/types'
 
 const store = useUsuariosStore()
 
 onMounted(() => store.fetchUsuarios())
 
+/**
+ * Cadastro e por **convite** — nao existe criacao direta no contrato, nem edicao
+ * de usuario por aqui. O convite devolve uma senha provisoria que o servidor
+ * **nao devolve de novo**: por isso ela vive num estado proprio, exibida uma
+ * unica vez, com o aviso antes de haver como perde-la.
+ */
 const showModal = ref(false)
-const editando = ref<Partial<Usuario>>({})
+const convite = reactive({ nome: '', email: '', perfilId: '' })
+const senhaProvisoria = ref<string | null>(null)
+const copiada = ref(false)
 
-function novo() {
-  editando.value = { nome: '', email: '', ativo: true, empresas: [] }
+function novoConvite() {
+  convite.nome = ''
+  convite.email = ''
+  convite.perfilId = store.perfis[0]?.id ?? ''
+  senhaProvisoria.value = null
+  copiada.value = false
   showModal.value = true
 }
 
-function editar(u: Usuario) {
-  editando.value = { ...u }
-  showModal.value = true
+async function enviarConvite() {
+  const convidado = await store.convidar(convite.nome, convite.email, convite.perfilId)
+  // Erro mantem a modal aberta: a mensagem esta no store
+  if (convidado) senhaProvisoria.value = convidado.senhaProvisoria
 }
 
-async function salvar() {
-  await store.salvarUsuario(editando.value as Usuario)
+async function copiarSenha() {
+  if (!senhaProvisoria.value) return
+  try {
+    await navigator.clipboard.writeText(senhaProvisoria.value)
+    copiada.value = true
+  } catch {
+    // Sem permissao de area de transferencia: a senha continua visivel na tela
+    copiada.value = false
+  }
+}
+
+function fecharModal() {
+  // A senha some junto com a modal — nao ha de onde exibi-la outra vez
   showModal.value = false
+  senhaProvisoria.value = null
 }
 
 function inicialAvatar(nome: string) {
@@ -38,8 +62,13 @@ function inicialAvatar(nome: string) {
   <div class="usuarios">
     <div class="toolbar">
       <h2 class="section-title">Usuários do Sistema</h2>
-      <BaseButton @click="novo">+ Novo Usuário</BaseButton>
+      <BaseButton @click="novoConvite">+ Convidar Usuário</BaseButton>
     </div>
+
+    <p v-if="store.erro" class="aviso aviso--erro">
+      {{ store.erro }}
+      <button class="aviso__acao" @click="store.fetchUsuarios()">Tentar de novo</button>
+    </p>
 
     <div class="usuarios-grid">
       <div v-for="u in store.usuarios" :key="u.id" class="user-card" :class="{ 'user-card--inativo': !u.ativo }">
@@ -54,9 +83,7 @@ function inicialAvatar(nome: string) {
             <BaseBadge :color="u.ativo ? 'green' : 'gray'">{{ u.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
           </div>
         </div>
-        <div class="user-card__actions">
-          <BaseButton size="sm" variant="ghost" @click="editar(u)">Editar</BaseButton>
-        </div>
+        <!-- Sem acao de edicao: o contrato nao tem mutation de usuario -->
       </div>
     </div>
 
@@ -87,33 +114,46 @@ function inicialAvatar(nome: string) {
       </table>
     </BaseCard>
 
-    <!-- Modal -->
-    <BaseModal v-if="showModal" :title="editando.id ? 'Editar Usuário' : 'Novo Usuário'" @close="showModal = false">
-      <form class="form-grid" @submit.prevent="salvar">
+    <!-- Convite -->
+    <BaseModal v-if="showModal" title="Convidar Usuário" @close="fecharModal">
+      <!-- Depois do convite: a senha, uma unica vez -->
+      <div v-if="senhaProvisoria" class="senha-box">
+        <p class="senha-box__aviso">
+          ⚠ Esta senha aparece <strong>uma única vez</strong>. Ela não é recuperável
+          depois — copie e entregue a {{ convite.nome || 'quem foi convidado' }} agora.
+        </p>
+        <div class="senha-box__valor">
+          <code>{{ senhaProvisoria }}</code>
+          <BaseButton size="sm" variant="secondary" @click="copiarSenha">
+            {{ copiada ? 'Copiado ✓' : 'Copiar' }}
+          </BaseButton>
+        </div>
+      </div>
+
+      <form v-else class="form-grid" @submit.prevent="enviarConvite">
         <div class="field" style="grid-column: 1/-1">
           <label class="field__label">Nome Completo</label>
-          <input v-model="editando.nome" class="input" required />
+          <input v-model="convite.nome" class="input" required />
         </div>
         <div class="field" style="grid-column: 1/-1">
           <label class="field__label">E-mail</label>
-          <input v-model="editando.email" type="email" class="input" required />
+          <input v-model="convite.email" type="email" class="input" required />
         </div>
-        <div class="field">
+        <div class="field" style="grid-column: 1/-1">
           <label class="field__label">Perfil de Acesso</label>
-          <select class="input" :value="editando.empresas?.[0]?.perfilId" @change="e => { if(editando.empresas?.[0]) editando.empresas[0].perfilId = (e.target as HTMLSelectElement).value }">
+          <select v-model="convite.perfilId" class="input">
             <option v-for="p in store.perfis" :key="p.id" :value="p.id">{{ p.nome }}</option>
           </select>
         </div>
-        <div class="field">
-          <label class="toggle-field">
-            <input v-model="editando.ativo" type="checkbox" class="toggle-input" />
-            <span>Usuário ativo</span>
-          </label>
-        </div>
+        <p v-if="store.erro" class="aviso aviso--erro" style="grid-column: 1/-1">{{ store.erro }}</p>
       </form>
+
       <template #footer>
-        <BaseButton variant="ghost" @click="showModal = false">Cancelar</BaseButton>
-        <BaseButton :loading="store.loading" @click="salvar">Salvar</BaseButton>
+        <BaseButton v-if="senhaProvisoria" @click="fecharModal">Concluir</BaseButton>
+        <template v-else>
+          <BaseButton variant="ghost" @click="fecharModal">Cancelar</BaseButton>
+          <BaseButton :loading="store.loading" @click="enviarConvite">Convidar</BaseButton>
+        </template>
       </template>
     </BaseModal>
   </div>
@@ -121,6 +161,49 @@ function inicialAvatar(nome: string) {
 
 <style scoped>
 .usuarios { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.aviso {
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  font-size: .875rem;
+}
+.aviso--erro { background: #fef2f2; border: 1px solid #fca5a5; color: var(--color-danger); }
+.aviso__acao {
+  margin-left: var(--space-3);
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: var(--radius);
+  padding: 0 var(--space-2);
+  cursor: pointer;
+}
+
+/* Senha provisoria: destaque suficiente para ninguem fechar sem copiar */
+.senha-box { display: flex; flex-direction: column; gap: var(--space-4); }
+.senha-box__aviso {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  font-size: .875rem;
+  line-height: 1.5;
+}
+.senha-box__valor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+}
+.senha-box__valor code {
+  flex: 1;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
 .toolbar { display: flex; align-items: center; justify-content: space-between; }
 .section-title { font-size: 1rem; font-weight: 600; color: var(--color-text); }
 

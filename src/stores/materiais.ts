@@ -1,50 +1,81 @@
+/**
+ * Materiais da empresa ativa.
+ *
+ * **Modelo dos stores de catálogo da fatia 2.** O formato aqui é o que os
+ * outros quatro repetem:
+ *
+ * - a lista é o que o **servidor** devolveu — não há `computed` filtrando por
+ *   empresa, porque filtro no cliente sobre lista já filtrada só serviria para
+ *   esconder erro do servidor (B2/B9);
+ * - carga e recarga vivem em `recursoDaEmpresaAtiva`, que também descarta
+ *   resposta atrasada da empresa anterior;
+ * - `erro` guarda mensagem pronta para a tela, para que falha de rede nunca
+ *   apareça como "nenhum registro encontrado" (REQ-16);
+ * - `reset()` registrado: o logout esvazia tudo (REQ-04 da fatia 1).
+ */
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Material } from '@/types'
-import { mockMateriais } from '@/mock/data'
-import { mockQuery } from '@/graphql/client'
+import { ref } from 'vue'
+import type { Material, MaterialEntrada } from '@/types'
+import { apolloClient } from '@/graphql/client'
+import { MATERIAIS, SALVAR_MATERIAL } from '@/graphql/operations/catalogo'
+import { mensagemDeErro } from '@/graphql/erros'
+import { recursoDaEmpresaAtiva } from '@/composables/recursoDaEmpresaAtiva'
 import { useEmpresaStore } from './empresa'
 import { registrarResetDeSessao } from './reset'
 
 export const useMateriaisStore = defineStore('materiais', () => {
   const empresaStore = useEmpresaStore()
-  const todos = ref<Material[]>([])
-  const loading = ref(false)
+  const materiais = ref<Material[]>([])
+  const erro = ref<string | null>(null)
 
-  /** Materiais/insumos da empresa ativa (reativo à troca de empresa) */
-  const materiais = computed(() =>
-    todos.value.filter(m => m.empresaId === empresaStore.empresaAtivaId)
-  )
+  const recurso = recursoDaEmpresaAtiva({
+    buscar: async (empresaId) => {
+      const { data } = await apolloClient.query({ query: MATERIAIS, variables: { empresaId } })
+      return data.materiais as Material[]
+    },
+    // Cópia: o Apollo devolve o resultado congelado, e uma escrita posterior
+    // faria `push` num array não extensível.
+    aplicar: (dados) => { materiais.value = [...dados]; erro.value = null },
+    limpar: () => { materiais.value = [] },
+    aoFalhar: (e) => { erro.value = mensagemDeErro(e, 'materiais') },
+  })
 
-  async function fetchMateriais() {
-    loading.value = true
-    const result = await mockQuery([...mockMateriais])
-    todos.value = result.data
-    loading.value = false
+  /** Guarda a resposta do servidor no lugar do item correspondente. */
+  function absorver(salvo: Material): void {
+    const idx = materiais.value.findIndex(m => m.id === salvo.id)
+    if (idx >= 0) materiais.value[idx] = salvo
+    else materiais.value.push(salvo)
   }
 
-  async function salvar(material: Material) {
-    loading.value = true
-    await mockQuery(null, 300)
-    const idx = todos.value.findIndex(m => m.id === material.id)
-    if (idx >= 0) {
-      todos.value[idx] = { ...material }
-    } else {
-      todos.value.push({ ...material, id: `mat-${Date.now()}`, empresaId: empresaStore.empresaAtivaId })
+  async function salvar(dados: Omit<MaterialEntrada, 'empresaId'>): Promise<Material | null> {
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: SALVAR_MATERIAL,
+        variables: { input: { ...dados, empresaId: empresaStore.empresaAtivaId } },
+      })
+      absorver(data.salvarMaterial)
+      return data.salvarMaterial
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'salvarMaterial')
+      return null
     }
-    loading.value = false
-  }
-
-  async function remover(id: string) {
-    await mockQuery(null, 200)
-    todos.value = todos.value.filter(m => m.id !== id)
   }
 
   function reset(): void {
-    todos.value = []
+    materiais.value = []
+    erro.value = null
   }
 
   registrarResetDeSessao(reset)
 
-  return { materiais, loading, fetchMateriais, salvar, remover, reset }
+  return {
+    materiais,
+    erro,
+    loading: recurso.carregando,
+    carregado: recurso.carregado,
+    fetchMateriais: recurso.carregar,
+    salvar,
+    reset,
+  }
 })

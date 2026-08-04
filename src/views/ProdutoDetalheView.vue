@@ -42,7 +42,7 @@ const produto = computed(() => produtosStore.getProduto(id))
 
 const resultado = computed(() => {
   if (!produto.value || !empresaStore.empresa) return null
-  return calcularPrecificacao(produto.value, empresaStore.empresa, despesasStore.despesas, materiaisStore.materiais)
+  return calcularPrecificacao(produto.value, empresaStore.empresa)
 })
 
 /** Do preço de tabela ao piso do desconto máximo (C10–C12) */
@@ -75,27 +75,25 @@ const emitidoEm = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short', timeStyle: 'short',
 }).format(new Date())
 
+/**
+ * A ficha vem **resolvida** do servidor: o material inteiro está em cada item.
+ * Antes esta tela cruzava `materialId` contra a lista em memória e caía em '—'
+ * quando não achava — exibindo custo zero para um insumo que existe.
+ */
 const fichaItens = computed(() => {
   if (!produto.value) return []
-  return produto.value.materiais.map(pm => {
-    const mat = materiaisStore.materiais.find(m => m.id === pm.materialId)
-    return {
-      ...pm,
-      nome: mat?.nome ?? '—',
-      custoUnitario: mat?.custoUnitario ?? 0,
-      custoTotal: (mat?.custoUnitario ?? 0) * pm.quantidadeUtilizada,
-      unidade: mat?.unidade ?? pm.unidade,
-    }
-  })
+  return produto.value.ficha.map(item => ({
+    materialId: item.material.id,
+    quantidadeUtilizada: item.quantidadeUtilizada,
+    unidade: item.unidade,
+    nome: item.material.nome,
+    custoUnitario: item.material.custoUnitario,
+    custoTotal: item.material.custoUnitario * item.quantidadeUtilizada,
+  }))
 })
 
-const impostosDosProduto = computed(() => {
-  if (!produto.value) return []
-  return produto.value.impostos.map(pi => {
-    const imp = impostosStore.impostos.find(i => i.id === pi.impostoId)
-    return { ...pi, nome: imp?.nome ?? '—' }
-  })
-})
+/** Impostos já vêm com nome e alíquota do cadastro (C3). */
+const impostosDosProduto = computed(() => produto.value?.impostos ?? [])
 
 const showEditModal = ref(false)
 
@@ -109,8 +107,10 @@ function iniciarEdicaoMargem() {
 
 async function salvarMargem() {
   if (!produto.value) return
-  await produtosStore.salvar({ ...produto.value, margemLucro: margemEdit.value })
-  editandoMargem.value = false
+  // Mutation propria: reenviar o produto inteiro para mudar um numero deixaria
+  // a ficha em memoria sobrescrever a que esta no servidor.
+  const salvo = await produtosStore.ajustarMargem(produto.value.id, margemEdit.value)
+  if (salvo) editandoMargem.value = false
 }
 </script>
 
@@ -179,7 +179,7 @@ async function salvarMargem() {
         <!-- Impostos vinculados -->
         <BaseCard title="Impostos Vinculados" subtitle="Tributação aplicada a este produto" style="margin-top: var(--space-5)">
           <div class="imp-list">
-            <div v-for="imp in impostosDosProduto" :key="imp.impostoId" class="imp-item">
+            <div v-for="imp in impostosDosProduto" :key="imp.id" class="imp-item">
               <span class="imp-item__nome">{{ imp.nome }}</span>
               <span class="imp-item__aliquota">{{ formatPercent(imp.aliquotaPercentual) }}</span>
             </div>

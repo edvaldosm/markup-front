@@ -38,13 +38,9 @@ const filtrados = computed(() =>
   })
 )
 
+/** C1 vem calculado do servidor (B1) — a tela apenas lê. */
 function custoBaseProduto(prodId: string): number {
-  const prod = store.getProduto(prodId)
-  if (!prod) return 0
-  return prod.materiais.reduce((acc, pm) => {
-    const mat = materiaisStore.materiais.find(m => m.id === pm.materialId)
-    return acc + (mat ? mat.custoUnitario * pm.quantidadeUtilizada : 0)
-  }, 0)
+  return store.getProduto(prodId)?.custoBase ?? 0
 }
 </script>
 
@@ -80,7 +76,7 @@ function custoBaseProduto(prodId: string): number {
         <div class="produto-card__stats">
           <div class="pstat">
             <span class="pstat__label">{{ seg.rotulos.materialPlural }}</span>
-            <span class="pstat__value">{{ p.materiais.length }}</span>
+            <span class="pstat__value">{{ p.ficha.length }}</span>
           </div>
           <div class="pstat">
             <span class="pstat__label">Margem</span>

@@ -8,7 +8,7 @@
 import { gql } from '@apollo/client/core'
 
 /** Fragmento do perfil: permissões decidem o que a UI oferece (B5). */
-const CAMPOS_PERFIL = gql`
+export const CAMPOS_PERFIL = gql`
   fragment CamposPerfil on Perfil {
     id
     nome

@@ -13,7 +13,7 @@ import StatCard from '@/components/ui/StatCard.vue'
 
 const store = useEmpresaStore()
 const despesasStore = useDespesasStore()
-const { calcularPercentualDF, calcularFatorR } = useMarkupCalculator()
+const { calcularFatorR } = useMarkupCalculator()
 const { formatCurrency, formatPercent } = useCurrency()
 const seg = computed(() => segmentoConfig(store.empresa?.segmento))
 
@@ -151,8 +151,8 @@ const segmentos = [
             </div>
             <div class="indicator">
               <span class="indicator__label">% Despesas Fixas</span>
-              <span class="indicator__value" :class="{ 'text-warning': calcularPercentualDF(despesasStore.despesas, store.empresa?.faturamentoMedioMensal ?? 1) > 20 }">
-                {{ formatPercent(calcularPercentualDF(despesasStore.despesas, store.empresa?.faturamentoMedioMensal ?? 1)) }}
+              <span class="indicator__value" :class="{ 'text-warning': (store.empresa?.percentualDespesasFixas ?? 0) > 20 }">
+                {{ formatPercent((store.empresa?.percentualDespesasFixas ?? 0)) }}
               </span>
               <span class="indicator__sub">sobre o faturamento</span>
             </div>

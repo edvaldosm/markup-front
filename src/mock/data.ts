@@ -1,7 +1,60 @@
 import type {
-  Empresa, DespesaFixa, Material, Imposto, Produto,
+  Empresa, Imposto, CategoriaDespesa, UnidadeMedida, TipoMaterial, TipoProduto,
   Perfil, Usuario, Permissao
 } from '@/types'
+
+// ─── Formato de linha ─────────────────────────────────────────────────────────
+//
+// A partir da fatia 2 da integração, este arquivo é o **banco** do servidor
+// falso, não o formato que o front consome. Por isso os registros mantêm a forma
+// de linha de tabela — com `empresaId` e referências por id — enquanto a
+// composição do objeto do contrato (ficha com o material embutido, impostos
+// resolvidos, `custoBase` calculado) é feita pelo servidor, que é onde ela
+// acontece de verdade.
+
+export interface DespesaFixaRegistro {
+  id: string
+  empresaId: string
+  descricao: string
+  valorMensal: number
+  categoria: CategoriaDespesa
+  ativa: boolean
+}
+
+export interface MaterialRegistro {
+  id: string
+  empresaId: string
+  nome: string
+  unidade: UnidadeMedida
+  custoUnitario: number
+  fornecedor?: string
+  estoque?: number
+  tipo?: TipoMaterial
+}
+
+export interface ImpostoRegistro extends Imposto {
+  empresaId?: string
+}
+
+export interface ProdutoRegistro {
+  id: string
+  empresaId: string
+  nome: string
+  descricao?: string
+  categoria?: string
+  tipo?: TipoProduto
+  margemLucro: number
+  descontoMaximo: number
+  ativo: boolean
+  materiais: { materialId: string; quantidadeUtilizada: number; unidade: UnidadeMedida }[]
+  /**
+   * Referência ao imposto cadastrado. `aliquotaPercentual` sobrevive apenas nos
+   * literais antigos e **não é lida por ninguém**: quem vale é a alíquota do
+   * cadastro (C3), resolvida pelo servidor. Some quando o mock for apagado.
+   */
+  impostos: { impostoId: string; aliquotaPercentual?: number }[]
+  createdAt: string
+}
 
 // ─── Empresas (3 segmentos) ───────────────────────────────────────────────────
 
@@ -73,7 +126,7 @@ export const mockEmpresas: Empresa[] = [
 
 // ─── Despesas Fixas ───────────────────────────────────────────────────────────
 
-export const mockDespesasFixas: DespesaFixa[] = [
+export const mockDespesasFixas: DespesaFixaRegistro[] = [
   { id: 'df-001', empresaId: '1', descricao: 'Aluguel do espaço', valorMensal: 1800, categoria: 'ALUGUEL', ativa: true },
   { id: 'df-002', empresaId: '1', descricao: 'Energia elétrica', valorMensal: 420, categoria: 'ENERGIA', ativa: true },
   { id: 'df-003', empresaId: '1', descricao: 'Gás de cozinha', valorMensal: 180, categoria: 'GAS', ativa: true },
@@ -128,23 +181,14 @@ export const mockDespesasFixas: DespesaFixa[] = [
   { id: 'df-c09', empresaId: '4', descricao: 'Plano de saúde', valorMensal: 1200, categoria: 'OUTRO', ativa: true },
 ]
 
-/**
- * `Empresa.percentualDespesasFixas` é **calculado pelo backend** (C2/B1) e chega
- * pronto na query. Aqui o mock só reproduz o número, derivando-o das despesas
- * ativas, para as telas que ainda não migraram continuarem coerentes — nunca
- * como definição de como o cálculo se faz.
- */
-for (const emp of mockEmpresas) {
-  const totalAtivas = mockDespesasFixas
-    .filter(d => d.empresaId === emp.id && d.ativa)
-    .reduce((soma, d) => soma + d.valorMensal, 0)
-  emp.percentualDespesasFixas =
-    emp.faturamentoMedioMensal > 0 ? (totalAtivas / emp.faturamentoMedioMensal) * 100 : 0
-}
+// O rateio (C2) era pré-calculado aqui, uma vez, na carga do módulo. Removido na
+// fatia 2: quem calcula é o servidor, **na leitura**. Um valor guardado ficava
+// velho no instante em que uma despesa era inativada — e foi assim que um teste
+// flagrou o servidor falso mentindo diferente do backend.
 
 // ─── Materiais ────────────────────────────────────────────────────────────────
 
-export const mockMateriais: Material[] = [
+export const mockMateriais: MaterialRegistro[] = [
   { id: 'mat-001', empresaId: '1', nome: 'Farinha de trigo', unidade: 'KG', custoUnitario: 4.50, fornecedor: 'Distribuidora Pão de Ouro', estoque: 25 },
   { id: 'mat-002', empresaId: '1', nome: 'Açúcar refinado', unidade: 'KG', custoUnitario: 3.80, fornecedor: 'Distribuidora Pão de Ouro', estoque: 20 },
   { id: 'mat-003', empresaId: '1', nome: 'Ovos', unidade: 'UN', custoUnitario: 0.65, fornecedor: 'Sítio das Galinhas', estoque: 180 },
@@ -240,7 +284,7 @@ export const mockMateriais: Material[] = [
 
 // ─── Impostos ─────────────────────────────────────────────────────────────────
 
-export const mockImpostos: Imposto[] = [
+export const mockImpostos: ImpostoRegistro[] = [
   { id: 'imp-001', nome: 'Simples Nacional — Anexo II (Faixa 1)', chave: 'SIMPLES_NACIONAL_ANEXO_II_F1', aliquotaPercentual: 4.5, descricao: 'DAS unificado para faturamento até R$ 180.000/ano — indústria/confeitaria', ativo: true },
   { id: 'imp-002', nome: 'Simples Nacional — Anexo II (Faixa 2)', chave: 'SIMPLES_NACIONAL_ANEXO_II_F2', aliquotaPercentual: 7.8, descricao: 'DAS unificado para faturamento R$ 180.001 a R$ 360.000/ano', ativo: true },
   { id: 'imp-003', nome: 'Simples Nacional — Anexo III (Faixa 1)', chave: 'SIMPLES_NACIONAL_ANEXO_III_F1', aliquotaPercentual: 6.0, descricao: 'DAS para serviços com Fator R ≥ 28% — faturamento até R$ 180.000/ano (ISS embutido)', ativo: true },
@@ -251,7 +295,7 @@ export const mockImpostos: Imposto[] = [
 
 // ─── Produtos ─────────────────────────────────────────────────────────────────
 
-export const mockProdutos: Produto[] = [
+export const mockProdutos: ProdutoRegistro[] = [
   {
     id: 'prod-001',
     empresaId: '1',
@@ -1042,19 +1086,6 @@ export const mockUsuarios: Usuario[] = [
 ]
 
 
-// ─── Realismo: alíquota efetiva por faixa de faturamento ──────────────────────
-// O DAS é único por empresa (baseado no RBT12), não por produto. Aqui aplicamos a
-// alíquota EFETIVA aproximada da faixa de faturamento de cada empresa, sobrescrevendo
-// a alíquota nominal de 1ª faixa usada inline nos produtos acima.
-const aliquotaEfetivaPorEmpresa: Record<string, number> = {
-  '1': 7.8,   // Confeitaria — Anexo II, faixa 3 (~R$ 624 mil/ano)
-  '2': 12.3,  // Indústria — Anexo II, faixa 5 (~R$ 3,6 mi/ano)
-  '3': 14.4,  // NexaTech — Anexo III, faixa 5 (~R$ 1,9 mi/ano), Fator R ≥ 28%
-  '4': 19.3,  // CodeLab — Anexo V, faixa 4 (~R$ 1,44 mi/ano), Fator R < 28%
-}
-for (const p of mockProdutos) {
-  const aliq = aliquotaEfetivaPorEmpresa[p.empresaId]
-  if (aliq !== undefined) {
-    p.impostos = p.impostos.map(pi => ({ ...pi, aliquotaPercentual: aliq }))
-  }
-}
+// A alíquota efetiva por empresa vivia aqui, sobrescrevendo a alíquota de
+// cada produto. Removida na fatia 2 da integração: no contrato o produto
+// **referencia** impostos, e a alíquota que vale é a do cadastro (C3).

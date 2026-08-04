@@ -36,27 +36,37 @@ export type EmpresaEntrada = Omit<
   'id' | 'donoUsuarioId' | 'percentualDespesasFixas'
 > & { id?: string }
 
+export type CategoriaDespesa =
+  | 'ALUGUEL' | 'ENERGIA' | 'GAS' | 'INTERNET' | 'PROLABORE' | 'CONTADOR' | 'OUTRO'
+
+/**
+ * Nenhum destes tipos tem `empresaId`: a empresa é **argumento da consulta**
+ * (`materiais(empresaId:)`), não atributo do registro. O servidor devolve o
+ * conjunto já autorizado (B2/B9), e guardar o id de volta no objeto só serviria
+ * para o front refazer um filtro que não é dele.
+ */
 export interface DespesaFixa {
   id: string
-  empresaId: string
   descricao: string
   valorMensal: number
-  categoria: 'ALUGUEL' | 'ENERGIA' | 'GAS' | 'INTERNET' | 'PROLABORE' | 'CONTADOR' | 'OUTRO'
+  categoria: CategoriaDespesa
   ativa: boolean
 }
 
 export type UnidadeMedida = 'KG' | 'G' | 'L' | 'ML' | 'UN' | 'CX' | 'PCT' | 'H' | 'PC' | 'TON' | 'M' | 'M2'
 
+/** INSUMO: matéria-prima/ingrediente. MAO_DE_OBRA: hora técnica (serviços) */
+export type TipoMaterial = 'INSUMO' | 'MAO_DE_OBRA'
+
 export interface Material {
   id: string
-  empresaId: string
   nome: string
   unidade: UnidadeMedida
   custoUnitario: number
   fornecedor?: string
+  /** Descritivo; não entra em cálculo */
   estoque?: number
-  /** INSUMO: matéria-prima/ingrediente. MAO_DE_OBRA: hora técnica (serviços) */
-  tipo?: 'INSUMO' | 'MAO_DE_OBRA'
+  tipo: TipoMaterial
 }
 
 export interface Imposto {
@@ -64,37 +74,102 @@ export interface Imposto {
   nome: string
   chave: string
   aliquotaPercentual: number
-  descricao: string
+  descricao?: string
   ativo: boolean
 }
 
-export interface ProdutoMaterial {
-  materialId: string
-  material?: Material
+/**
+ * Um item da ficha técnica traz o **material inteiro**, resolvido pelo servidor.
+ *
+ * Antes o front guardava `materialId` e cruzava contra a lista em memória — e
+ * quando o material não estava lá, o item era ignorado em silêncio, subestimando
+ * o custo. No backend isso é erro explícito (guarda V6); aqui, deixa de existir.
+ */
+export interface ItemFichaTecnica {
+  material: Material
   quantidadeUtilizada: number
-  unidade: string
+  unidade: UnidadeMedida
 }
 
-export interface ProdutoImposto {
-  impostoId: string
-  imposto?: Imposto
-  aliquotaPercentual: number
-}
+/** PRODUTO: item físico vendido. SERVICO: serviço prestado (hora/projeto) */
+export type TipoProduto = 'PRODUTO' | 'SERVICO'
 
 export interface Produto {
   id: string
+  nome: string
+  descricao?: string
+  /** Agrupamento de catálogo, sem efeito no preço */
+  categoria?: string
+  tipo: TipoProduto
+  margemLucro: number
+  descontoMaximo: number
+  /**
+   * Somente leitura: `ProdutoInput` não tem o campo e não há mutation de
+   * alternância — pendência registrada para o markup-back.
+   */
+  ativo: boolean
+  ficha: ItemFichaTecnica[]
+  /** Impostos vinculados; a alíquota é a **do cadastro**, não uma cópia por produto */
+  impostos: Imposto[]
+  /** Calculado pelo servidor — C1 (B1) */
+  custoBase: number
+  /** Calculado pelo servidor — C3 (B1) */
+  percentualImpostos: number
+}
+
+// ─── Entradas de escrita (espelham os `input` do schema) ──────────────────────
+//
+// Toda escrita declara `empresaId`, pelo mesmo motivo das consultas: a empresa é
+// argumento do cliente, nunca estado implícito de sessão. `id` nulo = criação.
+
+export interface ItemFichaTecnicaEntrada {
+  materialId: string
+  quantidadeUtilizada: number
+  unidade: UnidadeMedida
+}
+
+export interface ProdutoEntrada {
+  id?: string
   empresaId: string
   nome: string
   descricao?: string
   categoria?: string
-  /** PRODUTO: item físico vendido. SERVICO: serviço prestado (precificado por hora/projeto) */
-  tipo?: 'PRODUTO' | 'SERVICO'
+  tipo: TipoProduto
   margemLucro: number
   descontoMaximo: number
+  ficha: ItemFichaTecnicaEntrada[]
+  /** Referência, não cópia: a alíquota vem do imposto cadastrado */
+  impostoIds: string[]
+}
+
+export interface MaterialEntrada {
+  id?: string
+  empresaId: string
+  nome: string
+  unidade: UnidadeMedida
+  custoUnitario: number
+  fornecedor?: string
+  tipo?: TipoMaterial
+  estoque?: number
+}
+
+export interface ImpostoEntrada {
+  id?: string
+  empresaId: string
+  chave: string
+  nome: string
+  descricao?: string
+  aliquotaPercentual: number
   ativo: boolean
-  materiais: ProdutoMaterial[]
-  impostos: ProdutoImposto[]
-  createdAt: string
+}
+
+export interface DespesaFixaEntrada {
+  id?: string
+  empresaId: string
+  descricao: string
+  valorMensal: number
+  categoria: CategoriaDespesa
+  ativa: boolean
 }
 
 export interface ResultadoPrecificacao {

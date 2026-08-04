@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { montarAppComo, entrarComo, aguardar, prepararAmbiente } from './app-harness'
+import { montarAppComo, entrarComo, aguardar, assentar, prepararAmbiente } from './app-harness'
 import { SENHA_PADRAO, type ServidorFalso } from './servidor-falso'
 import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
@@ -229,10 +229,16 @@ describe('isolamento de dados por empresa (R02/R09)', () => {
       produtos.fetchProdutos(), materiais.fetchMateriais(), despesas.fetchDespesas(),
     ]))
 
+    // Os objetos do contrato nao carregam `empresaId` — quem separa por empresa
+    // e o servidor. A prova passa a ser de conjunto: o que veio e exatamente o
+    // que existe para a empresa ativa, e nada alem disso.
     const ativa = empresaStore.empresaAtivaId
-    expect(produtos.produtos.every(p => p.empresaId === ativa)).toBe(true)
-    expect(materiais.materiais.every(m => m.empresaId === ativa)).toBe(true)
-    expect(despesas.despesas.every(d => d.empresaId === ativa)).toBe(true)
+    const idsEsperados = (linhas: { id: string; empresaId: string }[]) =>
+      linhas.filter(l => l.empresaId === ativa).map(l => l.id).sort()
+
+    expect(produtos.produtos.map(p => p.id).sort()).toEqual(idsEsperados(mockProdutos))
+    expect(materiais.materiais.map(m => m.id).sort()).toEqual(idsEsperados(mockMateriais))
+    expect(despesas.despesas.map(d => d.id).sort()).toEqual(idsEsperados(mockDespesasFixas))
   })
 
   it('trocar de empresa troca o conjunto de dados exposto', async () => {
@@ -246,11 +252,13 @@ describe('isolamento de dados por empresa (R02/R09)', () => {
     expect(empresaStore.empresaAtivaId).toBe('1')
     const daConfeitaria = produtos.produtos.map(p => p.id)
     expect(daConfeitaria.length).toBeGreaterThan(0)
-    expect(produtos.produtos.every(p => p.empresaId === '1')).toBe(true)
 
     expect(empresaStore.selecionarEmpresa('3')).toBe(true)
-    expect(produtos.produtos.every(p => p.empresaId === '3')).toBe(true)
-    // nenhum produto da confeitaria sobrou
+    // A recarga e disparada pelo watch da empresa ativa
+    await assentar()
+
+    expect(produtos.produtos.length).toBeGreaterThan(0)
+    // Nenhum produto da confeitaria sobrou — a prova do isolamento
     expect(produtos.produtos.some(p => daConfeitaria.includes(p.id))).toBe(false)
   })
 
