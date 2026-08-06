@@ -10,6 +10,10 @@ import { usePrecificacaoStore } from '@/stores/precificacao'
 import { useCurrency } from '@/composables/useCurrency'
 import { useRelatorio } from '@/composables/useRelatorio'
 import { segmentoConfig } from '@/config/segmentos'
+import { apolloClient } from '@/graphql/client'
+import { HISTORICO_DO_PRODUTO, REATIVAR_VERSAO_PRODUTO } from '@/graphql/operations/catalogo'
+import { mensagemDeErro } from '@/graphql/erros'
+import type { VersaoProduto } from '@/types'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
@@ -109,8 +113,55 @@ async function salvarMargem() {
     editandoMargem.value = false
     // A margem muda o preço: busca de novo em vez de deixar o preço velho na tela.
     await precificacaoStore.buscarProduto(id)
+    await buscarHistorico()   // o ajuste abriu versão nova (REQ-01) — recarrega a lista
   }
 }
+
+// ── Histórico de margem/desconto (spec versionamento-margem-produto) ───────
+
+const historico = ref<VersaoProduto[]>([])
+const carregandoHistorico = ref(false)
+const erroHistorico = ref<string | null>(null)
+const reativandoVersaoId = ref<string | null>(null)
+
+const formatarData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+
+async function buscarHistorico(): Promise<void> {
+  carregandoHistorico.value = true
+  erroHistorico.value = null
+  try {
+    const { data } = await apolloClient.query({
+      query: HISTORICO_DO_PRODUTO,
+      variables: { produtoId: id },
+      fetchPolicy: 'network-only',
+    })
+    historico.value = data.historicoDoProduto
+  } catch (e) {
+    erroHistorico.value = mensagemDeErro(e, 'historicoDoProduto')
+  } finally {
+    carregandoHistorico.value = false
+  }
+}
+
+async function reativar(versaoId: string): Promise<void> {
+  reativandoVersaoId.value = versaoId
+  try {
+    await apolloClient.mutate({ mutation: REATIVAR_VERSAO_PRODUTO, variables: { versaoId } })
+    // Reativar não volta no tempo: fecha a vigente e abre uma versão nova —
+    // recarrega produto, preço e histórico pra refletir o estado real.
+    await Promise.all([
+      produtosStore.fetchProdutos(),
+      precificacaoStore.buscarProduto(id),
+      buscarHistorico(),
+    ])
+  } catch (e) {
+    erroHistorico.value = mensagemDeErro(e, 'reativarVersaoProduto')
+  } finally {
+    reativandoVersaoId.value = null
+  }
+}
+
+buscarHistorico()
 </script>
 
 <template>
@@ -237,6 +288,34 @@ async function salvarMargem() {
           </div>
         </BaseCard>
 
+        <BaseCard title="Histórico de Margem" subtitle="Cada ajuste vira uma versão — nada se apaga">
+          <p v-if="erroHistorico" class="hist-erro">{{ erroHistorico }}</p>
+          <p v-else-if="carregandoHistorico && !historico.length" class="hist-vazio">Carregando…</p>
+          <p v-else-if="!historico.length" class="hist-vazio">Nenhuma versão registrada ainda.</p>
+
+          <ul v-else class="hist-lista">
+            <li v-for="v in historico" :key="v.id" class="hist-item" :class="{ 'hist-item--vigente': !v.dataFim }">
+              <div class="hist-item__valores">
+                <span>ML {{ formatPercent(v.margemLucro) }}</span>
+                <span>·</span>
+                <span>Desc. {{ formatPercent(v.descontoMaximo) }}</span>
+                <BaseBadge v-if="!v.dataFim" color="green">vigente</BaseBadge>
+              </div>
+              <div class="hist-item__periodo">
+                {{ formatarData.format(new Date(v.dataInicio)) }}
+                <template v-if="v.dataFim"> → {{ formatarData.format(new Date(v.dataFim)) }}</template>
+                <template v-else> → hoje</template>
+              </div>
+              <BaseButton
+                v-if="v.dataFim"
+                size="sm" variant="ghost"
+                :loading="reativandoVersaoId === v.id"
+                @click="reativar(v.id)"
+              >Reativar</BaseButton>
+            </li>
+          </ul>
+        </BaseCard>
+
         <div v-if="resultado" class="preco-box">
           <div class="preco-box__formula">
             PV = <strong>{{ formatCurrency(resultado.custoBase) }}</strong> / <strong>{{ resultado.divisorMarkup.toFixed(4) }}</strong>
@@ -272,6 +351,21 @@ async function salvarMargem() {
 
 <style scoped>
 .detalhe { display: flex; flex-direction: column; gap: var(--space-6); }
+
+.hist-erro { color: var(--color-danger, #dc2626); font-size: .8125rem; }
+.hist-vazio { color: var(--color-text-muted); font-size: .8125rem; }
+
+.hist-lista { display: flex; flex-direction: column; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.hist-item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius);
+  font-size: .8125rem;
+}
+.hist-item--vigente { border-color: color-mix(in srgb, #059669 40%, var(--color-border-light)); background: color-mix(in srgb, #059669 6%, transparent); }
+.hist-item__valores { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; color: var(--color-text); }
+.hist-item__periodo { color: var(--color-text-muted); font-size: .75rem; flex: 1; text-align: right; margin-right: var(--space-2); }
 
 .back-btn {
   background: none; border: none;

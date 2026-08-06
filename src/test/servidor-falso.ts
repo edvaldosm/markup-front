@@ -585,11 +585,46 @@ function metricasDaBaseGql() {
   }
 }
 
+/** Uma versão de margem/desconto no histórico do produto (mock de `versao_produto`). */
+interface VersaoRegistro {
+  id: string
+  produtoId: string
+  margemLucro: number
+  descontoMaximo: number
+  dataInicio: string
+  dataFim: string | null
+}
+
 export function instalarServidorFalso(): ServidorFalso {
   const sessoes = new Map<string, Sessao>()   // accessToken → sessão
   const porRefresh = new Map<string, Sessao>()
   let sequencia = 0
   let noAr = true
+  const mockVersoesProduto: VersaoRegistro[] = []
+  let sequenciaVersao = 0
+
+  /**
+   * Replica `CatalogoPersistencia.registrarNovaVersao` — idempotente: se a
+   * versão aberta já tem esta margem/desconto, não faz nada. Senão, fecha a
+   * aberta e abre uma nova (spec versionamento-margem-produto, REQ-01).
+   */
+  function registrarVersao(produtoId: string, margemLucro: number, descontoMaximo: number): void {
+    const agora = new Date().toISOString()
+    const aberta = mockVersoesProduto.find(v => v.produtoId === produtoId && v.dataFim === null)
+    if (aberta && aberta.margemLucro === margemLucro && aberta.descontoMaximo === descontoMaximo) {
+      return
+    }
+    if (aberta) aberta.dataFim = agora
+    sequenciaVersao += 1
+    mockVersoesProduto.push({
+      id: `versao-${sequenciaVersao}`,
+      produtoId,
+      margemLucro,
+      descontoMaximo,
+      dataInicio: agora,
+      dataFim: null,
+    })
+  }
 
   const chamadas: Record<string, number> = {}
 
@@ -1054,6 +1089,7 @@ export function instalarServidorFalso(): ServidorFalso {
               ...campos,
             }
         if (!existente) mockProdutos.push(registro)
+        registrarVersao(registro.id, registro.margemLucro, registro.descontoMaximo)
 
         return comErroDeDominio(() => ({ salvarProduto: produtoGql(registro) }))
       }
@@ -1064,7 +1100,45 @@ export function instalarServidorFalso(): ServidorFalso {
         const alcance = exigirAlcance(usuario, produto.empresaId)
         if (alcance instanceof Response) return alcance
         produto.margemLucro = Number(variaveis.margemLucro)
+        registrarVersao(produto.id, produto.margemLucro, produto.descontoMaximo)
         return comErroDeDominio(() => ({ ajustarMargem: produtoGql(produto) }))
+      }
+
+      /** "Salvar" da Simulação Manual: margem e desconto juntos, uma versão só. */
+      case 'ajustarMargemEDesconto': {
+        const produto = mockProdutos.find(p => p.id === variaveis.produtoId)
+        if (!produto) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, produto.empresaId)
+        if (alcance instanceof Response) return alcance
+        produto.margemLucro = Number(variaveis.margemLucro)
+        produto.descontoMaximo = Number(variaveis.descontoMaximo)
+        registrarVersao(produto.id, produto.margemLucro, produto.descontoMaximo)
+        return comErroDeDominio(() => ({ ajustarMargemEDesconto: produtoGql(produto) }))
+      }
+
+      case 'historicoDoProduto': {
+        const produto = mockProdutos.find(p => p.id === variaveis.produtoId)
+        if (!produto) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, produto.empresaId)
+        if (alcance instanceof Response) return alcance
+        const versoes = mockVersoesProduto
+          .filter(v => v.produtoId === produto.id)
+          .sort((a, b) => (a.dataInicio < b.dataInicio ? 1 : -1))
+          .map(v => ({ __typename: 'VersaoProduto', ...v }))
+        return dados({ historicoDoProduto: versoes })
+      }
+
+      case 'reativarVersaoProduto': {
+        const versao = mockVersoesProduto.find(v => v.id === variaveis.versaoId)
+        if (!versao) return erroGraphQL('Versao nao encontrada', 'NOT_FOUND')
+        const produto = mockProdutos.find(p => p.id === versao.produtoId)
+        if (!produto) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, produto.empresaId)
+        if (alcance instanceof Response) return alcance
+        produto.margemLucro = versao.margemLucro
+        produto.descontoMaximo = versao.descontoMaximo
+        registrarVersao(produto.id, produto.margemLucro, produto.descontoMaximo)
+        return comErroDeDominio(() => ({ reativarVersaoProduto: produtoGql(produto) }))
       }
     }
 

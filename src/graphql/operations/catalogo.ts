@@ -142,6 +142,46 @@ export const AJUSTAR_MARGEM = gql`
   ${CAMPOS_PRODUTO}
 `
 
+/**
+ * "Salvar" da Simulação Manual: grava margem e desconto juntos, numa versão
+ * só — chamar `ajustarMargem` e um ajuste de desconto em separado abriria
+ * duas versões pra uma decisão só.
+ */
+export const AJUSTAR_MARGEM_E_DESCONTO = gql`
+  mutation ajustarMargemEDesconto($produtoId: ID!, $margemLucro: BigDecimal!, $descontoMaximo: BigDecimal!) {
+    ajustarMargemEDesconto(produtoId: $produtoId, margemLucro: $margemLucro, descontoMaximo: $descontoMaximo) {
+      ...CamposProduto
+    }
+  }
+  ${CAMPOS_PRODUTO}
+`
+
+/** Mais recente primeiro; exatamente uma tem dataFim nula (a vigente). */
+export const HISTORICO_DO_PRODUTO = gql`
+  query historicoDoProduto($produtoId: ID!) {
+    historicoDoProduto(produtoId: $produtoId) {
+      id
+      margemLucro
+      descontoMaximo
+      dataInicio
+      dataFim
+    }
+  }
+`
+
+/**
+ * Não volta no tempo de verdade: fecha a versão vigente e abre uma nova com
+ * os valores da versão escolhida — o histórico só cresce.
+ */
+export const REATIVAR_VERSAO_PRODUTO = gql`
+  mutation reativarVersaoProduto($versaoId: ID!) {
+    reativarVersaoProduto(versaoId: $versaoId) {
+      ...CamposProduto
+    }
+  }
+  ${CAMPOS_PRODUTO}
+`
+
 export const SALVAR_MATERIAL = gql`
   mutation salvarMaterial($input: MaterialInput!) {
     salvarMaterial(input: $input) {

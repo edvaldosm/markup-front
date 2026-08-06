@@ -259,6 +259,20 @@ export interface SimulacaoMarkup {
   faixaNegociacao: FaixaNegociacao
 }
 
+/**
+ * Um período de vigência de margem/desconto do produto — histórico
+ * append-only (spec `versionamento-margem-produto`). `dataFim` nula = vigente.
+ * `dataInicio`/`dataFim` são ISO-8601 (escalar `DateTime`), formatados aqui,
+ * nunca calculados — só apresentação.
+ */
+export interface VersaoProduto {
+  id: string
+  margemLucro: number
+  descontoMaximo: number
+  dataInicio: string
+  dataFim: string | null
+}
+
 /** Um ponto da faixa de negociação: quanto se pratica e o que sobra (C10–C12) */
 export interface DegrauDesconto {
   /** Desconto aplicado sobre o preço de tabela (%) */

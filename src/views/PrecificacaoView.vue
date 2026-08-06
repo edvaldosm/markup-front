@@ -8,8 +8,10 @@ import { usePrecificacaoStore } from '@/stores/precificacao'
 import { useCurrency } from '@/composables/useCurrency'
 import { apolloClient } from '@/graphql/client'
 import { SIMULAR_MARKUP } from '@/graphql/operations/precificacao'
+import { AJUSTAR_MARGEM_E_DESCONTO } from '@/graphql/operations/catalogo'
 import { mensagemDeErro } from '@/graphql/erros'
 import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import type { Produto, SimulacaoMarkup } from '@/types'
 
 const empresaStore = useEmpresaStore()
@@ -46,21 +48,22 @@ watch(produtoSelecionadoId, (id) => {
   if (id) precificacaoStore.buscarProduto(id)
 }, { immediate: true })
 
-// ── Simulação Manual — sem produto, sem empresa, stateless ─────────────────
+// ── Simulação Manual — sobre o produto selecionado ao lado ─────────────────
+//
+// Custo Base, Impostos e Despesas Fixas não são digitados: são os valores
+// reais do produto escolhido em "Calculadora por Produto" (mesmo `resultado`
+// de cima). Só Margem de Lucro e Desconto Máximo ficam abertos — é "e se eu
+// mudasse a margem/desconto deste produto?", não uma calculadora solta.
 
-const simCustoBase = ref(0)
-const simImpostos = ref(0)
-const simDespesasFixas = ref(0)
 const simMargemLucro = ref(0)
 const simDesconto = ref(0)
 
-/** Máscara monetária por dígitos — mesmo padrão usado em `FatorRView`. */
-const simCustoBaseTexto = computed<string>({
-  get: () => formatCurrency(simCustoBase.value),
-  set: (valor: string) => {
-    const digitos = valor.replace(/\D/g, '')
-    simCustoBase.value = digitos ? Number(digitos) / 100 : 0
-  },
+/** Ao trocar de produto, a simulação recomeça dos valores atuais dele. */
+watch(resultado, (r) => {
+  if (r) {
+    simMargemLucro.value = r.percentualMargemLucro
+    simDesconto.value = r.percentualDesconto
+  }
 })
 
 const simulacao = ref<SimulacaoMarkup | null>(null)
@@ -69,16 +72,16 @@ const erroSimulacao = ref<string | null>(null)
 let debounceSimulacao: ReturnType<typeof setTimeout> | undefined
 
 async function simularMarkup(): Promise<void> {
-  if (simCustoBase.value <= 0) { simulacao.value = null; return }
+  if (!resultado.value) { simulacao.value = null; return }
   simulando.value = true
   erroSimulacao.value = null
   try {
     const { data } = await apolloClient.query({
       query: SIMULAR_MARKUP,
       variables: {
-        custoBase: simCustoBase.value,
-        percentualImpostos: simImpostos.value,
-        percentualDespesasFixas: simDespesasFixas.value,
+        custoBase: resultado.value.custoBase,
+        percentualImpostos: resultado.value.percentualImpostos,
+        percentualDespesasFixas: resultado.value.percentualDespesasFixas,
         percentualMargemLucro: simMargemLucro.value,
         percentualDesconto: simDesconto.value,
       },
@@ -93,10 +96,50 @@ async function simularMarkup(): Promise<void> {
   }
 }
 
-watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto], () => {
+watch([resultado, simMargemLucro, simDesconto], () => {
   clearTimeout(debounceSimulacao)
   debounceSimulacao = setTimeout(simularMarkup, 350)
 })
+
+// ── Salvar a simulação — grava margem+desconto como versão nova do produto ─
+
+/** Só deixa salvar quando a simulação difere do que já está gravado. */
+const simulacaoMudou = computed(() => {
+  if (!resultado.value) return false
+  return simMargemLucro.value !== resultado.value.percentualMargemLucro
+    || simDesconto.value !== resultado.value.percentualDesconto
+})
+
+const salvando = ref(false)
+const erroSalvar = ref<string | null>(null)
+const salvoComSucesso = ref(false)
+
+async function salvarSimulacao(): Promise<void> {
+  if (!produtoSelecionadoId.value || !simulacaoMudou.value) return
+  salvando.value = true
+  erroSalvar.value = null
+  salvoComSucesso.value = false
+  try {
+    await apolloClient.mutate({
+      mutation: AJUSTAR_MARGEM_E_DESCONTO,
+      variables: {
+        produtoId: produtoSelecionadoId.value,
+        margemLucro: simMargemLucro.value,
+        descontoMaximo: simDesconto.value,
+      },
+    })
+    // Margem/desconto novos mudam o preço do produto — busca de novo em vez
+    // de deixar o resultado velho na tela (mesmo padrão de `salvarMargem`
+    // em ProdutoDetalheView).
+    await Promise.all([produtosStore.fetchProdutos(), precificacaoStore.buscarProduto(produtoSelecionadoId.value)])
+    salvoComSucesso.value = true
+    setTimeout(() => { salvoComSucesso.value = false }, 3000)
+  } catch (e) {
+    erroSalvar.value = mensagemDeErro(e, 'ajustarMargemEDesconto')
+  } finally {
+    salvando.value = false
+  }
+}
 </script>
 
 <template>
@@ -196,29 +239,33 @@ watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto]
         </div>
       </BaseCard>
 
-      <!-- Simulação Manual: stateless, via simularMarkup -->
-      <BaseCard title="Simulação Manual" subtitle="Insira os valores para simular">
-        <div class="sim-form">
+      <!-- Simulação Manual: mesmo produto de cima, só ML/Desconto abertos -->
+      <BaseCard title="Simulação Manual" subtitle="Ajuste margem e desconto sobre os dados reais do produto">
+        <div v-if="resultado" class="sim-form">
           <div class="field">
             <label class="field__label">Custo Base — CP (R$)</label>
-            <input v-model="simCustoBaseTexto" type="text" inputmode="numeric" class="input" />
+            <div class="input input--somente-leitura">{{ formatCurrency(resultado.custoBase) }}</div>
           </div>
           <div class="field">
             <label class="field__label">Impostos (%)</label>
-            <input v-model.number="simImpostos" type="number" step="0.1" min="0" class="input" />
+            <div class="input input--somente-leitura">{{ formatPercent(resultado.percentualImpostos) }}</div>
           </div>
           <div class="field">
             <label class="field__label">Despesas Fixas — DF (%)</label>
-            <input v-model.number="simDespesasFixas" type="number" step="0.1" min="0" class="input" />
+            <div class="input input--somente-leitura">{{ formatPercent(resultado.percentualDespesasFixas) }}</div>
           </div>
           <div class="field">
-            <label class="field__label">Margem de Lucro — ML (%)</label>
-            <input v-model.number="simMargemLucro" type="number" step="0.1" min="0" class="input" />
+            <label class="field__label field__label--destaque">Margem de Lucro — ML (%)</label>
+            <input v-model.number="simMargemLucro" type="number" step="0.1" min="0" class="input input--destaque" />
           </div>
           <div class="field">
-            <label class="field__label">Desconto Máximo (%)</label>
-            <input v-model.number="simDesconto" type="number" step="0.1" min="0" class="input" />
+            <label class="field__label field__label--destaque">Desconto Máximo (%)</label>
+            <input v-model.number="simDesconto" type="number" step="0.1" min="0" class="input input--destaque" />
           </div>
+        </div>
+        <div v-else class="empty-state empty-state--compact">
+          <span>◈</span>
+          <p>Selecione um produto ao lado para simular margem e desconto</p>
         </div>
 
         <p v-if="erroSimulacao" class="sim-erro">{{ erroSimulacao }}</p>
@@ -240,6 +287,23 @@ watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto]
           </div>
           <p v-else-if="simulando" class="sim-carregando">Calculando…</p>
         </Transition>
+
+        <div v-if="resultado" class="sim-salvar">
+          <BaseButton
+            size="sm"
+            :loading="salvando"
+            :disabled="!simulacaoMudou"
+            @click="salvarSimulacao"
+          >Salvar simulação como nova versão</BaseButton>
+          <p class="sim-salvar__hint">
+            Grava ML {{ formatPercent(simMargemLucro) }} e Desconto {{ formatPercent(simDesconto) }} como a versão
+            vigente do produto — a anterior fica no histórico.
+          </p>
+          <p v-if="erroSalvar" class="sim-erro">{{ erroSalvar }}</p>
+          <Transition name="fade">
+            <p v-if="salvoComSucesso" class="sim-salvo-ok">Simulação salva como nova versão.</p>
+          </Transition>
+        </div>
       </BaseCard>
     </div>
   </div>
@@ -256,11 +320,47 @@ watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto]
 
 .selector-row { margin-bottom: var(--space-5); }
 .field__label { font-size: .8125rem; font-weight: 500; color: var(--color-text-muted); display: block; margin-bottom: var(--space-1); }
+.field__label--destaque { color: var(--color-primary-600); font-weight: 600; }
 
 .sim-form { display: flex; flex-direction: column; gap: var(--space-4); }
 .sim-form .field { display: flex; flex-direction: column; gap: var(--space-1); }
 
+.input {
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  color: var(--color-text);
+  outline: none;
+  background: var(--color-surface);
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.input:focus { border-color: var(--color-primary-400); box-shadow: 0 0 0 3px rgba(85,181,89,.15); }
+/* Só ML e Desconto são editáveis nesta simulação — destacados em verde pra
+   deixar claro o que responde à digitação, o resto vem travado do produto. */
+.input--destaque {
+  border: 2px solid var(--color-primary-500, #16a34a);
+  background: color-mix(in srgb, var(--color-primary-500, #16a34a) 6%, var(--color-surface));
+  font-weight: 700;
+  font-size: 1rem;
+}
+.input--destaque:focus { border-color: var(--color-primary-500, #16a34a); box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+.input--somente-leitura {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  cursor: default;
+  user-select: text;
+}
+
+.empty-state--compact { padding: var(--space-8) var(--space-4); font-size: 1.5rem; }
+
 .sim-erro { color: var(--color-danger, #dc2626); font-size: .8125rem; margin-top: var(--space-3); }
+
+.sim-salvar { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.sim-salvar__hint { font-size: .75rem; color: var(--color-text-muted); line-height: 1.4; }
+.sim-salvo-ok { font-size: .8125rem; color: var(--color-primary-600); font-weight: 600; }
 .sim-carregando { color: var(--color-text-muted); font-size: .8125rem; margin-top: var(--space-4); font-style: italic; }
 
 .sim-resultado {
@@ -373,36 +473,6 @@ watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto]
 .breakdown-item__dot--df       { background: #60a5fa; }
 .breakdown-item__dot--desconto { background: #a78bfa; }
 .breakdown-item__dot--lucro    { background: var(--color-primary-600); }
-
-/* Simulação */
-.sim-form { display: flex; flex-direction: column; gap: var(--space-4); margin-bottom: var(--space-5); }
-.field { display: flex; flex-direction: column; gap: var(--space-1); }
-.sim-input {
-  padding: var(--space-2) var(--space-3);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius);
-  font-size: .9rem;
-  color: var(--color-text);
-  outline: none;
-  background: var(--color-surface);
-}
-.sim-input:focus { border-color: var(--color-primary-400); box-shadow: 0 0 0 3px rgba(85,181,89,.15); }
-
-.sim-resultado {
-  background: var(--color-primary-900);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.sim-resultado__formula { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--color-primary-300); }
-.sim-formula-label { font-weight: 500; }
-.sim-resultado__pv { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.sim-pv-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--color-primary-300); }
-.sim-pv-value { font-size: 2rem; font-weight: 800; color: var(--color-primary-300); }
-.sim-resultado__info { font-size: .75rem; color: var(--color-primary-400); text-align: center; }
-.sim-resultado__info strong { color: var(--color-primary-200); }
 
 .empty-state {
   display: flex;
