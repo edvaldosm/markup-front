@@ -885,6 +885,38 @@ export function instalarServidorFalso(): ServidorFalso {
         })
       }
 
+      /** Sem empresa: nasce com `perfilGlobal`, não com vínculo (emenda 06-08-2026). */
+      case 'convidarUsuarioGlobal': {
+        const negado = exigirEscopoGlobal(usuario)
+        if (negado) return negado
+        if (mockUsuarios.some(u => u.email === variaveis.email)) {
+          return erroGraphQL('E-mail ja cadastrado', 'BAD_REQUEST')
+        }
+        const perfil = mockPerfis.find(p => p.id === variaveis.perfilId)
+        if (!perfil) return erroGraphQL('Perfil nao encontrado', 'NOT_FOUND')
+        if (!perfil.escopoGlobal) {
+          return erroGraphQL('perfil informado não tem escopo global', 'BAD_REQUEST')
+        }
+
+        sequencia += 1
+        const convidado: Usuario = {
+          id: `usr-convidado-${sequencia}`,
+          nome: String(variaveis.nome),
+          email: String(variaveis.email),
+          ativo: true,
+          empresas: [],
+          perfilGlobal: perfil,
+        }
+        mockUsuarios.push(convidado)
+        return dados({
+          convidarUsuarioGlobal: {
+            __typename: 'Convidado',
+            senhaProvisoria: `prov-${sequencia}`,
+            usuario: usuarioGql(convidado),
+          },
+        })
+      }
+
       case 'minhasEmpresas':
         return dados({ minhasEmpresas: empresasDoUsuario(usuario).map(empresaGql) })
 

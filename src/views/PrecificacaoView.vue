@@ -281,7 +281,7 @@ async function salvarSimulacao(): Promise<void> {
               <span class="sim-resultado__pv-value">{{ formatCurrency(simulacao.precoVenda) }}</span>
             </div>
             <div class="sim-resultado__rodape">
-              Soma dos percentuais: <strong>{{ formatPercent(simulacao.somaTotalPercentuais) }}</strong> |
+              Soma dos percentuais: <strong>{{ formatPercent(simulacao.somaTotalPercentuais) }}</strong> <br>
               Divisor: <strong>{{ simulacao.divisorMarkup.toFixed(4) }}</strong>
             </div>
           </div>

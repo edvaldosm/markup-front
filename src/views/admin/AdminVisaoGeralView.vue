@@ -15,7 +15,6 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import StatCard from '@/components/ui/StatCard.vue'
-import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 import RelatorioPdfModal from '@/components/ui/RelatorioPdfModal.vue'
 
 const store = useAdminStore()
@@ -33,15 +32,6 @@ const visualizarRelatorioBase = () => visualizarPdf('GESTAO_EMPRESAS_USUARIOS')
 const baixarRelatorioBaseXlsx = () => baixar('GESTAO_EMPRESAS_USUARIOS', 'XLSX')
 
 onMounted(() => { if (!store.carregado) store.fetchTudo() })
-
-/**
- * `MetricasBase` não tem `porSegmento` nem `usuariosInativos` — pendências
- * registradas em `integracao-backend-precificacao/spec.md`. Sem os campos, o
- * front não recalcula por conta própria (Artigo III v2.5.0): a tela mostra
- * indisponível em vez de somar `empresas.value` por segmento.
- */
-const MOTIVO_POR_SEGMENTO = 'Contagem de empresas por segmento ainda não é um campo do contrato — pendência registrada para o backend.'
-const MOTIVO_USUARIOS_INATIVOS = 'Contagem de usuários inativos ainda não é um campo do contrato — pendência registrada para o backend.'
 
 /**
  * Empresas com mais gente dentro — **ordenação**, não agregado novo: o
@@ -116,7 +106,7 @@ const maioresEquipes = computed(() =>
         <template #value>{{ store.metricas?.totalUsuarios ?? '—' }}</template>
         <template #sub>
           {{ store.metricas?.usuariosAtivos ?? '—' }} ativos ·
-          <IndisponivelBackend :motivo="MOTIVO_USUARIOS_INATIVOS" /> inativos
+          {{ store.usuariosInativos }} inativos
         </template>
       </StatCard>
       <StatCard
@@ -135,7 +125,17 @@ const maioresEquipes = computed(() =>
 
     <div class="admin-cols">
       <BaseCard title="Empresas por segmento">
-        <IndisponivelBackend :motivo="MOTIVO_POR_SEGMENTO" tamanho="bloco" />
+        <ul v-if="store.empresasPorSegmento.length" class="seg-list">
+          <li v-for="linha in store.empresasPorSegmento" :key="linha.segmento" class="seg-item">
+            <span class="seg-item__icon">{{ segmentoConfig(linha.segmento).icone }}</span>
+            <div class="seg-item__info">
+              <span class="seg-item__nome">{{ segmentoConfig(linha.segmento).nome }}</span>
+              <span class="seg-item__desc">{{ segmentoConfig(linha.segmento).descricao }}</span>
+            </div>
+            <span class="seg-item__total">{{ linha.total }}</span>
+          </li>
+        </ul>
+        <p v-else class="seg-vazio">Nenhuma empresa cadastrada ainda.</p>
       </BaseCard>
 
       <BaseCard title="Perfis em uso">
@@ -246,6 +246,7 @@ const maioresEquipes = computed(() =>
 .seg-item__nome { font-size: .875rem; font-weight: 600; color: var(--color-text); }
 .seg-item__desc { font-size: .75rem; color: var(--color-text-muted); }
 .seg-item__total { font-size: 1.125rem; font-weight: 700; color: var(--color-primary-700); }
+.seg-vazio { color: var(--color-text-muted); font-size: .875rem; }
 
 .table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .table th {

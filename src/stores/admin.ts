@@ -26,6 +26,7 @@ import { apolloClient } from '@/graphql/client'
 import {
   TODAS_EMPRESAS, EMPRESA_ADMIN, TODOS_USUARIOS, METRICAS_DA_BASE,
   VINCULAR_USUARIO, DESVINCULAR_USUARIO, DEFINIR_PERFIL_NO_VINCULO, DEFINIR_USUARIO_ATIVO,
+  CONVIDAR_USUARIO_GLOBAL,
 } from '@/graphql/operations/admin'
 import { mensagemDeErro } from '@/graphql/erros'
 import { podeAcessarModuloAdmin } from '@/auth/autorizacao'
@@ -42,6 +43,12 @@ export interface AcessoDoUsuario {
   empresa: Empresa
   perfil: Perfil
   dono: boolean
+}
+
+/** Resultado de um convite — a senha só existe aqui, uma única vez. */
+export interface Convidado {
+  usuario: Usuario
+  senhaProvisoria: string
 }
 
 /** Usuário visto pelo gestor do site: cadastro + escopo + onde ele entra */
@@ -188,7 +195,62 @@ export const useAdminStore = defineStore('admin', () => {
     })),
   )
 
+  /**
+   * Quantas empresas há em cada segmento — mesma família de `usuariosPorPerfil`:
+   * `segmento` já vem em cada `Empresa` (`CamposEmpresa`, campo do contrato),
+   * então contar quantas vezes cada valor aparece é agrupamento sobre lista já
+   * correta, não recálculo de domínio (Artigo III v2.5.0 continua respeitado —
+   * nenhum número de negócio nasce aqui, só a contagem de um campo categórico
+   * que o servidor já mandou). Só entram segmentos com pelo menos uma empresa,
+   * mais populoso primeiro.
+   */
+  const empresasPorSegmento = computed(() => {
+    const porSegmento = new Map<Empresa['segmento'], number>()
+    for (const { empresa } of empresas.value) {
+      porSegmento.set(empresa.segmento, (porSegmento.get(empresa.segmento) ?? 0) + 1)
+    }
+    return [...porSegmento.entries()]
+      .map(([segmento, total]) => ({ segmento, total }))
+      .sort((a, b) => b.total - a.total)
+  })
+
+  /**
+   * Usuários inativos — mesma família: `ativo` já vem em cada `Usuario`
+   * (`todosUsuarios`), então é contagem sobre lista já correta, não a
+   * subtração `totalUsuarios - usuariosAtivos` de `MetricasBase` (que sim
+   * seria recalcular um agregado do servidor a partir de outro).
+   */
+  const usuariosInativos = computed(() => usuarios.value.filter(u => !u.ativo).length)
+
   // ─── Ações do gestor ────────────────────────────────────────────────────────
+
+  /**
+   * Convida alguém para escopo global — sem empresa (emenda 06-08-2026,
+   * ADR-0008 só cobria convite por-empresa). Devolve a senha provisória para
+   * a tela exibir uma vez; o store não a guarda, mesma regra de
+   * `usuarios.ts` → `convidar`.
+   */
+  async function convidarGlobal(nome: string, email: string, perfilId: string): Promise<Convidado | null> {
+    if (!souGestor.value) return null
+    loading.value = true
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: CONVIDAR_USUARIO_GLOBAL,
+        variables: { nome, email, perfilId },
+      })
+      usuarios.value.push(data.convidarUsuarioGlobal.usuario)
+      return {
+        usuario: data.convidarUsuarioGlobal.usuario,
+        senhaProvisoria: data.convidarUsuarioGlobal.senhaProvisoria,
+      }
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'convidarUsuarioGlobal')
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
 
   /** Ativa/desativa o acesso de um usuário. Devolve o novo estado, ou `null` se recusado. */
   async function definirUsuarioAtivo(usuarioId: string, ativo: boolean): Promise<boolean | null> {
@@ -299,10 +361,10 @@ export const useAdminStore = defineStore('admin', () => {
     // estado
     empresas, usuarios, perfis, metricas, loading, carregado, erro, souGestor,
     // derivados
-    usuariosAdmin, empresaAdminPorId, usuariosPorPerfil,
+    usuariosAdmin, empresaAdminPorId, usuariosPorPerfil, empresasPorSegmento, usuariosInativos,
     perfilPorId, usuarioPorId,
     // ações
     fetchTudo, buscarEmpresaAdmin, limpar,
-    definirUsuarioAtivo, definirPerfilNoVinculo, vincularUsuario, desvincularUsuario,
+    definirUsuarioAtivo, definirPerfilNoVinculo, vincularUsuario, desvincularUsuario, convidarGlobal,
   }
 })
