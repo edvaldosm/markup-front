@@ -6,9 +6,12 @@ import { useEmpresaStore } from '@/stores/empresa'
 import { useDespesasStore } from '@/stores/despesas'
 import { usePrecificacaoStore } from '@/stores/precificacao'
 import { useCurrency } from '@/composables/useCurrency'
+import { useRelatorio } from '@/composables/useRelatorio'
+import type { TipoRelatorio } from '@/graphql/relatorios'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
+import RelatorioPdfModal from '@/components/ui/RelatorioPdfModal.vue'
 
 const produtosStore = useProdutosStore()
 const materiaisStore = useMateriaisStore()
@@ -27,6 +30,13 @@ onMounted(() => Promise.all([
 
 const relatorioAtivo = ref<'precificacao' | 'despesas' | 'materiais'>('precificacao')
 
+/** Cada aba da tela é um tipo do catálogo fechado do backend (REQ-10). */
+const TIPO_POR_ABA: Record<typeof relatorioAtivo.value, TipoRelatorio> = {
+  precificacao: 'LISTA_PRECIFICACAO',
+  despesas: 'DESPESAS_FIXAS',
+  materiais: 'CUSTO_MATERIAIS',
+}
+
 const percentualDF = computed(() =>
   empresaStore.empresa?.percentualDespesasFixas ?? 0
 )
@@ -36,14 +46,19 @@ const custoTotalMateriais = computed(() =>
   materiaisStore.materiais.reduce((soma, m) => soma + m.custoUnitario, 0)
 )
 
-const gerandoPDF = ref(false)
-function gerarPDF() {
-  gerandoPDF.value = true
-  setTimeout(() => {
-    gerandoPDF.value = false
-    alert('Em produção: relatório PDF gerado via JasperReports/iText no backend.')
-  }, 1200)
+/**
+ * Documento gerado pelo módulo de relatórios do backend (JasperReports,
+ * Artigo B12); o front só pede, pré-visualiza e baixa ([[FR11-relatorio-vem-do-backend]]).
+ */
+const { carregando, erro, pdfAberto, visualizarPdf, fecharPdf, baixarPdfAberto, baixar } = useRelatorio()
+
+function parametroRelatorio(): Record<string, string> {
+  const empresaId = empresaStore.empresa?.id
+  return empresaId ? { empresaId } : {}
 }
+
+const visualizarRelatorio = () => visualizarPdf(TIPO_POR_ABA[relatorioAtivo.value], parametroRelatorio())
+const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', parametroRelatorio())
 </script>
 
 <template>
@@ -64,10 +79,23 @@ function gerarPDF() {
         {{ tab.label }}
       </button>
       <div style="flex:1" />
-      <BaseButton variant="secondary" size="sm" :loading="gerandoPDF" @click="gerarPDF">
-        📄 Exportar PDF
+      <BaseButton variant="secondary" size="sm" :loading="carregando" @click="visualizarRelatorio">
+        📄 Visualizar PDF
+      </BaseButton>
+      <BaseButton variant="ghost" size="sm" :loading="carregando" @click="baixarXlsx">
+        📊 Baixar XLSX
       </BaseButton>
     </div>
+
+    <p v-if="erro" class="erro-relatorio">{{ erro }}</p>
+
+    <RelatorioPdfModal
+      v-if="pdfAberto"
+      :url="pdfAberto.url"
+      :nome-arquivo="pdfAberto.nomeArquivo"
+      @close="fecharPdf"
+      @baixar="baixarPdfAberto"
+    />
 
     <!-- Relatório: Precificação -->
     <div v-if="relatorioAtivo === 'precificacao'">
@@ -220,6 +248,8 @@ function gerarPDF() {
 }
 .tab-btn:hover { border-color: var(--color-primary-300); color: var(--color-primary-700); }
 .tab-btn--active { background: var(--color-primary-600); border-color: var(--color-primary-600); color: #fff; }
+
+.erro-relatorio { color: var(--color-danger); font-size: .875rem; margin: 0; }
 
 .report-meta {
   display: flex;

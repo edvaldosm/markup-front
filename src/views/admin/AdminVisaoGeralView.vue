@@ -7,16 +7,30 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 import { useCurrency } from '@/composables/useCurrency'
+import { useRelatorio } from '@/composables/useRelatorio'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import StatCard from '@/components/ui/StatCard.vue'
 import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
+import RelatorioPdfModal from '@/components/ui/RelatorioPdfModal.vue'
 
 const store = useAdminStore()
+const authStore = useAuthStore()
 const router = useRouter()
 const { formatCurrency } = useCurrency()
+
+/**
+ * `GESTAO_EMPRESAS_USUARIOS` é o único tipo de escopo GLOBAL do catálogo
+ * (REQ-11 de `integracao-backend-relatorios/spec.md`) — exige `ESCOPO_GLOBAL`
+ * no backend, então só aparece para quem já enxerga esta tela como ADMIN.
+ */
+const { carregando: gerandoRelatorio, erro: erroRelatorio, pdfAberto, visualizarPdf, fecharPdf, baixarPdfAberto, baixar } = useRelatorio()
+const visualizarRelatorioBase = () => visualizarPdf('GESTAO_EMPRESAS_USUARIOS')
+const baixarRelatorioBaseXlsx = () => baixar('GESTAO_EMPRESAS_USUARIOS', 'XLSX')
 
 onMounted(() => { if (!store.carregado) store.fetchTudo() })
 
@@ -69,6 +83,27 @@ const maioresEquipes = computed(() =>
         </button>
       </div>
     </header>
+
+    <div v-if="authStore.adminGlobal" class="admin-relatorio">
+      <span class="admin-relatorio__label">Relatório da base inteira (empresas e usuários)</span>
+      <div class="admin-relatorio__acoes">
+        <BaseButton variant="secondary" size="sm" :loading="gerandoRelatorio" @click="visualizarRelatorioBase">
+          📄 Visualizar PDF
+        </BaseButton>
+        <BaseButton variant="ghost" size="sm" :loading="gerandoRelatorio" @click="baixarRelatorioBaseXlsx">
+          📊 Baixar XLSX
+        </BaseButton>
+      </div>
+      <p v-if="erroRelatorio" class="admin-relatorio__erro">{{ erroRelatorio }}</p>
+    </div>
+
+    <RelatorioPdfModal
+      v-if="pdfAberto"
+      :url="pdfAberto.url"
+      :nome-arquivo="pdfAberto.nomeArquivo"
+      @close="fecharPdf"
+      @baixar="baixarPdfAberto"
+    />
 
     <div class="stats-grid">
       <StatCard
@@ -180,6 +215,20 @@ const maioresEquipes = computed(() =>
 .quick__icon { font-size: 1.1rem; color: var(--color-primary-600); }
 .quick__label { display: block; font-size: .875rem; font-weight: 600; color: var(--color-text); }
 .quick__hint { display: block; font-size: .75rem; color: var(--color-text-muted); }
+
+.admin-relatorio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+.admin-relatorio__label { font-size: .8125rem; font-weight: 600; color: var(--color-text-muted); flex: 1; min-width: 200px; }
+.admin-relatorio__acoes { display: flex; gap: var(--space-2); }
+.admin-relatorio__erro { flex-basis: 100%; color: var(--color-danger); font-size: .8125rem; margin: 0; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
 

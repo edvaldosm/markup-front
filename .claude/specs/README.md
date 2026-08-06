@@ -43,7 +43,7 @@ backend inexistente, tela nova).
 | Integração backend — catálogo, usuários e perfis | [integracao-backend-catalogo/](integracao-backend-catalogo/spec.md) | **concluída** |
 | Integração backend — precificação e auditoria de cálculo zero | [integracao-backend-precificacao/](integracao-backend-precificacao/spec.md) | **concluída** |
 | Integração backend — Gestão do Site | `integracao-backend-gestao-site/` | próxima — depende da anterior fechar |
-| Módulo de relatórios (Jasper) | `modulo-relatorios-jasper` — spec no repo **markup-back** | **bloqueada**: módulo `com.markup.reports` não existe no backend |
+| Integração backend — relatórios (PDF/XLSX) | [integracao-backend-relatorios/](integracao-backend-relatorios/spec.md) | **desbloqueada** em 2026-08-06 — módulo `com.markup.reports` confirmado no ar via Swagger |
 | Assistente (RAG) | a especificar | tela nova, não remoção de mock |
 | Módulo Gestão do Site (mock) | [modulo-gestao-site/](modulo-gestao-site/spec.md) | baseline do que existe hoje — superado por `integracao-backend-gestao-site` quando essa nascer |
 | Faixa de negociação e PDF (mock) | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | baseline — a faixa já migrou em `integracao-backend-precificacao`; o PDF segue bloqueado |

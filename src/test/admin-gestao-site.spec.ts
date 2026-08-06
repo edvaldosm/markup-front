@@ -261,6 +261,31 @@ describe('poderes do gestor (REQ-06/REQ-07)', () => {
   })
 })
 
+// ─── Relatório da base (integracao-backend-relatorios, REQ-11/F9) ────────────
+
+describe('relatório GESTAO_EMPRESAS_USUARIOS — só para o ADMIN global', () => {
+  it('o gestor vê a ação de exportar a base na Visão Geral', async () => {
+    const app = await montarAppComo(GESTOR)
+    await app.irPara('/admin')
+
+    expect(app.wrapper.find('.admin-relatorio').exists()).toBe(true)
+    expect(app.texto()).toContain('Visualizar PDF')
+    expect(app.texto()).toContain('Baixar XLSX')
+    app.desmontar()
+  })
+
+  it.each([
+    ['Ana (PROPRIETARIO, todas as permissões)', 'ana@docesdaana.com.br'],
+    ['Marcos (GERENTE)', 'marcos@docesdaana.com.br'],
+  ])('%s nunca chega na Visão Geral para ver a ação (rota barrada)', async (_nome, email) => {
+    const app = await montarAppComo(email)
+    await app.irPara('/admin')
+
+    expect(app.wrapper.find('.admin-relatorio').exists()).toBe(false)
+    app.desmontar()
+  })
+})
+
 // ─── Identidade visual (REQ-08/REQ-09) ───────────────────────────────────────
 
 describe('escopo de tema neutro (FR10)', () => {

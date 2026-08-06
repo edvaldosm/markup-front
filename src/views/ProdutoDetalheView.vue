@@ -8,13 +8,14 @@ import { useDespesasStore } from '@/stores/despesas'
 import { useImpostosStore } from '@/stores/impostos'
 import { usePrecificacaoStore } from '@/stores/precificacao'
 import { useCurrency } from '@/composables/useCurrency'
-import { gerarRelatorioPdf } from '@/graphql/relatorios'
+import { useRelatorio } from '@/composables/useRelatorio'
 import { segmentoConfig } from '@/config/segmentos'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import ProdutoFormModal from '@/components/ui/ProdutoFormModal.vue'
 import FaixaNegociacaoCard from '@/components/ui/FaixaNegociacaoCard.vue'
+import RelatorioPdfModal from '@/components/ui/RelatorioPdfModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,24 +51,19 @@ const faixa = computed(() => resultado.value?.faixaNegociacao ?? null)
 
 /**
  * O documento é gerado pelo **módulo de relatórios do backend** (JasperReports,
- * Artigo B12); o front só pede e baixa ([[FR11-relatorio-vem-do-backend]]).
- * O módulo ainda não existe no backend — a chamada falha com mensagem clara
- * (`erroPdf`), nunca com impressão local como consolo.
+ * Artigo B12); o front só pede, pré-visualiza e baixa ([[FR11-relatorio-vem-do-backend]]).
+ * PDF abre em modal antes de baixar; XLSX vai direto para "Salvar Como".
  */
-const gerandoPdf = ref(false)
-const erroPdf = ref<string | null>(null)
+const { carregando: gerandoPdf, erro: erroPdf, pdfAberto, visualizarPdf, fecharPdf, baixarPdfAberto, baixar } = useRelatorio()
 
-async function gerarPdf() {
+function visualizarFichaPdf() {
   if (!produto.value) return
-  gerandoPdf.value = true
-  erroPdf.value = null
-  try {
-    await gerarRelatorioPdf('FICHA_TECNICA_PRODUTO', { produtoId: produto.value.id })
-  } catch (e) {
-    erroPdf.value = e instanceof Error ? e.message : 'Falha ao gerar o relatório.'
-  } finally {
-    gerandoPdf.value = false
-  }
+  visualizarPdf('FICHA_TECNICA_PRODUTO', { produtoId: produto.value.id })
+}
+
+function baixarFichaXlsx() {
+  if (!produto.value) return
+  baixar('FICHA_TECNICA_PRODUTO', 'XLSX', { produtoId: produto.value.id })
 }
 
 const emitidoEm = new Intl.DateTimeFormat('pt-BR', {
@@ -140,13 +136,23 @@ async function salvarMargem() {
       </div>
       <div class="detalhe__actions">
         <BaseBadge :color="produto.ativo ? 'green' : 'gray'">{{ produto.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
-        <BaseButton class="no-print" variant="ghost" :loading="gerandoPdf" @click="gerarPdf">Gerar PDF</BaseButton>
+        <BaseButton class="no-print" variant="ghost" :loading="gerandoPdf" @click="visualizarFichaPdf">Visualizar PDF</BaseButton>
+        <BaseButton class="no-print" variant="ghost" :loading="gerandoPdf" @click="baixarFichaXlsx">Baixar XLSX</BaseButton>
         <BaseButton class="no-print" variant="secondary" @click="showEditModal = true">Editar {{ seg.rotulos.produto }}</BaseButton>
       </div>
     </div>
 
     <p v-if="erroPdf" class="erro-pdf no-print">{{ erroPdf }}</p>
     <p v-if="precificacaoStore.erroProduto" class="erro-pdf no-print">{{ precificacaoStore.erroProduto }}</p>
+
+    <RelatorioPdfModal
+      v-if="pdfAberto"
+      class="no-print"
+      :url="pdfAberto.url"
+      :nome-arquivo="pdfAberto.nomeArquivo"
+      @close="fecharPdf"
+      @baixar="baixarPdfAberto"
+    />
 
     <div class="detalhe__grid">
       <!-- Ficha Técnica -->

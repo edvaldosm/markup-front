@@ -7,9 +7,16 @@
 
 - **Idioma de trabalho:** pt-br.
 - **Fonte de verdade do domínio:** `d:\ObsidianDocumentos\Conhecimento\cálculos\financeiras\markup\wiki\wiki-markup.md` (consultar o "segundo cérebro" antes da web).
-- **Versão:** 2.5.0 — 2026-08-03
+- **Versão:** 2.6.0 — 2026-08-06
 
 ### Histórico
+- **2.6.0** — Linha **F11** passa a admitir **pré-visualização inline** do PDF
+  gerado pelo backend (`modo=inline`), além de baixar. Emenda motivada pelo
+  módulo de relatórios sair do bloqueio: o Swagger do backend em execução
+  confirmou `POST /api/relatorios/{tipo}` com `formato` (PDF/XLSX) e `modo`
+  (download/inline — inline só aceito com PDF). Não é mudança de princípio:
+  o front continua sem montar documento, só ganhou onde exibir o binário do
+  backend antes do download. Ver `integracao-backend-relatorios/spec.md`.
 - **2.5.0** — Artigo III ganha a linha **"zero cálculo no front, sem exceção de
   tamanho"**. Emenda motivada por auditoria que encontrou fórmula de domínio
   (Fator R) rodando em telas já ligadas a dado real do backend, e agregações
@@ -75,7 +82,7 @@ Detalhe em `.claude/frontend-markup/rules/`.
 - **F8.** O assistente consome **o backend**, nunca o vault direto; não renderiza conteúdo fora de formação de preço. → [FR08](frontend-markup/rules/FR08-assistente-consome-backend.md)
 - **F9.** Toda regra de **visibilidade ou permissão** tem teste de aceite que **navega como cada perfil** e prova o que ele vê e o que lhe é negado. → [FR09](frontend-markup/rules/FR09-teste-navegacao-por-perfil.md)
 - **F10.** Módulo com público próprio muda de identidade por **escopo de tema** (remapeia os tokens), nunca por cor hardcoded ou componente duplicado; e o que o separa — escopo ou permissão — é declarado na rota. → [FR10](frontend-markup/rules/FR10-escopo-de-tema-por-modulo.md)
-- **F11.** O front **pede e baixa** relatório do backend; não monta documento nem embarca biblioteca de PDF. Impressão local existe só no modo mock, datada. → [FR11](frontend-markup/rules/FR11-relatorio-vem-do-backend.md)
+- **F11.** O front **pede e baixa** relatório do backend; não monta documento nem embarca biblioteca de PDF. PDF pode ser **pré-visualizado em tela** (`modo=inline`) antes do download — XLSX não tem pré-visualização, só download, porque o próprio backend recusa `inline` fora de PDF. → [FR11](frontend-markup/rules/FR11-relatorio-vem-do-backend.md)
 
 ## Artigo III — Fronteira Backend ↔ Frontend
 
