@@ -6,9 +6,11 @@ import { useMateriaisStore } from '@/stores/materiais'
 import { useProdutosStore } from '@/stores/produtos'
 import { usePrecificacaoStore } from '@/stores/precificacao'
 import { useCurrency } from '@/composables/useCurrency'
+import { apolloClient } from '@/graphql/client'
+import { SIMULAR_MARKUP } from '@/graphql/operations/precificacao'
+import { mensagemDeErro } from '@/graphql/erros'
 import BaseCard from '@/components/ui/BaseCard.vue'
-import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
-import type { Produto } from '@/types'
+import type { Produto, SimulacaoMarkup } from '@/types'
 
 const empresaStore = useEmpresaStore()
 const despesasStore = useDespesasStore()
@@ -16,15 +18,6 @@ const materiaisStore = useMateriaisStore()
 const produtosStore = useProdutosStore()
 const precificacaoStore = usePrecificacaoStore()
 const { formatCurrency, formatPercent } = useCurrency()
-
-/**
- * A "simulação manual" que existia aqui reimplementava PV = CP / divisor com
- * números digitados na hora — a mesma fórmula de `CalculadoraDeMarkup.java`,
- * fora do backend. Sem endpoint de simulação stateless (pendência registrada
- * em `integracao-backend-precificacao/spec.md`), o modo fica desativado em vez
- * de continuar calculando por conta própria (Artigo III v2.5.0).
- */
-const MOTIVO_SIMULACAO = 'Simulação manual exige um endpoint de simulação sem cálculo local — pendência registrada para o backend.'
 
 onMounted(async () => {
   await Promise.all([
@@ -52,6 +45,58 @@ const resultado = computed(() =>
 watch(produtoSelecionadoId, (id) => {
   if (id) precificacaoStore.buscarProduto(id)
 }, { immediate: true })
+
+// ── Simulação Manual — sem produto, sem empresa, stateless ─────────────────
+
+const simCustoBase = ref(0)
+const simImpostos = ref(0)
+const simDespesasFixas = ref(0)
+const simMargemLucro = ref(0)
+const simDesconto = ref(0)
+
+/** Máscara monetária por dígitos — mesmo padrão usado em `FatorRView`. */
+const simCustoBaseTexto = computed<string>({
+  get: () => formatCurrency(simCustoBase.value),
+  set: (valor: string) => {
+    const digitos = valor.replace(/\D/g, '')
+    simCustoBase.value = digitos ? Number(digitos) / 100 : 0
+  },
+})
+
+const simulacao = ref<SimulacaoMarkup | null>(null)
+const simulando = ref(false)
+const erroSimulacao = ref<string | null>(null)
+let debounceSimulacao: ReturnType<typeof setTimeout> | undefined
+
+async function simularMarkup(): Promise<void> {
+  if (simCustoBase.value <= 0) { simulacao.value = null; return }
+  simulando.value = true
+  erroSimulacao.value = null
+  try {
+    const { data } = await apolloClient.query({
+      query: SIMULAR_MARKUP,
+      variables: {
+        custoBase: simCustoBase.value,
+        percentualImpostos: simImpostos.value,
+        percentualDespesasFixas: simDespesasFixas.value,
+        percentualMargemLucro: simMargemLucro.value,
+        percentualDesconto: simDesconto.value,
+      },
+      fetchPolicy: 'network-only',
+    })
+    simulacao.value = data.simularMarkup
+  } catch (e) {
+    erroSimulacao.value = mensagemDeErro(e, 'simularMarkup')
+    simulacao.value = null
+  } finally {
+    simulando.value = false
+  }
+}
+
+watch([simCustoBase, simImpostos, simDespesasFixas, simMargemLucro, simDesconto], () => {
+  clearTimeout(debounceSimulacao)
+  debounceSimulacao = setTimeout(simularMarkup, 350)
+})
 </script>
 
 <template>
@@ -151,9 +196,50 @@ watch(produtoSelecionadoId, (id) => {
         </div>
       </BaseCard>
 
-      <!-- Simulação Manual: desativada, ver MOTIVO_SIMULACAO -->
-      <BaseCard title="Simulação Manual" subtitle="Aguardando capacidade do backend">
-        <IndisponivelBackend :motivo="MOTIVO_SIMULACAO" tamanho="bloco" />
+      <!-- Simulação Manual: stateless, via simularMarkup -->
+      <BaseCard title="Simulação Manual" subtitle="Insira os valores para simular">
+        <div class="sim-form">
+          <div class="field">
+            <label class="field__label">Custo Base — CP (R$)</label>
+            <input v-model="simCustoBaseTexto" type="text" inputmode="numeric" class="input" />
+          </div>
+          <div class="field">
+            <label class="field__label">Impostos (%)</label>
+            <input v-model.number="simImpostos" type="number" step="0.1" min="0" class="input" />
+          </div>
+          <div class="field">
+            <label class="field__label">Despesas Fixas — DF (%)</label>
+            <input v-model.number="simDespesasFixas" type="number" step="0.1" min="0" class="input" />
+          </div>
+          <div class="field">
+            <label class="field__label">Margem de Lucro — ML (%)</label>
+            <input v-model.number="simMargemLucro" type="number" step="0.1" min="0" class="input" />
+          </div>
+          <div class="field">
+            <label class="field__label">Desconto Máximo (%)</label>
+            <input v-model.number="simDesconto" type="number" step="0.1" min="0" class="input" />
+          </div>
+        </div>
+
+        <p v-if="erroSimulacao" class="sim-erro">{{ erroSimulacao }}</p>
+
+        <Transition name="fade">
+          <div v-if="simulacao" class="sim-resultado">
+            <div class="sim-resultado__formula">
+              <span>PV = CP / Divisor</span>
+              <span>{{ formatCurrency(simulacao.custoBase) }} / {{ simulacao.divisorMarkup.toFixed(4) }}</span>
+            </div>
+            <div class="sim-resultado__pv">
+              <span class="sim-resultado__pv-label">Preço de Venda</span>
+              <span class="sim-resultado__pv-value">{{ formatCurrency(simulacao.precoVenda) }}</span>
+            </div>
+            <div class="sim-resultado__rodape">
+              Soma dos percentuais: {{ formatPercent(simulacao.somaTotalPercentuais) }} ·
+              Divisor: {{ simulacao.divisorMarkup.toFixed(4) }}
+            </div>
+          </div>
+          <p v-else-if="simulando" class="sim-carregando">Calculando…</p>
+        </Transition>
       </BaseCard>
     </div>
   </div>
@@ -170,6 +256,34 @@ watch(produtoSelecionadoId, (id) => {
 
 .selector-row { margin-bottom: var(--space-5); }
 .field__label { font-size: .8125rem; font-weight: 500; color: var(--color-text-muted); display: block; margin-bottom: var(--space-1); }
+
+.sim-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.sim-form .field { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.sim-erro { color: var(--color-danger, #dc2626); font-size: .8125rem; margin-top: var(--space-3); }
+.sim-carregando { color: var(--color-text-muted); font-size: .8125rem; margin-top: var(--space-4); font-style: italic; }
+
+.sim-resultado {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, #059669 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sim-resultado__formula {
+  display: flex; justify-content: space-between;
+  font-size: .75rem; color: var(--color-text-muted);
+}
+.sim-resultado__pv { display: flex; flex-direction: column; gap: 2px; }
+.sim-resultado__pv-label { font-size: .75rem; color: var(--color-text-muted); }
+.sim-resultado__pv-value { font-size: 1.6rem; font-weight: 800; color: #059669; }
+.sim-resultado__rodape { font-size: .7rem; color: var(--color-text-light); }
+
+.fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
 .select {
   width: 100%;
   padding: var(--space-2) var(--space-3);

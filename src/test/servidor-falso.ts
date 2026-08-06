@@ -134,6 +134,7 @@ function rateioDeDespesas(empresa: Empresa): number {
  * aparece aqui, mesmo vazio.
  */
 function empresaGql(empresa: Empresa) {
+  const aplicaFatorR = fatorRSeAplica(empresa)
   return {
     __typename: 'Empresa',
     id: empresa.id,
@@ -146,6 +147,10 @@ function empresaGql(empresa: Empresa) {
     folhaPagamentoMensal: empresa.folhaPagamentoMensal ?? null,
     percentualDespesasFixas: rateioDeDespesas(empresa),
     donoUsuarioId: empresa.donoUsuarioId,
+    // C8/C9 — mesma regra de ResultadoPrecificacao.fatorR/anexoAplicado, só que
+    // como estado salvo da empresa, não por produto (REQ-02, resolvido 06-08-2026).
+    fatorR: aplicaFatorR ? fatorRDe(empresa) : null,
+    anexoAplicado: aplicaFatorR ? anexoAplicadoDe(empresa) : null,
   }
 }
 
@@ -350,6 +355,63 @@ export function precificarGql(registro: ProdutoRegistro, empresa: Empresa) {
       __typename: 'Breakdown',
       custoRecuperado: custoBase,
       valorImpostos: precoVenda * (impostos / 100),
+      valorDespesasFixas: precoVenda * (despesasFixas / 100),
+      valorDesconto: precoVenda * (desconto / 100),
+      lucroLiquido: precoVenda * (margemLucro / 100),
+    },
+    faixaNegociacao: faixaNegociacaoGql(precoVenda, margemLucro, desconto),
+  }
+}
+
+/** 1ª faixa do Simples — mesmas constantes de `SimularImpactoAnexo.java`. */
+const ALIQUOTA_ANEXO_III_FAIXA_1 = 6
+const ALIQUOTA_ANEXO_V_FAIXA_1 = 15.5
+
+/**
+ * Replica `CalculadoraDeMarkup.precificarComImpostoHipotetico`: mesmo custo
+ * base/DF%/ML%/desconto reais, só o imposto é hipotético (o real, cadastrado
+ * no produto, não muda sozinho quando o anexo muda).
+ */
+function precificarComImpostoHipoteticoGql(
+  registro: ProdutoRegistro,
+  empresa: Empresa,
+  impostoHipotetico: number,
+  anexoHipotetico: string,
+) {
+  const produto = produtoGql(registro)
+  const despesasFixas = rateioDeDespesas(empresa)
+  const margemLucro = registro.margemLucro
+  const desconto = registro.descontoMaximo
+
+  const soma = impostoHipotetico + despesasFixas + margemLucro + desconto
+  const divisor = 1 - soma / 100
+  if (divisor <= 0) {
+    throw new ErroDeDominio(
+      `soma dos percentuais alcança ou passa de 100% (${soma}): preço inviável`,
+      'BAD_REQUEST',
+    )
+  }
+
+  const custoBase = produto.custoBase
+  const precoVenda = custoBase / divisor
+
+  return {
+    __typename: 'ResultadoPrecificacao',
+    produto,
+    custoBase,
+    percentualImpostos: impostoHipotetico,
+    percentualDespesasFixas: despesasFixas,
+    percentualMargemLucro: margemLucro,
+    percentualDesconto: desconto,
+    somaTotalPercentuais: soma,
+    divisorMarkup: divisor,
+    precoVenda,
+    fatorR: fatorRSeAplica(empresa) ? fatorRDe(empresa) : null,
+    anexoAplicado: anexoHipotetico,
+    breakdown: {
+      __typename: 'Breakdown',
+      custoRecuperado: custoBase,
+      valorImpostos: precoVenda * (impostoHipotetico / 100),
       valorDespesasFixas: precoVenda * (despesasFixas / 100),
       valorDesconto: precoVenda * (desconto / 100),
       lucroLiquido: precoVenda * (margemLucro / 100),
@@ -692,6 +754,66 @@ export function instalarServidorFalso(): ServidorFalso {
         }))
       }
 
+      case 'simularMarkup': {
+        const custoBase = Number(variaveis.custoBase)
+        const impostos = Number(variaveis.percentualImpostos)
+        const despesasFixas = Number(variaveis.percentualDespesasFixas)
+        const margemLucro = Number(variaveis.percentualMargemLucro)
+        const desconto = Number(variaveis.percentualDesconto)
+
+        return comErroDeDominio(() => {
+          const soma = impostos + despesasFixas + margemLucro + desconto
+          const divisor = 1 - soma / 100
+          if (divisor <= 0) {
+            throw new ErroDeDominio(
+              `soma dos percentuais alcança ou passa de 100% (${soma}): preço inviável`,
+              'BAD_REQUEST',
+            )
+          }
+          const precoVenda = custoBase / divisor
+          return {
+            simularMarkup: {
+              __typename: 'SimulacaoMarkup',
+              custoBase,
+              percentualImpostos: impostos,
+              percentualDespesasFixas: despesasFixas,
+              percentualMargemLucro: margemLucro,
+              percentualDesconto: desconto,
+              somaTotalPercentuais: soma,
+              divisorMarkup: divisor,
+              precoVenda,
+              breakdown: {
+                __typename: 'Breakdown',
+                custoRecuperado: custoBase,
+                valorImpostos: precoVenda * (impostos / 100),
+                valorDespesasFixas: precoVenda * (despesasFixas / 100),
+                valorDesconto: precoVenda * (desconto / 100),
+                lucroLiquido: precoVenda * (margemLucro / 100),
+              },
+              faixaNegociacao: faixaNegociacaoGql(precoVenda, margemLucro, desconto),
+            },
+          }
+        })
+      }
+
+      case 'simularImpactoAnexo': {
+        const registro = mockProdutos.find(p => p.id === variaveis.produtoId)
+        if (!registro) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, registro.empresaId)
+        if (alcance instanceof Response) return alcance
+        const empresa = mockEmpresas.find(e => e.id === alcance)!
+        return comErroDeDominio(() => ({
+          simularImpactoAnexo: {
+            __typename: 'ImpactoAnexo',
+            nomeProduto: registro.nome,
+            comoAnexoIII: precificarComImpostoHipoteticoGql(
+              registro, empresa, ALIQUOTA_ANEXO_III_FAIXA_1, 'ANEXO_III'),
+            comoAnexoV: precificarComImpostoHipoteticoGql(
+              registro, empresa, ALIQUOTA_ANEXO_V_FAIXA_1, 'ANEXO_V'),
+          },
+        }))
+      }
+
       // -- Acesso ----------------------------------------------------------
 
       case 'perfis':
@@ -730,6 +852,30 @@ export function instalarServidorFalso(): ServidorFalso {
 
       case 'minhasEmpresas':
         return dados({ minhasEmpresas: empresasDoUsuario(usuario).map(empresaGql) })
+
+      case 'simularFatorR': {
+        const alcance = exigirAlcance(usuario, variaveis.empresaId)
+        if (alcance instanceof Response) return alcance
+        const real = mockEmpresas.find(e => e.id === alcance)
+        if (!real) return erroGraphQL('Empresa não encontrada', 'NOT_FOUND')
+
+        // Stateless: monta uma empresa hipotética só para o cálculo, não grava
+        // nada em mockEmpresas — mesmo espírito de Empresa.substituir no backend.
+        const hipotetica: Empresa = {
+          ...real,
+          faturamentoMedioMensal: Number(variaveis.faturamentoMedioMensal),
+          folhaPagamentoMensal: Number(variaveis.folhaPagamentoMensal),
+        }
+        const aplicavel = fatorRSeAplica(hipotetica)
+        return dados({
+          simularFatorR: {
+            __typename: 'SimulacaoFatorR',
+            fatorR: aplicavel ? fatorRDe(hipotetica) : null,
+            anexoAplicado: aplicavel ? anexoAplicadoDe(hipotetica) : null,
+            aplicavel,
+          },
+        })
+      }
 
       case 'salvarEmpresa': {
         const entrada = variaveis.input as Partial<Empresa> & { id?: string | null }

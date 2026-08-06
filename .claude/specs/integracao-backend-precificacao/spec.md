@@ -4,8 +4,32 @@
 > (isso é o `plan.md`). Deve obedecer a [constitution.md](../../constitution.md).
 
 - **Slug:** integracao-backend-precificacao
-- **Status:** aprovada
+- **Status:** aprovada · **parcialmente concluída 06-08-2026** (ver abaixo)
 - **Data:** 2026-08-04
+
+> **Atualização 06-08-2026 — pendências 1 e 2 (Fator R) resolvidas no
+> markup-back.** `Empresa.fatorR`/`Empresa.anexoAplicado` (estado salvo, C8/C9)
+> e `simularFatorR(empresaId, faturamentoMedioMensal, folhaPagamentoMensal)`
+> (simulação stateless, "e se") existem no contrato e foram testados ao vivo.
+> Documentado em `markup-back/.claude/specs/contrato-graphql-pendencias-frontend/spec.md`
+> (REQ-02/REQ-03). Reflexo aqui, no `markup-front`:
+> - `DashboardView`, `EmpresaView` e `FatorRView` **não usam mais**
+>   `IndisponivelBackend` para Fator R — REQ-05 (as quatro superfícies
+>   desativadas) fica **parcialmente atendido**: as três leem/simulam de
+>   verdade agora.
+> - `EmpresaFormModal` **continua** desativada — REQ-06 pede exatamente esta
+>   capacidade, mas `simularFatorR` exige uma empresa já existente (`empresaId`),
+>   e o formulário de criação ainda não tem uma. Sem solução ainda.
+> - Pendência 2 do REQ-06 (`Empresa.fatorR`/`anexoAplicado` para o estado
+>   salvo) está **fechada**. A parte de "simulação de markup completo" da
+>   mesma pendência (custo, impostos, margem, desconto — não só Fator R)
+>   **continua aberta**: `PrecificacaoView` modo manual segue desativada.
+> - **Extensão pedida na mesma revisão:** `FatorRView` ganhou também o card
+>   "Impacto no preço" (mesmo produto sob a alíquota efetiva de Anexo III vs
+>   V), via `simularImpactoAnexo` — capacidade nova no backend, não coberta
+>   pelas pendências originais desta spec. Comparação **didática**: usa a
+>   alíquota da 1ª faixa do Simples (6%/15,5%), não modela as faixas
+>   seguintes — documentado em `SimularImpactoAnexo.java` e na própria tela.
 
 ## Problema / Objetivo
 

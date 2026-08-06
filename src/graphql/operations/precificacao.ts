@@ -91,3 +91,75 @@ export const PRECIFICAR_TODOS = gql`
   }
   ${CAMPOS_RESULTADO}
 `
+
+/**
+ * Comparação didática (não o preço oficial) — mesmo produto sob a alíquota
+ * efetiva de cada anexo do Fator R. Usada só pelo simulador de `FatorRView`.
+ */
+export const SIMULAR_IMPACTO_ANEXO = gql`
+  query simularImpactoAnexo($produtoId: ID!) {
+    simularImpactoAnexo(produtoId: $produtoId) {
+      nomeProduto
+      comoAnexoIII {
+        ...CamposResultadoPrecificacao
+      }
+      comoAnexoV {
+        ...CamposResultadoPrecificacao
+      }
+    }
+  }
+  ${CAMPOS_RESULTADO}
+`
+
+/**
+ * Simulação manual (tela "Simulação Manual" de `PrecificacaoView`) — sem
+ * produto, sem empresa, stateless. Mesma fórmula de `CalculadoraDeMarkup`.
+ */
+export const SIMULAR_MARKUP = gql`
+  query simularMarkup(
+    $custoBase: BigDecimal!
+    $percentualImpostos: BigDecimal!
+    $percentualDespesasFixas: BigDecimal!
+    $percentualMargemLucro: BigDecimal!
+    $percentualDesconto: BigDecimal!
+  ) {
+    simularMarkup(
+      custoBase: $custoBase
+      percentualImpostos: $percentualImpostos
+      percentualDespesasFixas: $percentualDespesasFixas
+      percentualMargemLucro: $percentualMargemLucro
+      percentualDesconto: $percentualDesconto
+    ) {
+      custoBase
+      percentualImpostos
+      percentualDespesasFixas
+      percentualMargemLucro
+      percentualDesconto
+      somaTotalPercentuais
+      divisorMarkup
+      precoVenda
+      breakdown {
+        custoRecuperado
+        valorImpostos
+        valorDespesasFixas
+        valorDesconto
+        lucroLiquido
+      }
+      faixaNegociacao {
+        descontoMinimo
+        descontoMaximo
+        precoTabela
+        precoMinimo
+        economiaMaxima
+        lucroNoTeto
+        lucroNoPiso
+        degraus {
+          desconto
+          preco
+          lucro
+          margemEfetiva
+        }
+      }
+    }
+  }
+`

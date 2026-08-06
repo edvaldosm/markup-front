@@ -106,6 +106,8 @@ export const CAMPOS_EMPRESA = gql`
     folhaPagamentoMensal
     percentualDespesasFixas
     donoUsuarioId
+    fatorR
+    anexoAplicado
   }
 `
 
@@ -130,4 +132,23 @@ export const SALVAR_EMPRESA = gql`
     }
   }
   ${CAMPOS_EMPRESA}
+`
+
+/**
+ * Stateless — não grava nada. Recebe folha/faturamento hipotéticos e devolve o
+ * mesmo cálculo (C8/C9) que a empresa real teria; segmento/regime continuam os
+ * cadastrados (REQ-03, resolvido 06-08-2026 só para Fator R).
+ */
+export const SIMULAR_FATOR_R = gql`
+  query simularFatorR($empresaId: ID!, $faturamentoMedioMensal: BigDecimal!, $folhaPagamentoMensal: BigDecimal!) {
+    simularFatorR(
+      empresaId: $empresaId
+      faturamentoMedioMensal: $faturamentoMedioMensal
+      folhaPagamentoMensal: $folhaPagamentoMensal
+    ) {
+      fatorR
+      anexoAplicado
+      aplicavel
+    }
+  }
 `

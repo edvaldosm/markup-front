@@ -28,13 +28,35 @@ export interface Empresa {
   // `despesasFixas` existe no schema como campo aninhado de Empresa; o front
   // continua lendo-as pelo store próprio (`despesasFixas(empresaId)`) até a
   // fatia 2 da integração, então não é espelhado aqui ainda.
+  /**
+   * Fator R (%) **salvo** da empresa, calculado pelo backend (C8) — mesma
+   * fórmula de `ResultadoPrecificacao.fatorR`, mas por empresa, não por
+   * produto. `null`/ausente fora do recorte de serviços no Simples (V5).
+   * Resolvido em 06-08-2026 (era pendência de `Empresa.fatorR`).
+   */
+  fatorR?: number | null
+  /** Anexo do Simples efetivamente aplicado agora (C9) — par de `fatorR`. */
+  anexoAplicado?: AnexoSimples | null
 }
 
 /** Campos que o front envia ao salvar uma empresa — espelha `EmpresaInput`. */
 export type EmpresaEntrada = Omit<
   Empresa,
-  'id' | 'donoUsuarioId' | 'percentualDespesasFixas'
+  'id' | 'donoUsuarioId' | 'percentualDespesasFixas' | 'fatorR' | 'anexoAplicado'
 > & { id?: string }
+
+/**
+ * Resultado de `simularFatorR` — entrada hipotética (folha/faturamento), nada
+ * persistido. Par stateless de `Empresa.fatorR`/`anexoAplicado` (REQ-03 de
+ * `contrato-graphql-pendencias-frontend`, resolvido 06-08-2026 só para Fator R
+ * — o simulador de markup completo continua pendente).
+ */
+export interface SimulacaoFatorR {
+  fatorR: number | null
+  anexoAplicado: AnexoSimples | null
+  /** `false` fora do recorte (não-serviço, ou fora do Simples) — os dois campos acima vêm nulos. */
+  aplicavel: boolean
+}
 
 export type CategoriaDespesa =
   | 'ALUGUEL' | 'ENERGIA' | 'GAS' | 'INTERNET' | 'PROLABORE' | 'CONTADOR' | 'OUTRO'
@@ -191,6 +213,42 @@ export interface ResultadoPrecificacao {
   fatorR?: number
   /** Anexo efetivamente aplicado após avaliar o Fator R */
   anexoAplicado?: AnexoSimples
+  breakdown: {
+    custoRecuperado: number
+    valorImpostos: number
+    valorDespesasFixas: number
+    valorDesconto: number
+    lucroLiquido: number
+  }
+  faixaNegociacao: FaixaNegociacao
+}
+
+/**
+ * Saída de `simularImpactoAnexo` — comparação didática do mesmo produto sob a
+ * alíquota efetiva de cada anexo (1ª faixa do Simples: 6% Anexo III, 15,5%
+ * Anexo V). Não é o preço oficial do produto, que usa os impostos cadastrados
+ * nele — ver o próprio backend (`SimularImpactoAnexo.java`) para a limitação.
+ */
+export interface ImpactoAnexo {
+  nomeProduto: string
+  comoAnexoIII: ResultadoPrecificacao
+  comoAnexoV: ResultadoPrecificacao
+}
+
+/**
+ * Saída de `simularMarkup` — simulação totalmente manual (sem produto nem
+ * empresa reais). Mesmos campos de `ResultadoPrecificacao`, exceto
+ * `produto`/`fatorR`/`anexoAplicado`, que não fazem sentido aqui.
+ */
+export interface SimulacaoMarkup {
+  custoBase: number
+  percentualImpostos: number
+  percentualDespesasFixas: number
+  percentualMargemLucro: number
+  percentualDesconto: number
+  somaTotalPercentuais: number
+  divisorMarkup: number
+  precoVenda: number
   breakdown: {
     custoRecuperado: number
     valorImpostos: number

@@ -10,19 +10,11 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
-import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 
 const store = useEmpresaStore()
 const despesasStore = useDespesasStore()
 const { formatCurrency, formatPercent } = useCurrency()
 
-/**
- * Fator R não tem campo no contrato (nem persistido, nem simulado) — só existe
- * dentro de `ResultadoPrecificacao`, por produto. Pendência registrada em
- * `integracao-backend-precificacao/spec.md`. Sem fórmula local no lugar
- * (Artigo III v2.5.0): o formulário para de prever o anexo em tempo real.
- */
-const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
 const seg = computed(() => segmentoConfig(store.empresa?.segmento))
 
 onMounted(() => Promise.all([store.fetchEmpresa(), despesasStore.fetchDespesas()]))
@@ -124,7 +116,7 @@ const segmentos = [
               <input v-model.number="form.folhaPagamentoMensal" type="number" step="100" class="input" />
               <p class="field__hint">
                 Salários + pró-labore + encargos. Numerador do <strong>Fator R</strong>.
-                Atual: <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
+                <template v-if="store.empresa?.fatorR != null">Atual: {{ formatPercent(store.empresa.fatorR) }}</template>
               </p>
             </div>
 
@@ -171,7 +163,11 @@ const segmentos = [
             </div>
             <div class="indicator" v-if="ehServico">
               <span class="indicator__label">Fator R</span>
-              <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
+              <span v-if="store.empresa?.fatorR != null" class="indicator__value">{{ formatPercent(store.empresa.fatorR) }}</span>
+              <span v-else class="indicator__sub">Não se aplica (fora do Simples de serviços)</span>
+              <span v-if="store.empresa?.anexoAplicado" class="indicator__sub">
+                Anexo {{ store.empresa.anexoAplicado.replace('ANEXO_', '') }}
+              </span>
             </div>
           </div>
         </BaseCard>

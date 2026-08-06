@@ -10,7 +10,6 @@ import { segmentoConfig } from '@/config/segmentos'
 import StatCard from '@/components/ui/StatCard.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
-import IndisponivelBackend from '@/components/ui/IndisponivelBackend.vue'
 
 const router = useRouter()
 const empresaStore = useEmpresaStore()
@@ -21,15 +20,6 @@ const { formatCurrency, formatPercent } = useCurrency()
 
 const seg = computed(() => segmentoConfig(empresaStore.empresa?.segmento))
 const ehServico = computed(() => empresaStore.empresa?.segmento === 'SERVICOS')
-
-/**
- * Fator R da empresa não tem campo no contrato hoje — só existe por produto,
- * dentro de `ResultadoPrecificacao`. Pendência registrada em
- * `integracao-backend-precificacao/spec.md`. Enquanto isso, sem fórmula local:
- * a tela mostra indisponível em vez de inventar a conta (Artigo III v2.5.0).
- */
-const MOTIVO_FATOR_R = 'Fator R por empresa ainda não é um campo do contrato — pendência registrada para o backend.'
-const MOTIVO_TOTAL_DESPESAS = 'Total consolidado de despesas ainda não é um agregado do contrato — pendência registrada para o backend.'
 
 onMounted(async () => {
   await Promise.all([
@@ -112,7 +102,14 @@ const alertas = computed(() => {
         color="orange"
       />
       <StatCard v-else label="Fator R" icon="🧮" color="orange">
-        <template #value><IndisponivelBackend :motivo="MOTIVO_FATOR_R" /></template>
+        <template #value>
+          <span v-if="empresaStore.empresa?.fatorR != null">{{ formatPercent(empresaStore.empresa.fatorR) }}</span>
+          <span v-else class="fator-r-inaplicavel">Não se aplica</span>
+        </template>
+        <template v-if="empresaStore.empresa?.anexoAplicado" #sub>
+          Anexo {{ empresaStore.empresa.anexoAplicado.replace('ANEXO_', '') }}
+        </template>
+        <template v-else-if="empresaStore.empresa?.fatorR == null" #sub>fora do Simples de serviços</template>
       </StatCard>
     </div>
 
@@ -191,6 +188,8 @@ const alertas = computed(() => {
 
 <style scoped>
 .dashboard { display: flex; flex-direction: column; gap: var(--space-6); }
+
+.fator-r-inaplicavel { color: var(--color-text-light); font-size: .85em; }
 
 .seg-hero {
   display: flex;
