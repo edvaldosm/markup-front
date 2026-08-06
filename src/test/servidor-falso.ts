@@ -1140,6 +1140,22 @@ export function instalarServidorFalso(): ServidorFalso {
         registrarVersao(produto.id, produto.margemLucro, produto.descontoMaximo)
         return comErroDeDominio(() => ({ reativarVersaoProduto: produtoGql(produto) }))
       }
+
+      /** Exclusão de verdade (emenda de REQ-02) — a vigente é sempre recusada. */
+      case 'excluirVersaoProduto': {
+        const versao = mockVersoesProduto.find(v => v.id === variaveis.versaoId)
+        if (!versao) return erroGraphQL('Versao nao encontrada', 'NOT_FOUND')
+        const produto = mockProdutos.find(p => p.id === versao.produtoId)
+        if (!produto) return erroGraphQL('Produto nao encontrado', 'NOT_FOUND')
+        const alcance = exigirAlcance(usuario, produto.empresaId)
+        if (alcance instanceof Response) return alcance
+        if (versao.dataFim === null) {
+          return erroGraphQL('a versão vigente não pode ser excluída', 'BAD_REQUEST')
+        }
+        const indice = mockVersoesProduto.indexOf(versao)
+        mockVersoesProduto.splice(indice, 1)
+        return dados({ excluirVersaoProduto: true })
+      }
     }
 
     return erroGraphQL(`Operacao nao suportada no servidor falso: ${operacao}`, 'BAD_REQUEST')

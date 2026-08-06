@@ -11,7 +11,7 @@ import { useCurrency } from '@/composables/useCurrency'
 import { useRelatorio } from '@/composables/useRelatorio'
 import { segmentoConfig } from '@/config/segmentos'
 import { apolloClient } from '@/graphql/client'
-import { HISTORICO_DO_PRODUTO, REATIVAR_VERSAO_PRODUTO } from '@/graphql/operations/catalogo'
+import { HISTORICO_DO_PRODUTO, REATIVAR_VERSAO_PRODUTO, EXCLUIR_VERSAO_PRODUTO } from '@/graphql/operations/catalogo'
 import { mensagemDeErro } from '@/graphql/erros'
 import type { VersaoProduto } from '@/types'
 import BaseCard from '@/components/ui/BaseCard.vue'
@@ -161,6 +161,36 @@ async function reativar(versaoId: string): Promise<void> {
   }
 }
 
+// ── Exclusão de versão — emenda de REQ-02 (06-08-2026, a pedido do usuário) ─
+//
+// O servidor recusa excluir a vigente (nunca fica sem versão aberta); aqui
+// só é preciso um segundo clique de confirmação, pra exclusão de verdade não
+// sair de um toque errado.
+
+const confirmandoExclusaoId = ref<string | null>(null)
+const excluindoVersaoId = ref<string | null>(null)
+let timeoutConfirmacao: ReturnType<typeof setTimeout> | undefined
+
+function pedirExclusao(versaoId: string): void {
+  clearTimeout(timeoutConfirmacao)
+  confirmandoExclusaoId.value = versaoId
+  timeoutConfirmacao = setTimeout(() => { confirmandoExclusaoId.value = null }, 4000)
+}
+
+async function excluir(versaoId: string): Promise<void> {
+  clearTimeout(timeoutConfirmacao)
+  confirmandoExclusaoId.value = null
+  excluindoVersaoId.value = versaoId
+  try {
+    await apolloClient.mutate({ mutation: EXCLUIR_VERSAO_PRODUTO, variables: { versaoId } })
+    await buscarHistorico()
+  } catch (e) {
+    erroHistorico.value = mensagemDeErro(e, 'excluirVersaoProduto')
+  } finally {
+    excluindoVersaoId.value = null
+  }
+}
+
 buscarHistorico()
 </script>
 
@@ -288,30 +318,43 @@ buscarHistorico()
           </div>
         </BaseCard>
 
-        <BaseCard title="Histórico de Margem" subtitle="Cada ajuste vira uma versão — nada se apaga">
+        <BaseCard title="Histórico de Margem" subtitle="Cada ajuste vira uma versão — a vigente nunca pode ser apagada">
           <p v-if="erroHistorico" class="hist-erro">{{ erroHistorico }}</p>
           <p v-else-if="carregandoHistorico && !historico.length" class="hist-vazio">Carregando…</p>
           <p v-else-if="!historico.length" class="hist-vazio">Nenhuma versão registrada ainda.</p>
 
           <ul v-else class="hist-lista">
             <li v-for="v in historico" :key="v.id" class="hist-item" :class="{ 'hist-item--vigente': !v.dataFim }">
-              <div class="hist-item__valores">
-                <span>ML {{ formatPercent(v.margemLucro) }}</span>
-                <span>·</span>
-                <span>Desc. {{ formatPercent(v.descontoMaximo) }}</span>
+              <div class="hist-item__topo">
+                <div class="hist-item__valores">
+                  <span class="hist-item__valor">ML {{ formatPercent(v.margemLucro) }}</span>
+                  <span class="hist-item__ponto">·</span>
+                  <span class="hist-item__valor">Desc. {{ formatPercent(v.descontoMaximo) }}</span>
+                </div>
                 <BaseBadge v-if="!v.dataFim" color="green">vigente</BaseBadge>
               </div>
+
               <div class="hist-item__periodo">
-                {{ formatarData.format(new Date(v.dataInicio)) }}
-                <template v-if="v.dataFim"> → {{ formatarData.format(new Date(v.dataFim)) }}</template>
-                <template v-else> → hoje</template>
+                <span>{{ formatarData.format(new Date(v.dataInicio)) }}</span>
+                <span class="hist-item__seta">→</span>
+                <span>{{ v.dataFim ? formatarData.format(new Date(v.dataFim)) : 'hoje' }}</span>
               </div>
-              <BaseButton
-                v-if="v.dataFim"
-                size="sm" variant="ghost"
-                :loading="reativandoVersaoId === v.id"
-                @click="reativar(v.id)"
-              >Reativar</BaseButton>
+
+              <div v-if="v.dataFim" class="hist-item__acoes">
+                <BaseButton
+                  size="sm" variant="ghost"
+                  :disabled="excluindoVersaoId === v.id"
+                  :loading="reativandoVersaoId === v.id"
+                  @click="reativar(v.id)"
+                >Reativar</BaseButton>
+                <BaseButton
+                  size="sm"
+                  :variant="confirmandoExclusaoId === v.id ? 'danger' : 'ghost'"
+                  :disabled="reativandoVersaoId === v.id"
+                  :loading="excluindoVersaoId === v.id"
+                  @click="confirmandoExclusaoId === v.id ? excluir(v.id) : pedirExclusao(v.id)"
+                >{{ confirmandoExclusaoId === v.id ? 'Confirmar exclusão?' : 'Excluir' }}</BaseButton>
+              </div>
             </li>
           </ul>
         </BaseCard>
@@ -357,15 +400,28 @@ buscarHistorico()
 
 .hist-lista { display: flex; flex-direction: column; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
 .hist-item {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius);
   font-size: .8125rem;
 }
 .hist-item--vigente { border-color: color-mix(in srgb, #059669 40%, var(--color-border-light)); background: color-mix(in srgb, #059669 6%, transparent); }
-.hist-item__valores { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; color: var(--color-text); }
-.hist-item__periodo { color: var(--color-text-muted); font-size: .75rem; flex: 1; text-align: right; margin-right: var(--space-2); }
+
+.hist-item__topo { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.hist-item__valores { display: flex; align-items: baseline; gap: var(--space-2); font-weight: 600; color: var(--color-text); }
+.hist-item__valor { white-space: nowrap; }
+.hist-item__ponto { color: var(--color-text-light); }
+
+.hist-item__periodo {
+  display: flex; align-items: center; gap: var(--space-2);
+  color: var(--color-text-muted); font-size: .75rem;
+}
+.hist-item__seta { color: var(--color-text-light); }
+
+.hist-item__acoes { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-1); }
 
 .back-btn {
   background: none; border: none;

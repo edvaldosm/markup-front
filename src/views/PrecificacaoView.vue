@@ -281,8 +281,8 @@ async function salvarSimulacao(): Promise<void> {
               <span class="sim-resultado__pv-value">{{ formatCurrency(simulacao.precoVenda) }}</span>
             </div>
             <div class="sim-resultado__rodape">
-              Soma dos percentuais: {{ formatPercent(simulacao.somaTotalPercentuais) }} ·
-              Divisor: {{ simulacao.divisorMarkup.toFixed(4) }}
+              Soma dos percentuais: <strong>{{ formatPercent(simulacao.somaTotalPercentuais) }}</strong> |
+              Divisor: <strong>{{ simulacao.divisorMarkup.toFixed(4) }}</strong>
             </div>
           </div>
           <p v-else-if="simulando" class="sim-carregando">Calculando…</p>
@@ -365,21 +365,22 @@ async function salvarSimulacao(): Promise<void> {
 
 .sim-resultado {
   margin-top: var(--space-5);
-  padding: var(--space-4);
+  padding: var(--space-5);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, #059669 8%, transparent);
+  background: var(--color-primary-900);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .sim-resultado__formula {
   display: flex; justify-content: space-between;
-  font-size: .75rem; color: var(--color-text-muted);
+  font-size: .8125rem; color: var(--color-primary-300);
 }
-.sim-resultado__pv { display: flex; flex-direction: column; gap: 2px; }
-.sim-resultado__pv-label { font-size: .75rem; color: var(--color-text-muted); }
-.sim-resultado__pv-value { font-size: 1.6rem; font-weight: 800; color: #059669; }
-.sim-resultado__rodape { font-size: .7rem; color: var(--color-text-light); }
+.sim-resultado__pv { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.sim-resultado__pv-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--color-primary-400); }
+.sim-resultado__pv-value { font-size: 2rem; font-weight: 800; color: var(--color-primary-300); }
+.sim-resultado__rodape { font-size: .75rem; color: var(--color-primary-400); text-align: center; }
+.sim-resultado__rodape strong { color: var(--color-primary-200); }
 
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }

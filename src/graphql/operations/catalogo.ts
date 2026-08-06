@@ -182,6 +182,17 @@ export const REATIVAR_VERSAO_PRODUTO = gql`
   ${CAMPOS_PRODUTO}
 `
 
+/**
+ * Exclusão de verdade — emenda de REQ-02 (06-08-2026). O servidor recusa
+ * excluir a versão vigente (nunca fica sem versão aberta); o front só
+ * precisa tratar o erro, não repetir a checagem.
+ */
+export const EXCLUIR_VERSAO_PRODUTO = gql`
+  mutation excluirVersaoProduto($versaoId: ID!) {
+    excluirVersaoProduto(versaoId: $versaoId)
+  }
+`
+
 export const SALVAR_MATERIAL = gql`
   mutation salvarMaterial($input: MaterialInput!) {
     salvarMaterial(input: $input) {
