@@ -37,3 +37,5 @@ flowchart TD
 ```
 
 > Usuários com perfil **ADMIN** (escopo global) enxergam todas as empresas cadastradas na base, independentemente de serem donos ou não. Os demais usuários só veem as empresas que **possuem** (cadastraram) ou que foram **compartilhadas** com eles.
+
+> **Trocar de empresa pode trocar seu perfil.** Como o perfil depende da empresa ativa (ver [`14-perfis-rbac.md`](./14-perfis-rbac.md)), se a tela em que você está não for permitida pelo perfil na nova empresa, o sistema redireciona automaticamente para o Dashboard — em vez de deixar aberta uma tela que o servidor passaria a recusar.

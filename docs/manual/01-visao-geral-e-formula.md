@@ -2,7 +2,7 @@
 title: "Visão geral e fórmula do Markup Divisor"
 ordem: 1
 tags: [markup-divisor, formula, pv, cp, segmento-de-negocio, fluxo-de-trabalho]
-resumo: "Explica a fórmula PV = CP / Divisor usada pelo sistema Markup, o significado de cada sigla, os três segmentos de negócio suportados e o fluxo de trabalho recomendado para colocar uma empresa em produção."
+resumo: "Explica a fórmula PV = CP / Divisor usada pelo sistema Markup, o significado de cada sigla, os quatro segmentos de negócio suportados (Confeitaria, Indústria, Serviços, Comércio) e o fluxo de trabalho recomendado para colocar uma empresa em produção."
 ---
 
 # 1. Visão geral do sistema
@@ -46,7 +46,7 @@ flowchart LR
     DIV --> PV
 ```
 
-O sistema é organizado por **segmento de negócio** — Confeitaria 🧁, Indústria 🏭 ou Serviços 🛠️ — que muda apenas os rótulos das telas (ex.: "Ingrediente" vs "Matéria-prima" vs "Custo direto"), mas não a fórmula.
+O sistema é organizado por **segmento de negócio** — Confeitaria 🧁, Indústria 🏭, Serviços 🛠️ ou Comércio 🏬 — que muda apenas os rótulos das telas (ex.: "Ingrediente" vs "Matéria-prima" vs "Custo direto" vs "Custo de aquisição"), mas não a fórmula.
 
 ## Fluxo de trabalho recomendado
 

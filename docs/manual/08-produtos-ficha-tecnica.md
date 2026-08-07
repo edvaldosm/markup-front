@@ -1,8 +1,8 @@
 ---
 title: "Cadastro de Produtos (Ficha Técnica)"
 ordem: 8
-tags: [produto, ficha-tecnica, margem-de-lucro, desconto-maximo, servico]
-resumo: "Como montar a ficha técnica de um produto ou serviço: insumos consumidos e quantidades, margem de lucro, desconto máximo e impostos vinculados, com as validações exigidas antes de salvar."
+tags: [produto, ficha-tecnica, margem-de-lucro, desconto-maximo, servico, tipo-produto]
+resumo: "Como montar a ficha técnica de um produto ou serviço: tipo (produto físico ou serviço), insumos consumidos e quantidades, margem de lucro, desconto máximo e impostos vinculados, com as validações exigidas antes de salvar. O status ativo/inativo é somente leitura nesta tela."
 ---
 
 # 8. Cadastro de Produtos (Ficha Técnica)
@@ -24,7 +24,7 @@ A tela lista os produtos em cards, com busca por nome, filtro por categoria e, e
    - **Nome*** (obrigatório)
    - **Descrição**
    - **Categoria** (texto livre, ex.: "Bolos Clássicos")
-   - **Produto ativo** (checkbox)
+   - **Tipo**: `PRODUTO` (item físico vendido) ou `SERVICO` (serviço prestado, cobrado por hora/projeto)
 3. **Parâmetros de Precificação**:
    - **Margem de Lucro — ML (%)** — a rentabilidade líquida desejada sobre o preço de venda (dica na tela: alimentação recomenda 25%–40%)
    - **Desconto Máximo (%)** — reserva para promoções/negociação, **sem perder a margem-alvo**
@@ -34,7 +34,7 @@ A tela lista os produtos em cards, com busca por nome, filtro por categoria e, e
    - Repita para todos os insumos da receita/composição.
    - Use o **×** para remover uma linha.
 5. **Impostos Vinculados**:
-   - Clique em **"+ Imposto"** para vincular um imposto cadastrado (a alíquota é copiada automaticamente, mas pode ser ajustada manualmente por produto) — ver [`05-impostos.md`](./05-impostos.md).
+   - Clique em **"+ Imposto"** para vincular um imposto cadastrado (a alíquota é sempre a do cadastro do imposto, nunca copiada ou editável por produto) — ver [`05-impostos.md`](./05-impostos.md).
    - Use o **×** para desvincular.
 6. Validações antes de salvar: o **Nome** é obrigatório e é preciso ter **ao menos um material** na ficha técnica — caso contrário o sistema mostra os erros em destaque e não permite salvar.
 7. Clique em **"Criar Produto"**.
@@ -42,7 +42,7 @@ A tela lista os produtos em cards, com busca por nome, filtro por categoria e, e
 ```mermaid
 flowchart TD
     A["Menu: Cadastros > Produtos"] --> B["Clicar em + Novo Produto"]
-    B --> C["Preencher Nome*, Descrição e Categoria"]
+    B --> C["Preencher Nome*, Descrição, Categoria e Tipo"]
     C --> D["Definir Margem de Lucro % e Desconto Máximo %"]
     D --> E["Adicionar Insumos: Material + Quantidade"]
     E --> F["Vincular Impostos ao produto"]
@@ -55,4 +55,8 @@ flowchart TD
 
 ## 8.3 Editando um produto
 
-Abra o produto (clique no card ou vá ao detalhe) e clique em **"Editar Produto"** — o mesmo formulário é reaberto pré-preenchido.
+Abra o produto (clique no card ou vá ao detalhe) e clique em **"Editar Produto"** — o mesmo formulário é reaberto pré-preenchido, incluindo a ficha técnica (materiais e quantidades) e os impostos vinculados.
+
+> **O status Ativo/Inativo não é editável neste formulário.** O contrato não oferece uma operação para alternar o status de um produto — ele aparece na listagem (badge Ativo/Inativo), mas não há controle para mudá-lo pela interface.
+
+> **Para ajustar só a margem de lucro rapidamente**, sem reabrir o formulário inteiro, use o campo editável na página de detalhe — ver [`10-detalhe-produto-faixa-negociacao.md`](./10-detalhe-produto-faixa-negociacao.md), item 10.4. Esse ajuste abre uma **nova versão** no histórico do produto em vez de sobrescrever a anterior.
