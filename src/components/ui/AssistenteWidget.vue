@@ -41,6 +41,10 @@ function fechar(): void {
   aberto.value = false
 }
 
+function limparConversa(): void {
+  assistente.limpar()
+}
+
 function aoTeclarEsc(): void {
   if (aberto.value) fechar()
 }
@@ -72,11 +76,26 @@ const posicaoClasse = computed(() => `assistente--${opcoes.posicao}`)
       <div v-if="aberto" class="assistente__painel" role="dialog" aria-label="Assistente de precificação">
         <div class="assistente__header">
           <h2 class="assistente__titulo">Assistente</h2>
-          <button class="assistente__fechar" type="button" aria-label="Fechar" @click="fechar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div class="assistente__acoes">
+            <button
+              class="assistente__acao"
+              type="button"
+              aria-label="Limpar conversa"
+              title="Limpar conversa"
+              :disabled="assistente.mensagens.length === 0"
+              @click="limparConversa"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+            <button class="assistente__acao" type="button" aria-label="Fechar" @click="fechar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div ref="listaRef" class="assistente__lista" role="log" aria-live="polite" aria-label="Mensagens da conversa">
@@ -160,11 +179,13 @@ const posicaoClasse = computed(() => `assistente--${opcoes.posicao}`)
   background: var(--color-bg-subtle);
 }
 .assistente__titulo { font-size: .95rem; font-weight: 600; color: var(--color-text); }
-.assistente__fechar {
+.assistente__acoes { display: flex; align-items: center; gap: var(--space-1); }
+.assistente__acao {
   background: none; border: none; color: var(--color-text-muted);
   padding: var(--space-1); border-radius: var(--radius-sm); display: flex;
 }
-.assistente__fechar:hover { background: var(--color-bg); color: var(--color-text); }
+.assistente__acao:hover:not(:disabled) { background: var(--color-bg); color: var(--color-text); }
+.assistente__acao:disabled { opacity: .35; cursor: not-allowed; }
 
 .assistente__lista {
   flex: 1;
