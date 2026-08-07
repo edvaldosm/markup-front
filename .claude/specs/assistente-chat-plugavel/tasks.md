@@ -70,6 +70,18 @@ adicionado na mesma sessão, ver
   `.app-content`/`.app-main`) · alvo: `src/components/layout/AppLayout.vue` ·
   dep: T-F6, T-F8.
 
+### Revisão 07-08-2026 — botão de limpar conversa
+
+- [x] **T-F13** (REQ-11) — `AssistenteWidget.vue`: botão "Limpar conversa" no
+  header do painel (ícone de lixeira), desabilitado quando
+  `assistente.mensagens.length === 0`, chama `assistente.limpar()` (já
+  existia na store desde T-F3 — esvazia `mensagens` e `threadId`) · alvo:
+  `src/components/ui/AssistenteWidget.vue` · dep: T-F3, T-F6.
+- [x] Verificado ao vivo: botão nasce desabilitado, habilita após a primeira
+  pergunta, ao clicar esvazia a lista e a pergunta seguinte recebe
+  `threadId` novo do backend (não reaproveita a conversa anterior) ·
+  `npx vue-tsc --noEmit` e `npx vitest run` (173 testes) sem regressão.
+
 ### Documentação (SDD e vault)
 
 - [x] **T-F10** — `assistente-ui/SKILL.md` reescrito: plugin, store com

@@ -84,6 +84,11 @@ esteja preenchendo dados de precificação e tenha uma dúvida sobre o domínio.
 - **REQ-10 (MUST):** O widget é instalado **globalmente, uma única vez**, no
   layout raiz das rotas autenticadas (`AppLayout.vue`) — visível em todo o
   site, em qualquer módulo/tela, sem precisar ser plugado tela a tela.
+- **REQ-11 (MUST, adicionado 07-08-2026):** O usuário consegue limpar a
+  conversa manualmente (botão no cabeçalho do painel) sem precisar deslogar.
+  Limpar apaga o histórico visual **e** o `threadId` — a próxima pergunta
+  começa uma conversa nova no backend, nunca continua a anterior. Botão
+  desabilitado quando não há histórico (nada para limpar).
 
 ## Critérios de aceite
 
@@ -97,9 +102,13 @@ esteja preenchendo dados de precificação e tenha uma dúvida sobre o domínio.
       diferentes sem alteração de código, só de instalação.
 - [ ] Um erro de rede (backend fora do ar) mostra mensagem diferente de uma
       resposta `RECUSADO`/`FORA_DE_ESCOPO` do backend.
-- [ ] A segunda pergunta de uma conversa chega ao backend com o `threadId`
+- [x] A segunda pergunta de uma conversa chega ao backend com o `threadId`
       devolvido pela primeira resposta — confirmável na aba de rede
-      (variável `threadId` na query).
+      (variável `threadId` na query). **Verificado ao vivo 07-08-2026.**
+- [x] Botão "Limpar conversa": desabilitado sem histórico; após uma pergunta,
+      habilita; ao clicar, esvazia a lista e a pergunta seguinte recebe um
+      `threadId` novo (não reaproveita o anterior). **Verificado ao vivo
+      07-08-2026.**
 
 ## Fora de escopo
 

@@ -94,6 +94,21 @@ const fichaItens = computed(() => {
 /** Impostos já vêm com nome e alíquota do cadastro (C3). */
 const impostosDosProduto = computed(() => produto.value?.impostos ?? [])
 
+/**
+ * Despesas fixas, diferente de impostos, **não são vinculadas por produto**
+ * — são da empresa inteira, rateadas por faturamento médio (C2) e aplicadas
+ * igual a todos os produtos. A lista aqui é a mesma de `despesasStore`
+ * (Cadastros → Despesas Fixas); só as ativas entram no rateio que compõe
+ * `resultado.percentualDespesasFixas`.
+ */
+const despesasAtivas = computed(() => despesasStore.despesas.filter(d => d.ativa))
+
+const categoriaLabel: Record<string, string> = {
+  ALUGUEL: 'Aluguel', ENERGIA: 'Energia', GAS: 'Gás',
+  INTERNET: 'Internet', PROLABORE: 'Pró-labore',
+  CONTADOR: 'Contador', OUTRO: 'Outro',
+}
+
 const showEditModal = ref(false)
 
 const editandoMargem = ref(false)
@@ -278,6 +293,28 @@ buscarHistorico()
           </div>
         </BaseCard>
 
+        <!-- Despesas fixas: não vinculadas a este produto — rateadas na empresa toda (C2) -->
+        <BaseCard
+          title="Despesas Fixas"
+          subtitle="Rateadas pelo faturamento médio da empresa — aplicam-se a todos os produtos"
+          style="margin-top: var(--space-5)"
+        >
+          <div class="df-list">
+            <div v-for="d in despesasAtivas" :key="d.id" class="df-item">
+              <div class="df-item__info">
+                <span class="df-item__nome">{{ d.descricao }}</span>
+                <BaseBadge color="blue">{{ categoriaLabel[d.categoria] }}</BaseBadge>
+              </div>
+              <span class="df-item__valor">{{ formatCurrency(d.valorMensal) }}</span>
+            </div>
+            <div v-if="!despesasAtivas.length" class="imp-empty">Nenhuma despesa fixa ativa</div>
+          </div>
+          <div v-if="despesasAtivas.length" class="df-total">
+            <span>Total mensal · {{ formatPercent(resultado?.percentualDespesasFixas ?? 0) }} do preço deste produto</span>
+            <strong>{{ formatCurrency(despesasStore.totalMensal) }}</strong>
+          </div>
+        </BaseCard>
+
         <!-- Faixa de negociação: do preço de tabela ao piso do desconto máximo -->
         <FaixaNegociacaoCard v-if="faixa" :faixa="faixa" class="faixa-card" />
       </div>
@@ -452,6 +489,19 @@ buscarHistorico()
 .imp-item__nome { font-size: .875rem; font-weight: 500; }
 .imp-item__aliquota { font-size: .9375rem; font-weight: 700; color: var(--color-primary-600); }
 .imp-empty { font-size: .875rem; color: var(--color-text-light); text-align: center; padding: var(--space-4); }
+
+.df-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.df-item { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3); background: var(--color-bg-subtle); border-radius: var(--radius); }
+.df-item__info { display: flex; align-items: center; gap: var(--space-2); }
+.df-item__nome { font-size: .875rem; font-weight: 500; }
+.df-item__valor { font-size: .9375rem; font-weight: 700; color: var(--color-text); }
+.df-total {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: var(--space-3); padding: var(--space-3) var(--space-4);
+  background: var(--color-primary-50); border-radius: var(--radius);
+  font-size: .8125rem; color: var(--color-primary-700); font-weight: 600;
+}
+.df-total strong { font-size: .9375rem; }
 
 .params { display: flex; flex-direction: column; gap: var(--space-4); }
 .param-item { display: flex; flex-direction: column; gap: var(--space-1); }
