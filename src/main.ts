@@ -5,11 +5,15 @@ import router from './router'
 import { definirAoPerderSessao } from './graphql/client'
 import { useAuthStore } from './stores/auth'
 import { useEmpresaStore } from './stores/empresa'
+import { AssistentePlugin } from './plugins/assistente'
 import './assets/main.css'
 
 async function iniciar() {
   const app = createApp(App)
   app.use(createPinia())
+  // Instalado uma única vez — o widget é montado globalmente em AppLayout.vue,
+  // nunca importado tela a tela (assistente-chat-plugavel, REQ-05/REQ-10).
+  app.use(AssistentePlugin, { posicao: 'bottom-right', maxMensagens: 10 })
 
   /**
    * A camada GraphQL não conhece o router — importá-lo lá fecharia o ciclo

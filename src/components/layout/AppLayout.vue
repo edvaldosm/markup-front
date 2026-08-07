@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
+import AssistenteWidget from '@/components/ui/AssistenteWidget.vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { guardaNavegacao } from '@/router'
 import { segmentoConfig } from '@/config/segmentos'
@@ -117,6 +118,11 @@ const segStyle = computed(() => {
         <RouterView />
       </main>
     </div>
+
+    <!-- Fora de .app-content (overflow-y: auto cortaria o painel flutuante) e
+         fora de .app-main (não deve remontar a cada troca de rota). Único
+         ponto de instalação do site (assistente-chat-plugavel, REQ-10). -->
+    <AssistenteWidget />
   </div>
 </template>
 

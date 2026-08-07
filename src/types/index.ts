@@ -406,6 +406,50 @@ export interface PaginatedResult<T> {
   pageInfo: PageInfo
 }
 
+// ─── Assistente ─────────────────────────────────────────────────────────────
+//
+// Espelha o contrato real do backend (`perguntarAssistente`, `RespostaAssistente`,
+// `StatusResposta`, `OrigemResposta`) — mais rico do que uma pergunta/resposta
+// simples: cruza com catálogo real da empresa ativa (`empresaId`) e mantém
+// memória multi-turn no servidor (`threadId`, TTL de ociosidade).
+
+/** Espelha `enum StatusResposta` do backend — o front só decide a UI por status, nunca o próprio status. */
+export type StatusRespostaAssistente =
+  | 'OK'
+  | 'FORA_DE_ESCOPO'
+  | 'RECUSADO'
+  | 'SEM_FONTE'
+  | 'DADOS_INSUFICIENTES'
+  | 'NAO_ENCONTRADO'
+  | 'AMBIGUO'
+
+/** Espelha `enum OrigemResposta` — de onde vieram os fatos usados na resposta. */
+export type OrigemRespostaAssistente = 'BANCO_DE_DADOS' | 'RAG' | 'BANCO_DE_DADOS_E_RAG' | 'NENHUMA'
+
+export interface FonteAssistente {
+  documento: string
+  trecho: string
+}
+
+/** Retorno de `perguntarAssistente` — `threadId` é sempre devolvido, mesmo em recusa. */
+export interface RespostaAssistente {
+  status: StatusRespostaAssistente
+  texto: string
+  origem: OrigemRespostaAssistente
+  fontes: FonteAssistente[]
+  threadId: string
+}
+
+/** Uma mensagem exibida no widget — só do front, não existe no schema. */
+export interface MensagemAssistente {
+  autor: 'usuario' | 'assistente'
+  texto: string
+  /** Só em mensagens do assistente — usado pra estilizar recusa/sem-fonte diferente de OK. */
+  status?: StatusRespostaAssistente
+  fontes?: FonteAssistente[]
+  criadaEm: string
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 //
 // Não existe um tipo de "usuário da sessão" separado: o autenticado é o mesmo
