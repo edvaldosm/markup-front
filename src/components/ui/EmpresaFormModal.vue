@@ -6,6 +6,7 @@ import BaseModal from './BaseModal.vue'
 import BaseButton from './BaseButton.vue'
 import FatorRNote from './FatorRNote.vue'
 import IndisponivelBackend from './IndisponivelBackend.vue'
+import CurrencyInput from './CurrencyInput.vue'
 import type { Empresa, EmpresaEntrada, SegmentoNegocio } from '@/types'
 
 const emit = defineEmits<{ close: []; created: [empresa: Empresa] }>()
@@ -124,16 +125,15 @@ async function salvar() {
             <option v-for="a in anexos" :key="a" :value="a">{{ a.replace('_', ' ') }}</option>
           </select>
         </div>
-        <div class="field">
-          <label class="field__label">Faturamento Médio Mensal (R$) *</label>
-          <input v-model.number="form.faturamentoMedioMensal" type="number" step="100" class="input" />
-        </div>
-        <div class="field" v-if="ehServico" style="grid-column:1/-1">
-          <label class="field__label">Folha de Pagamento Mensal (R$)</label>
-          <input v-model.number="form.folhaPagamentoMensal" type="number" step="100" class="input" />
-          <p class="field__hint" v-if="ehSimples">
-            <strong>Fator R:</strong> <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
-          </p>
+        <CurrencyInput v-model="form.faturamentoMedioMensal" label="Faturamento Médio Mensal (R$) *" />
+        <div v-if="ehServico" style="grid-column:1/-1">
+          <CurrencyInput v-model="form.folhaPagamentoMensal" label="Folha de Pagamento Mensal (R$)">
+            <template #hint>
+              <p class="field__hint" v-if="ehSimples">
+                <strong>Fator R:</strong> <IndisponivelBackend :motivo="MOTIVO_FATOR_R" />
+              </p>
+            </template>
+          </CurrencyInput>
         </div>
       </div>
 

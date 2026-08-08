@@ -10,6 +10,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
+import CurrencyInput from '@/components/ui/CurrencyInput.vue'
 import type { Material, MaterialEntrada } from '@/types'
 
 const store = useMateriaisStore()
@@ -151,10 +152,7 @@ const unidades: Material['unidade'][] = ['KG', 'G', 'L', 'ML', 'UN', 'CX', 'PCT'
             <option v-for="u in unidades" :key="u" :value="u">{{ u }}</option>
           </select>
         </div>
-        <div class="field">
-          <label class="field__label">Custo Unitário (R$)</label>
-          <input v-model.number="editando.custoUnitario" type="number" step="0.01" class="input" required />
-        </div>
+        <CurrencyInput v-model="editando.custoUnitario" label="Custo Unitário (R$)" />
         <div class="field">
           <label class="field__label">Fornecedor</label>
           <input v-model="editando.fornecedor" class="input" placeholder="Nome do fornecedor" />

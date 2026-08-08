@@ -6,6 +6,7 @@ import { useDespesasStore } from '@/stores/despesas'
 import { useCurrency } from '@/composables/useCurrency'
 import { segmentoConfig } from '@/config/segmentos'
 import FatorRNote from '@/components/ui/FatorRNote.vue'
+import CurrencyInput from '@/components/ui/CurrencyInput.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
@@ -106,19 +107,19 @@ const segmentos = [
                 </select>
               </div>
             </div>
-            <div class="field">
-              <label class="field__label">Faturamento Médio Mensal (R$)</label>
-              <input v-model.number="form.faturamentoMedioMensal" type="number" step="100" class="input" required />
-              <p class="field__hint">Base de cálculo para rateio das Despesas Fixas. Revisar mensalmente.</p>
-            </div>
-            <div class="field" v-if="ehServico">
-              <label class="field__label">Folha de Pagamento Mensal (R$)</label>
-              <input v-model.number="form.folhaPagamentoMensal" type="number" step="100" class="input" />
-              <p class="field__hint">
-                Salários + pró-labore + encargos. Numerador do <strong>Fator R</strong>.
-                <template v-if="store.empresa?.fatorR != null">Atual: {{ formatPercent(store.empresa.fatorR) }}</template>
-              </p>
-            </div>
+            <CurrencyInput
+              v-model="form.faturamentoMedioMensal"
+              label="Faturamento Médio Mensal (R$)"
+              hint="Base de cálculo para rateio das Despesas Fixas. Revisar mensalmente."
+            />
+            <CurrencyInput v-if="ehServico" v-model="form.folhaPagamentoMensal" label="Folha de Pagamento Mensal (R$)">
+              <template #hint>
+                <p class="field__hint">
+                  Salários + pró-labore + encargos. Numerador do <strong>Fator R</strong>.
+                  <template v-if="store.empresa?.fatorR != null">Atual: {{ formatPercent(store.empresa.fatorR) }}</template>
+                </p>
+              </template>
+            </CurrencyInput>
 
             <div class="form-actions">
               <Transition name="fade">

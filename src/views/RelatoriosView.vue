@@ -12,6 +12,7 @@ import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import RelatorioPdfModal from '@/components/ui/RelatorioPdfModal.vue'
+import PrecificacaoChart from '@/components/ui/PrecificacaoChart.vue'
 
 const produtosStore = useProdutosStore()
 const materiaisStore = useMateriaisStore()
@@ -45,6 +46,21 @@ const percentualDF = computed(() =>
 const custoTotalMateriais = computed(() =>
   materiaisStore.materiais.reduce((soma, m) => soma + m.custoUnitario, 0)
 )
+
+/** Dado do gráfico: mesmas linhas da tabela de precificação, sem cálculo novo. */
+const dadosGrafico = computed(() =>
+  precificacaoStore.todos.map(item => ({
+    nome: item.produto.nome,
+    custoBase: item.custoBase,
+    lucroLiquido: item.breakdown.lucroLiquido,
+    precoVenda: item.precoVenda,
+  })),
+)
+
+/** Totais da tabela — soma das linhas já exibidas, igual ao rodapé do PDF. */
+const totalCustoBase = computed(() => precificacaoStore.todos.reduce((s, i) => s + i.custoBase, 0))
+const totalPrecoVenda = computed(() => precificacaoStore.todos.reduce((s, i) => s + i.precoVenda, 0))
+const totalLucroLiquido = computed(() => precificacaoStore.todos.reduce((s, i) => s + i.breakdown.lucroLiquido, 0))
 
 /**
  * Documento gerado pelo módulo de relatórios do backend (JasperReports,
@@ -98,7 +114,7 @@ const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', para
     />
 
     <!-- Relatório: Precificação -->
-    <div v-if="relatorioAtivo === 'precificacao'">
+    <div v-if="relatorioAtivo === 'precificacao'" class="relatorio-precificacao">
       <BaseCard title="Relatório de Precificação" :subtitle="`Empresa: ${empresaStore.empresa?.razaoSocial ?? '...'} · Gerado em ${new Date().toLocaleDateString('pt-BR')}`">
         <div class="report-meta">
           <div class="report-meta__item">
@@ -106,8 +122,9 @@ const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', para
             <strong>{{ formatCurrency(empresaStore.empresa?.faturamentoMedioMensal ?? 0) }}</strong>
           </div>
           <div class="report-meta__item">
-            <span>% Despesas Fixas (rateio)</span>
-            <strong>{{ formatPercent(percentualDF) }}</strong>
+            <span>Despesas Fixas (rateio)</span>
+            <strong>{{ formatCurrency(despesasStore.totalMensal) }}</strong>
+            <span class="report-meta__pct">{{ formatPercent(percentualDF) }} do faturamento</span>
           </div>
           <div class="report-meta__item">
             <span>Regime Tributário</span>
@@ -142,7 +159,31 @@ const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', para
               <td class="report-table__lucro">{{ formatCurrency(item.breakdown.lucroLiquido) }}</td>
             </tr>
           </tbody>
+          <tfoot>
+            <tr class="report-tfoot">
+              <td>Total ({{ precificacaoStore.todos.length }} produtos)</td>
+              <td>{{ formatCurrency(totalCustoBase) }}</td>
+              <td colspan="4"></td>
+              <td></td>
+              <td class="report-table__price">{{ formatCurrency(totalPrecoVenda) }}</td>
+              <td class="report-table__lucro">{{ formatCurrency(totalLucroLiquido) }}</td>
+            </tr>
+          </tfoot>
         </table>
+
+        <p class="report-note">
+          * Rateio mensal soma apenas despesas <strong>ATIVAS</strong> (guarda de cálculo R11). Despesas inativas
+          continuam listadas no relatório "Despesas Fixas" para histórico, mas não entram neste total — por isso a
+          soma das linhas ali pode superar o valor de rateio mostrado aqui.
+        </p>
+      </BaseCard>
+
+      <BaseCard
+        v-if="dadosGrafico.length"
+        title="Visão estratégica"
+        subtitle="Custo base, Lucro Líquido e Preço de venda por produto"
+      >
+        <PrecificacaoChart :itens="dadosGrafico" />
       </BaseCard>
     </div>
 
@@ -264,6 +305,7 @@ const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', para
 .report-meta__item { display: flex; flex-direction: column; gap: 2px; }
 .report-meta__item span { font-size: .75rem; color: var(--color-text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
 .report-meta__item strong { font-size: 1.0625rem; font-weight: 700; color: var(--color-primary-800); }
+.report-meta__item span.report-meta__pct { text-transform: none; letter-spacing: normal; font-size: .7rem; font-weight: 400; }
 
 .report-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
 .report-table th { text-align: left; padding: var(--space-2) var(--space-3); font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border-light); white-space: nowrap; }
@@ -277,5 +319,9 @@ const baixarXlsx = () => baixar(TIPO_POR_ABA[relatorioAtivo.value], 'XLSX', para
 
 .report-tfoot td { font-weight: 700; background: var(--color-primary-50); color: var(--color-primary-800); padding: var(--space-3); }
 
+.report-note { font-size: .75rem; color: var(--color-text-light); margin-top: var(--space-4); line-height: 1.6; }
+
 .custo-total-aviso { display: flex; align-items: center; gap: var(--space-2); font-size: .875rem; color: var(--color-text-muted); margin-bottom: var(--space-4); }
+
+.relatorio-precificacao { display: flex; flex-direction: column; gap: var(--space-5); }
 </style>

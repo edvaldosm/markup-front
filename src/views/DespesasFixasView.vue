@@ -10,6 +10,7 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatCard from '@/components/ui/StatCard.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
+import CurrencyInput from '@/components/ui/CurrencyInput.vue'
 import type { DespesaFixa, DespesaFixaEntrada } from '@/types'
 
 const store = useDespesasStore()
@@ -157,10 +158,7 @@ const categorias = ['ALUGUEL','ENERGIA','GAS','INTERNET','PROLABORE','CONTADOR',
             <option v-for="c in categorias" :key="c" :value="c">{{ categoriaLabel[c] }}</option>
           </select>
         </div>
-        <div class="field">
-          <label class="field__label">Valor Mensal (R$)</label>
-          <input v-model.number="editando.valorMensal" type="number" step="0.01" class="input" required />
-        </div>
+        <CurrencyInput v-model="editando.valorMensal" label="Valor Mensal (R$)" />
         <div class="field" style="grid-column: 1/-1">
           <label class="toggle-field">
             <input v-model="editando.ativa" type="checkbox" class="toggle-input" />
