@@ -47,6 +47,7 @@ backend inexistente, tela nova).
 | Assistente (RAG) | [assistente-chat-plugavel/](assistente-chat-plugavel/spec.md) | **implementada e verificada ao vivo (2026-08-07)** — widget plugável global, memória multi-turn (`threadId`) |
 | Módulo Gestão do Site (mock) | [modulo-gestao-site/](modulo-gestao-site/spec.md) | baseline do que existe hoje — superado por `integracao-backend-gestao-site` quando essa nascer |
 | Faixa de negociação e PDF (mock) | [faixa-negociacao-e-pdf/](faixa-negociacao-e-pdf/spec.md) | baseline — a faixa já migrou em `integracao-backend-precificacao`; o PDF segue bloqueado |
+| Cadastro e manutenção de usuário (CPF, data de nascimento, restrito ao dono da empresa ou usuário global) | [cadastro-manutencao-usuario/](cadastro-manutencao-usuario/spec.md) | especificada em 2026-08-07 — depende do backend (`markup-back/.claude/specs/cadastro-manutencao-usuario/`) sair primeiro |
 
 ## Regras do fluxo
 

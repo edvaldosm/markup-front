@@ -28,6 +28,9 @@ import {
   VINCULAR_USUARIO, DESVINCULAR_USUARIO, DEFINIR_PERFIL_NO_VINCULO, DEFINIR_USUARIO_ATIVO,
   CONVIDAR_USUARIO_GLOBAL,
 } from '@/graphql/operations/admin'
+// `atualizarUsuario` é dado de pessoa, não de vínculo — mora em `usuarios.ts`
+// (mesmo dono da mutation por-empresa); aqui só se importa, não se duplica.
+import { ATUALIZAR_USUARIO } from '@/graphql/operations/usuarios'
 import { mensagemDeErro } from '@/graphql/erros'
 import { podeAcessarModuloAdmin } from '@/auth/autorizacao'
 import { useAuthStore } from './auth'
@@ -228,16 +231,18 @@ export const useAdminStore = defineStore('admin', () => {
    * Convida alguém para escopo global — sem empresa (emenda 06-08-2026,
    * ADR-0008 só cobria convite por-empresa). Devolve a senha provisória para
    * a tela exibir uma vez; o store não a guarda, mesma regra de
-   * `usuarios.ts` → `convidar`.
+   * `usuarios.ts` → `convidar`. `cpf`/`dataNascimento` obrigatórios (REQ-07).
    */
-  async function convidarGlobal(nome: string, email: string, perfilId: string): Promise<Convidado | null> {
+  async function convidarGlobal(
+    nome: string, email: string, cpf: string, dataNascimento: string, perfilId: string,
+  ): Promise<Convidado | null> {
     if (!souGestor.value) return null
     loading.value = true
     erro.value = null
     try {
       const { data } = await apolloClient.mutate({
         mutation: CONVIDAR_USUARIO_GLOBAL,
-        variables: { nome, email, perfilId },
+        variables: { nome, email, cpf, perfilId, dataNascimento: `${dataNascimento}T00:00:00.000Z` },
       })
       usuarios.value.push(data.convidarUsuarioGlobal.usuario)
       return {
@@ -249,6 +254,32 @@ export const useAdminStore = defineStore('admin', () => {
       return null
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Edita nome/CPF/nascimento/e-mail de qualquer usuário da base (REQ-09) —
+   * a tela inteira já exige escopo global, então quem chega aqui já está
+   * autorizado a ver o usuário; a mutation em si é a mesma de `usuarios.ts`.
+   */
+  async function atualizarUsuarioAdmin(
+    usuarioId: string, nome: string, cpf: string, dataNascimento: string, email: string,
+  ): Promise<Usuario | null> {
+    if (!souGestor.value) return null
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: ATUALIZAR_USUARIO,
+        variables: { usuarioId, nome, cpf, email, dataNascimento: `${dataNascimento}T00:00:00.000Z` },
+      })
+      const salvo: Usuario = data.atualizarUsuario
+      const idx = usuarios.value.findIndex(u => u.id === salvo.id)
+      if (idx >= 0) usuarios.value[idx] = salvo
+      else usuarios.value.push(salvo)
+      return salvo
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'atualizarUsuario')
+      return null
     }
   }
 
@@ -366,5 +397,6 @@ export const useAdminStore = defineStore('admin', () => {
     // ações
     fetchTudo, buscarEmpresaAdmin, limpar,
     definirUsuarioAtivo, definirPerfilNoVinculo, vincularUsuario, desvincularUsuario, convidarGlobal,
+    atualizarUsuarioAdmin,
   }
 })

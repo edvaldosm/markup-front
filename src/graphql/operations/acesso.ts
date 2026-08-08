@@ -33,6 +33,8 @@ const CAMPOS_USUARIO = gql`
     id
     nome
     email
+    cpf
+    dataNascimento
     ativo
     empresas {
       empresaId

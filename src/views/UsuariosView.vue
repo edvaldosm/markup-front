@@ -1,56 +1,49 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUsuariosStore } from '@/stores/usuarios'
+import { useAuthStore } from '@/stores/auth'
+import { useEmpresaStore } from '@/stores/empresa'
+import { souDonoDaEmpresa } from '@/auth/autorizacao'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseModal from '@/components/ui/BaseModal.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
+import UsuarioFormModal from '@/components/ui/UsuarioFormModal.vue'
+import type { Usuario } from '@/types'
 
 const store = useUsuariosStore()
+const auth = useAuthStore()
+const empresaStore = useEmpresaStore()
 
 onMounted(() => store.fetchUsuarios())
 
 /**
- * Cadastro e por **convite** — nao existe criacao direta no contrato, nem edicao
- * de usuario por aqui. O convite devolve uma senha provisoria que o servidor
- * **nao devolve de novo**: por isso ela vive num estado proprio, exibida uma
- * unica vez, com o aviso antes de haver como perde-la.
+ * Cadastro e edição restritos ao **dono da empresa** (REQ-03/04) ou a quem tem
+ * escopo global — `USUARIO_WRITE` sozinho deixou de bastar para **mostrar** a
+ * ação: qualquer PROPRIETARIO vinculado tem a permissão RBAC, mas só o dono
+ * (`Empresa.donoUsuarioId`) ou o ADMIN global chegam ao formulário. Se o
+ * servidor recusar mesmo assim (dado desatualizado no cliente), a tela trata
+ * como qualquer erro de mutation — `UsuarioFormModal` cuida disso.
  */
-const showModal = ref(false)
-const convite = reactive({ nome: '', email: '', perfilId: '' })
-const senhaProvisoria = ref<string | null>(null)
-const copiada = ref(false)
+const podeCadastrar = computed(() =>
+  souDonoDaEmpresa(auth.user, empresaStore.empresa) || auth.adminGlobal,
+)
 
-function novoConvite() {
-  convite.nome = ''
-  convite.email = ''
-  convite.perfilId = store.perfis[0]?.id ?? ''
-  senhaProvisoria.value = null
-  copiada.value = false
+const showModal = ref(false)
+const usuarioEditando = ref<Usuario | undefined>(undefined)
+
+function novoCadastro() {
+  usuarioEditando.value = undefined
   showModal.value = true
 }
 
-async function enviarConvite() {
-  const convidado = await store.convidar(convite.nome, convite.email, convite.perfilId)
-  // Erro mantem a modal aberta: a mensagem esta no store
-  if (convidado) senhaProvisoria.value = convidado.senhaProvisoria
-}
-
-async function copiarSenha() {
-  if (!senhaProvisoria.value) return
-  try {
-    await navigator.clipboard.writeText(senhaProvisoria.value)
-    copiada.value = true
-  } catch {
-    // Sem permissao de area de transferencia: a senha continua visivel na tela
-    copiada.value = false
-  }
+function editar(usuario: Usuario) {
+  usuarioEditando.value = usuario
+  showModal.value = true
 }
 
 function fecharModal() {
-  // A senha some junto com a modal — nao ha de onde exibi-la outra vez
   showModal.value = false
-  senhaProvisoria.value = null
+  usuarioEditando.value = undefined
 }
 
 function inicialAvatar(nome: string) {
@@ -62,7 +55,7 @@ function inicialAvatar(nome: string) {
   <div class="usuarios">
     <div class="toolbar">
       <h2 class="section-title">Usuários do Sistema</h2>
-      <BaseButton @click="novoConvite">+ Convidar Usuário</BaseButton>
+      <BaseButton v-if="podeCadastrar" @click="novoCadastro">+ Cadastrar Usuário</BaseButton>
     </div>
 
     <p v-if="store.erro" class="aviso aviso--erro">
@@ -83,7 +76,9 @@ function inicialAvatar(nome: string) {
             <BaseBadge :color="u.ativo ? 'green' : 'gray'">{{ u.ativo ? 'Ativo' : 'Inativo' }}</BaseBadge>
           </div>
         </div>
-        <!-- Sem acao de edicao: o contrato nao tem mutation de usuario -->
+        <div v-if="podeCadastrar" class="user-card__actions">
+          <BaseButton size="sm" variant="ghost" @click="editar(u)">Editar</BaseButton>
+        </div>
       </div>
     </div>
 
@@ -114,48 +109,17 @@ function inicialAvatar(nome: string) {
       </table>
     </BaseCard>
 
-    <!-- Convite -->
-    <BaseModal v-if="showModal" title="Convidar Usuário" @close="fecharModal">
-      <!-- Depois do convite: a senha, uma unica vez -->
-      <div v-if="senhaProvisoria" class="senha-box">
-        <p class="senha-box__aviso">
-          ⚠ Esta senha aparece <strong>uma única vez</strong>. Ela não é recuperável
-          depois — copie e entregue a {{ convite.nome || 'quem foi convidado' }} agora.
-        </p>
-        <div class="senha-box__valor">
-          <code>{{ senhaProvisoria }}</code>
-          <BaseButton size="sm" variant="secondary" @click="copiarSenha">
-            {{ copiada ? 'Copiado ✓' : 'Copiar' }}
-          </BaseButton>
-        </div>
-      </div>
-
-      <form v-else class="form-grid" @submit.prevent="enviarConvite">
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">Nome Completo</label>
-          <input v-model="convite.nome" class="input" required />
-        </div>
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">E-mail</label>
-          <input v-model="convite.email" type="email" class="input" required />
-        </div>
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">Perfil de Acesso</label>
-          <select v-model="convite.perfilId" class="input">
-            <option v-for="p in store.perfis" :key="p.id" :value="p.id">{{ p.nome }}</option>
-          </select>
-        </div>
-        <p v-if="store.erro" class="aviso aviso--erro" style="grid-column: 1/-1">{{ store.erro }}</p>
-      </form>
-
-      <template #footer>
-        <BaseButton v-if="senhaProvisoria" @click="fecharModal">Concluir</BaseButton>
-        <template v-else>
-          <BaseButton variant="ghost" @click="fecharModal">Cancelar</BaseButton>
-          <BaseButton :loading="store.loading" @click="enviarConvite">Convidar</BaseButton>
-        </template>
-      </template>
-    </BaseModal>
+    <!--
+      Cadastro / edição. Só `@close` fecha a modal: em modo criar, `@salvo`
+      dispara antes da tela de senha provisória (REQ-06) — fechar nesse
+      momento faria o usuário nunca ver a senha.
+    -->
+    <UsuarioFormModal
+      v-if="showModal"
+      :entidade="usuarioEditando"
+      :perfis="store.perfis"
+      @close="fecharModal"
+    />
   </div>
 </template>
 
@@ -178,32 +142,6 @@ function inicialAvatar(nome: string) {
   cursor: pointer;
 }
 
-/* Senha provisoria: destaque suficiente para ninguem fechar sem copiar */
-.senha-box { display: flex; flex-direction: column; gap: var(--space-4); }
-.senha-box__aviso {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #92400e;
-  border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
-  font-size: .875rem;
-  line-height: 1.5;
-}
-.senha-box__valor {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
-}
-.senha-box__valor code {
-  flex: 1;
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-}
 .toolbar { display: flex; align-items: center; justify-content: space-between; }
 .section-title { font-size: 1rem; font-weight: 600; color: var(--color-text); }
 
@@ -241,12 +179,4 @@ function inicialAvatar(nome: string) {
 .td-muted { color: var(--color-text-muted); font-size: .8125rem; }
 .perms-wrap { display: flex; gap: 4px; flex-wrap: wrap; }
 .perms-more { font-size: .7rem; color: var(--color-text-muted); align-self: center; }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-.field { display: flex; flex-direction: column; gap: var(--space-1); }
-.field__label { font-size: .8125rem; font-weight: 500; color: var(--color-text-muted); }
-.input { padding: var(--space-2) var(--space-3); border: 1.5px solid var(--color-border); border-radius: var(--radius); font-size: .9rem; color: var(--color-text); outline: none; background: var(--color-surface); font-family: inherit; }
-.input:focus { border-color: var(--color-primary-400); box-shadow: 0 0 0 3px rgba(85,181,89,.15); }
-.toggle-field { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: .875rem; }
-.toggle-input { width: 16px; height: 16px; accent-color: var(--color-primary-500); }
 </style>

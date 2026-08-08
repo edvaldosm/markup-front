@@ -17,7 +17,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Perfil, Usuario } from '@/types'
 import { apolloClient } from '@/graphql/client'
-import { CONVIDAR_USUARIO, PERFIS, USUARIOS } from '@/graphql/operations/usuarios'
+import { ATUALIZAR_USUARIO, CONVIDAR_USUARIO, PERFIS, USUARIOS } from '@/graphql/operations/usuarios'
 import { mensagemDeErro } from '@/graphql/erros'
 import { useEmpresaStore } from './empresa'
 import { registrarResetDeSessao } from './reset'
@@ -65,14 +65,25 @@ export const useUsuariosStore = defineStore('usuarios', () => {
    * Convida alguém para a **empresa ativa**. Devolve a senha provisória para a
    * tela exibir uma vez; o store não a guarda, justamente para não haver de onde
    * exibi-la de novo.
+   *
+   * `cpf`/`dataNascimento` obrigatórios (REQ-01) — o servidor também passou a
+   * exigir ser o dono da empresa ou ter escopo global; se o cliente estiver
+   * desatualizado e mostrar o botão para quem não é (REQ-04), a recusa cai
+   * aqui como qualquer outro erro de mutation (REQ-10).
    */
-  async function convidar(nome: string, email: string, perfilId: string): Promise<Convidado | null> {
+  async function convidar(
+    nome: string, email: string, cpf: string, dataNascimento: string, perfilId: string,
+  ): Promise<Convidado | null> {
     loading.value = true
     erro.value = null
     try {
       const { data } = await apolloClient.mutate({
         mutation: CONVIDAR_USUARIO,
-        variables: { nome, email, perfilId, empresaId: empresaStore.empresaAtivaId },
+        variables: {
+          nome, email, cpf, perfilId,
+          dataNascimento: `${dataNascimento}T00:00:00.000Z`,
+          empresaId: empresaStore.empresaAtivaId,
+        },
       })
       todosUsuarios.value.push(data.convidarUsuario.usuario)
       return {
@@ -87,6 +98,34 @@ export const useUsuariosStore = defineStore('usuarios', () => {
     }
   }
 
+  /**
+   * Edita nome/CPF/nascimento/e-mail de um usuário já cadastrado (REQ-02/08).
+   * Não mexe em perfil nem vínculo — isso continua no fluxo de vínculo
+   * existente (`definirPerfilNoVinculo`, fora de escopo aqui).
+   */
+  async function atualizar(
+    usuarioId: string, nome: string, cpf: string, dataNascimento: string, email: string,
+  ): Promise<Usuario | null> {
+    loading.value = true
+    erro.value = null
+    try {
+      const { data } = await apolloClient.mutate({
+        mutation: ATUALIZAR_USUARIO,
+        variables: { usuarioId, nome, cpf, email, dataNascimento: `${dataNascimento}T00:00:00.000Z` },
+      })
+      const salvo: Usuario = data.atualizarUsuario
+      const idx = todosUsuarios.value.findIndex(u => u.id === salvo.id)
+      if (idx >= 0) todosUsuarios.value[idx] = salvo
+      else todosUsuarios.value.push(salvo)
+      return salvo
+    } catch (e) {
+      erro.value = mensagemDeErro(e, 'atualizarUsuario')
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   function reset(): void {
     todosUsuarios.value = []
     perfis.value = []
@@ -95,5 +134,5 @@ export const useUsuariosStore = defineStore('usuarios', () => {
 
   registrarResetDeSessao(reset)
 
-  return { usuarios, perfis, loading, erro, fetchUsuarios, convidar, reset }
+  return { usuarios, perfis, loading, erro, fetchUsuarios, convidar, atualizar, reset }
 })

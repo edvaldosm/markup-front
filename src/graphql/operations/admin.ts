@@ -20,6 +20,8 @@ const CAMPOS_USUARIO_ADMIN = gql`
     id
     nome
     email
+    cpf
+    dataNascimento
     ativo
     empresas {
       ...CamposVinculo
@@ -139,11 +141,24 @@ export const DEFINIR_USUARIO_ATIVO = gql`
 /**
  * Convite sem empresa — só quem já é ADMIN global convida outro
  * (`ESCOPO_GLOBAL`, checado no servidor). `senhaProvisoria` é exibida uma
- * única vez, mesma regra de `convidarUsuario` (`usuarios.ts`).
+ * única vez, mesma regra de `convidarUsuario` (`usuarios.ts`). `cpf`/
+ * `dataNascimento` obrigatórios, mesma exigência do convite por-empresa (REQ-07).
  */
 export const CONVIDAR_USUARIO_GLOBAL = gql`
-  mutation convidarUsuarioGlobal($nome: String!, $email: String!, $perfilId: ID!) {
-    convidarUsuarioGlobal(nome: $nome, email: $email, perfilId: $perfilId) {
+  mutation convidarUsuarioGlobal(
+    $nome: String!
+    $email: String!
+    $cpf: String!
+    $dataNascimento: DateTime!
+    $perfilId: ID!
+  ) {
+    convidarUsuarioGlobal(
+      nome: $nome
+      email: $email
+      cpf: $cpf
+      dataNascimento: $dataNascimento
+      perfilId: $perfilId
+    ) {
       senhaProvisoria
       usuario {
         ...CamposUsuarioAdmin

@@ -1028,12 +1028,18 @@ export const mockPerfis: Perfil[] = [
  * Juliana→emp-003, Diego→emp-004 — cada um só enxerga a(s) sua(s).
  * Edvaldo é ADMIN global e enxerga as quatro. Ana também foi **convidada**
  * para a NexaTech (emp-003), então vê duas: uma própria + uma compartilhada.
+ *
+ * `cpf`/`dataNascimento` (REQ-01, `cadastro-manutencao-usuario`) — CPFs
+ * gerados com dígito verificador válido (mesmo algoritmo de `useCpf.ts`),
+ * cada um distinto, nenhum sequência repetida.
  */
 export const mockUsuarios: Usuario[] = [
   {
     id: '1',
     nome: 'Edvaldo Santiago',
     email: 'admin@markup.com.br',
+    cpf: '123.456.789-09',
+    dataNascimento: '1978-03-15',
     ativo: true,
     // ADMIN global não precisa de vínculo: o escopo global já autoriza tudo
     empresas: [],
@@ -1043,6 +1049,8 @@ export const mockUsuarios: Usuario[] = [
     id: '2',
     nome: 'Ana Paula Santos',
     email: 'ana@docesdaana.com.br',
+    cpf: '987.654.321-00',
+    dataNascimento: '1988-04-12',
     ativo: true,
     empresas: [
       { empresaId: '1', perfil: perfilProprietario },
@@ -1054,6 +1062,8 @@ export const mockUsuarios: Usuario[] = [
     id: '3',
     nome: 'Marcos Souza',
     email: 'marcos@docesdaana.com.br',
+    cpf: '111.222.333-96',
+    dataNascimento: '1985-11-02',
     ativo: true,
     empresas: [{ empresaId: '1', perfil: perfilGerente }]
   },
@@ -1061,6 +1071,8 @@ export const mockUsuarios: Usuario[] = [
     id: '4',
     nome: 'Carla Lima',
     email: 'carla@docesdaana.com.br',
+    cpf: '444.555.666-19',
+    dataNascimento: '1995-09-03',
     ativo: true,
     empresas: [{ empresaId: '1', perfil: perfilVendedor }]
   },
@@ -1068,6 +1080,8 @@ export const mockUsuarios: Usuario[] = [
     id: '5',
     nome: 'Ricardo Alves',
     email: 'contador@contabilidade.com.br',
+    cpf: '777.888.999-41',
+    dataNascimento: '1975-01-25',
     ativo: false,
     empresas: [{ empresaId: '1', perfil: perfilContador }]
   },
@@ -1075,6 +1089,8 @@ export const mockUsuarios: Usuario[] = [
     id: '6',
     nome: 'Roberto Menezes',
     email: 'roberto@metalforte.com.br',
+    cpf: '135.792.468-28',
+    dataNascimento: '1982-07-30',
     ativo: true,
     empresas: [{ empresaId: '2', perfil: perfilProprietario }]
   },
@@ -1082,6 +1098,8 @@ export const mockUsuarios: Usuario[] = [
     id: '7',
     nome: 'Juliana Ferraz',
     email: 'juliana@nexatech.com.br',
+    cpf: '246.813.579-28',
+    dataNascimento: '1990-05-20',
     ativo: true,
     empresas: [{ empresaId: '3', perfil: perfilProprietario }]
   },
@@ -1089,8 +1107,26 @@ export const mockUsuarios: Usuario[] = [
     id: '8',
     nome: 'Diego Prado',
     email: 'diego@codelab.com.br',
+    cpf: '864.209.753-10',
+    dataNascimento: '1992-12-08',
     ativo: true,
     empresas: [{ empresaId: '4', perfil: perfilProprietario }]
+  },
+  /**
+   * Fernando: **PROPRIETARIO vinculado à emp-001, mas não é o dono**
+   * (`donoUsuarioId` de emp-001 continua sendo Ana, id '2'). Existe só para
+   * provar REQ-03/04 — antes da feature ele veria "Cadastrar Usuário" por
+   * ter a permissão RBAC; agora não vê, porque não é quem cadastrou a
+   * empresa (spec `cadastro-manutencao-usuario`, critério de aceite 2).
+   */
+  {
+    id: '9',
+    nome: 'Fernando Costa',
+    email: 'fernando@docesdaana.com.br',
+    cpf: '159.357.486-06',
+    dataNascimento: '1983-10-11',
+    ativo: true,
+    empresas: [{ empresaId: '1', perfil: perfilProprietario }]
   },
 ]
 

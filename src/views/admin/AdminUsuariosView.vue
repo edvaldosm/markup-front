@@ -5,14 +5,15 @@
  * entram e com que perfil. Edição fina de vínculo fica no detalhe da empresa;
  * aqui o gestor enxerga o conjunto e liga/desliga o acesso.
  */
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { usePaginacao } from '@/composables/usePaginacao'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseModal from '@/components/ui/BaseModal.vue'
+import UsuarioFormModal from '@/components/ui/UsuarioFormModal.vue'
 import InfiniteScrollSentinel from '@/components/ui/InfiniteScrollSentinel.vue'
+import type { Usuario } from '@/types'
 
 const store = useAdminStore()
 
@@ -57,48 +58,28 @@ async function alternarAtivo(usuarioId: string, nome: string, ativo: boolean) {
 const iniciais = (nome: string) =>
   nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
 
-// ── Convidar usuário global — sem empresa (emenda 06-08-2026) ──────────────
+// ── Cadastrar / editar usuário global — sem empresa (emenda 06-08-2026) ────
 //
-// Mesma UX de "Convidar Usuário" em UsuariosView.vue: a senha provisória
-// aparece uma única vez, então o formulário vira um aviso+valor depois do
-// envio, sem volta. Diferença: aqui só perfis com escopoGlobal=true entram
-// no seletor — o servidor recusaria qualquer outro.
-
-const perfisGlobais = computed(() => store.perfis.filter(p => p.escopoGlobal))
+// `UsuarioFormModal` (modoGlobal=true) filtra os perfis com escopoGlobal=true
+// e cuida sozinho da tela de senha provisória no modo criar — aqui só se
+// controla a visibilidade e qual usuário está sendo editado (REQ-07/09).
 
 const showModalGlobal = ref(false)
-const conviteGlobal = reactive({ nome: '', email: '', perfilId: '' })
-const senhaProvisoriaGlobal = ref<string | null>(null)
-const copiadaGlobal = ref(false)
+const usuarioEditando = ref<Usuario | undefined>(undefined)
 
 function novoConviteGlobal() {
-  conviteGlobal.nome = ''
-  conviteGlobal.email = ''
-  conviteGlobal.perfilId = perfisGlobais.value[0]?.id ?? ''
-  senhaProvisoriaGlobal.value = null
-  copiadaGlobal.value = false
+  usuarioEditando.value = undefined
   showModalGlobal.value = true
 }
 
-async function enviarConviteGlobal() {
-  const convidado = await store.convidarGlobal(conviteGlobal.nome, conviteGlobal.email, conviteGlobal.perfilId)
-  // Erro mantém a modal aberta: a mensagem está em store.erro
-  if (convidado) senhaProvisoriaGlobal.value = convidado.senhaProvisoria
-}
-
-async function copiarSenhaGlobal() {
-  if (!senhaProvisoriaGlobal.value) return
-  try {
-    await navigator.clipboard.writeText(senhaProvisoriaGlobal.value)
-    copiadaGlobal.value = true
-  } catch {
-    copiadaGlobal.value = false
-  }
+function editar(usuario: Usuario) {
+  usuarioEditando.value = usuario
+  showModalGlobal.value = true
 }
 
 function fecharModalGlobal() {
   showModalGlobal.value = false
-  senhaProvisoriaGlobal.value = null
+  usuarioEditando.value = undefined
 }
 </script>
 
@@ -113,7 +94,7 @@ function fecharModalGlobal() {
         </p>
       </div>
       <div class="toolbar__acoes">
-        <BaseButton size="sm" @click="novoConviteGlobal">+ Convidar Usuário Global</BaseButton>
+        <BaseButton size="sm" @click="novoConviteGlobal">+ Cadastrar Usuário Global</BaseButton>
         <div class="toolbar__filtros">
           <input v-model="busca" class="input" placeholder="Buscar por nome ou e-mail…" />
           <select v-model="filtroEmpresa" class="input input--select">
@@ -193,13 +174,16 @@ function fecharModalGlobal() {
               </BaseBadge>
             </td>
             <td class="td-acoes">
-              <BaseButton
-                size="sm"
-                :variant="linha.usuario.ativo ? 'ghost' : 'secondary'"
-                @click="alternarAtivo(linha.usuario.id, linha.usuario.nome, !linha.usuario.ativo)"
-              >
-                {{ linha.usuario.ativo ? 'Desativar' : 'Reativar' }}
-              </BaseButton>
+              <div class="acoes-linha">
+                <BaseButton size="sm" variant="ghost" @click="editar(linha.usuario)">Editar</BaseButton>
+                <BaseButton
+                  size="sm"
+                  :variant="linha.usuario.ativo ? 'ghost' : 'secondary'"
+                  @click="alternarAtivo(linha.usuario.id, linha.usuario.nome, !linha.usuario.ativo)"
+                >
+                  {{ linha.usuario.ativo ? 'Desativar' : 'Reativar' }}
+                </BaseButton>
+              </div>
             </td>
           </tr>
           <tr v-if="!itensVisiveis.length">
@@ -219,57 +203,17 @@ function fecharModalGlobal() {
       </div>
     </BaseCard>
 
-    <!-- Convite global -->
-    <BaseModal v-if="showModalGlobal" title="Convidar Usuário Global" @close="fecharModalGlobal">
-      <!-- Depois do convite: a senha, uma única vez -->
-      <div v-if="senhaProvisoriaGlobal" class="senha-box">
-        <p class="senha-box__aviso">
-          ⚠ Esta senha aparece <strong>uma única vez</strong>. Ela não é recuperável
-          depois — copie e entregue a {{ conviteGlobal.nome || 'quem foi convidado' }} agora.
-        </p>
-        <div class="senha-box__valor">
-          <code>{{ senhaProvisoriaGlobal }}</code>
-          <BaseButton size="sm" variant="secondary" @click="copiarSenhaGlobal">
-            {{ copiadaGlobal ? 'Copiado ✓' : 'Copiar' }}
-          </BaseButton>
-        </div>
-      </div>
-
-      <form v-else class="form-grid" @submit.prevent="enviarConviteGlobal">
-        <p class="modal-hint">
-          Sem empresa: o convidado nasce com escopo global, alcançando todas as
-          empresas da base — mesmo nível de acesso desta tela.
-        </p>
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">Nome Completo</label>
-          <input v-model="conviteGlobal.nome" class="input" required />
-        </div>
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">E-mail</label>
-          <input v-model="conviteGlobal.email" type="email" class="input" required />
-        </div>
-        <div class="field" style="grid-column: 1/-1">
-          <label class="field__label">Perfil (escopo global)</label>
-          <select v-model="conviteGlobal.perfilId" class="input">
-            <option v-for="p in perfisGlobais" :key="p.id" :value="p.id">{{ p.nome }}</option>
-          </select>
-          <p v-if="!perfisGlobais.length" class="modal-hint modal-hint--erro">
-            Nenhum perfil de escopo global cadastrado — não há como convidar.
-          </p>
-        </div>
-        <p v-if="store.erro" class="aviso" style="grid-column: 1/-1">{{ store.erro }}</p>
-      </form>
-
-      <template #footer>
-        <BaseButton v-if="senhaProvisoriaGlobal" @click="fecharModalGlobal">Concluir</BaseButton>
-        <template v-else>
-          <BaseButton variant="ghost" @click="fecharModalGlobal">Cancelar</BaseButton>
-          <BaseButton :loading="store.loading" :disabled="!perfisGlobais.length" @click="enviarConviteGlobal">
-            Convidar
-          </BaseButton>
-        </template>
-      </template>
-    </BaseModal>
+    <!--
+      Cadastro / edição global — modoGlobal filtra perfis de escopoGlobal=true
+      e cuida da tela de senha provisória sozinho no modo criar (REQ-07/09).
+    -->
+    <UsuarioFormModal
+      v-if="showModalGlobal"
+      :entidade="usuarioEditando"
+      :perfis="store.perfis"
+      modo-global
+      @close="fecharModalGlobal"
+    />
   </div>
 </template>
 
@@ -317,6 +261,7 @@ function fecharModalGlobal() {
 .table tbody tr:hover { background: var(--color-primary-50); }
 .th-acoes, .td-acoes { text-align: right; }
 .table__empty { text-align: center; color: var(--color-text-light); padding: var(--space-8) !important; }
+.acoes-linha { display: flex; gap: var(--space-2); justify-content: flex-end; }
 
 .usuario { display: flex; align-items: center; gap: var(--space-3); }
 .usuario__info { display: flex; flex-direction: column; min-width: 0; }
@@ -360,40 +305,6 @@ function fecharModalGlobal() {
   font-size: .8125rem;
   color: var(--color-danger);
 }
-.modal-hint { font-size: .8125rem; color: var(--color-text-muted); grid-column: 1/-1; }
-.modal-hint--erro { color: var(--color-danger); }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-.field { display: flex; flex-direction: column; gap: var(--space-1); }
-.field__label { font-size: .8125rem; font-weight: 500; color: var(--color-text-muted); }
-
-/* Senha provisória: destaque suficiente para ninguém fechar sem copiar */
-.senha-box { display: flex; flex-direction: column; gap: var(--space-4); }
-.senha-box__aviso {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #92400e;
-  border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
-  font-size: .875rem;
-  line-height: 1.5;
-}
-.senha-box__valor {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
-}
-.senha-box__valor code {
-  flex: 1;
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: .05em;
-}
-
 @media (max-width: 768px) {
   .toolbar__filtros { width: 100%; flex-direction: column; }
   .input, .input--select { min-width: 0; width: 100%; }

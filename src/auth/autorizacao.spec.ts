@@ -4,13 +4,14 @@
  * (`minhasEmpresas`, B9), e está coberto em `src/stores/empresa.spec.ts`.
  */
 import { describe, it, expect } from 'vitest'
-import type { Usuario } from '@/types'
-import { perfilEfetivo, isAdminGlobal, podeAcessarModuloAdmin, temPermissao } from './autorizacao'
+import type { Empresa, Usuario } from '@/types'
+import { perfilEfetivo, isAdminGlobal, podeAcessarModuloAdmin, temPermissao, souDonoDaEmpresa } from './autorizacao'
 import {
   perfilAdminGlobal,
   perfilProprietario,
   perfilVendedor,
   perfilContador,
+  mockEmpresa,
 } from '@/test/fixtures'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -23,6 +24,8 @@ const ana: Usuario = {
   id: '2',
   nome: 'Ana Paula Santos',
   email: 'ana@docesdaana.com.br',
+  cpf: '529.982.247-25',
+  dataNascimento: '1988-04-12',
   ativo: true,
   empresas: [
     { empresaId: '1', perfil: perfilProprietario },
@@ -34,6 +37,8 @@ const carla: Usuario = {
   id: '4',
   nome: 'Carla Lima',
   email: 'carla@docesdaana.com.br',
+  cpf: '111.444.777-35',
+  dataNascimento: '1995-09-03',
   ativo: true,
   empresas: [{ empresaId: '1', perfil: perfilVendedor }],
 }
@@ -43,6 +48,8 @@ const admin: Usuario = {
   id: '1',
   nome: 'Edvaldo Santiago',
   email: 'admin@markup.com.br',
+  cpf: '123.456.789-09',
+  dataNascimento: '1980-01-20',
   ativo: true,
   empresas: [],
   perfilGlobal: perfilAdminGlobal,
@@ -117,5 +124,29 @@ describe('RBAC — permissões do perfil', () => {
 
   it('deslogado não tem permissão alguma', () => {
     expect(temPermissao(null, 'PRODUTO_READ')).toBe(false)
+  })
+})
+
+describe('souDonoDaEmpresa (REQ-03) — quem cadastrou a empresa, não quem tem a permissão RBAC', () => {
+  it('dono da empresa: donoUsuarioId bate com o id do usuário', () => {
+    // mockEmpresa (emp-001, Doces da Ana) tem donoUsuarioId '2' — a própria Ana
+    expect(souDonoDaEmpresa(ana, mockEmpresa)).toBe(true)
+  })
+
+  it('não-dono: PROPRIETARIO vinculado, mas outro id é o dono', () => {
+    // Carla não é dona de emp-001 mesmo que tivesse perfil PROPRIETARIO lá
+    const carlaComoProprietaria: Usuario = { ...carla, empresas: [{ empresaId: '1', perfil: perfilProprietario }] }
+    expect(souDonoDaEmpresa(carlaComoProprietaria, mockEmpresa)).toBe(false)
+  })
+
+  it('usuário ou empresa nulos não lançam — devolvem false', () => {
+    expect(souDonoDaEmpresa(null, mockEmpresa)).toBe(false)
+    expect(souDonoDaEmpresa(ana, null)).toBe(false)
+    expect(souDonoDaEmpresa(null, null)).toBe(false)
+  })
+
+  it('empresa sem o mesmo dono não é confundida por coincidência de tipo', () => {
+    const empresaDeOutroDono: Empresa = { ...mockEmpresa, donoUsuarioId: '999' }
+    expect(souDonoDaEmpresa(ana, empresaDeOutroDono)).toBe(false)
   })
 })

@@ -153,8 +153,10 @@ describe('visão global do gestor (REQ-02..REQ-05)', () => {
     // Asserta nas linhas da tabela de equipe, não no texto da página: o nome de
     // um usuário de outra empresa aparece (legitimamente) no seletor de convite.
     const equipe = app.wrapper.findAll('tbody .usuario__info').map(el => el.text())
-    expect(equipe).toHaveLength(4)
-    for (const nome of ['Ana Paula Santos', 'Marcos Souza', 'Carla Lima', 'Ricardo Alves']) {
+    // Fernando (PROPRIETARIO vinculado, não dono — fixture da feature
+    // `cadastro-manutencao-usuario`, REQ-03/04) também é membro da equipe.
+    expect(equipe).toHaveLength(5)
+    for (const nome of ['Ana Paula Santos', 'Marcos Souza', 'Carla Lima', 'Ricardo Alves', 'Fernando Costa']) {
       expect(equipe.some(l => l.includes(nome)), `equipe deveria conter ${nome}`).toBe(true)
     }
     expect(equipe.some(l => l.includes('Roberto Menezes'))).toBe(false)

@@ -225,7 +225,9 @@ describe('convite de usuário (REQ-14)', () => {
     await usuarios.fetchUsuarios()
 
     const perfil = usuarios.perfis.find(p => p.nome === 'VENDEDOR')!
-    const convidado = await usuarios.convidar('Novo Vendedor', 'novo@docesdaana.com.br', perfil.id)
+    const convidado = await usuarios.convidar(
+      'Novo Vendedor', 'novo@docesdaana.com.br', '111.444.777-35', '1998-06-15', perfil.id,
+    )
 
     expect(convidado?.senhaProvisoria).toBeTruthy()
     // O store não guarda a senha: não há de onde exibi-la outra vez
@@ -243,7 +245,44 @@ describe('convite de usuário (REQ-14)', () => {
     await usuarios.fetchUsuarios()
 
     const perfil = usuarios.perfis[0]
-    const convidado = await usuarios.convidar('Duplicada', 'carla@docesdaana.com.br', perfil.id)
+    const convidado = await usuarios.convidar(
+      'Duplicada', 'carla@docesdaana.com.br', '529.982.247-25', '1990-02-10', perfil.id,
+    )
+
+    expect(convidado).toBeNull()
+    expect(usuarios.erro).toBeTruthy()
+  })
+
+  it('CPF já cadastrado é recusado com mensagem', async () => {
+    await comConfeitariaAtiva()
+    const usuarios = useUsuariosStore()
+    await usuarios.fetchUsuarios()
+
+    const perfil = usuarios.perfis[0]
+    // CPF da própria Ana (mockUsuarios) — e-mail novo, então só o CPF colide
+    const convidado = await usuarios.convidar(
+      'CPF Duplicado', 'cpf-duplicado@docesdaana.com.br', mockUsuarios.find(u => u.id === '2')!.cpf, '1990-02-10', perfil.id,
+    )
+
+    expect(convidado).toBeNull()
+    expect(usuarios.erro).toBeTruthy()
+  })
+
+  it('quem não é dono nem global é recusado ao convidar (REQ-04/10)', async () => {
+    // Fernando é PROPRIETARIO vinculado a emp-001 — teria a permissão RBAC,
+    // mas não é o donoUsuarioId (Ana). É o caso central do REQ-03/04.
+    await entrarComo('fernando@docesdaana.com.br')
+    const empresa = useEmpresaStore()
+    await empresa.fetchEmpresas()
+    await assentarTroca()
+
+    const usuarios = useUsuariosStore()
+    await usuarios.fetchUsuarios()
+    const perfil = usuarios.perfis[0]
+
+    const convidado = await usuarios.convidar(
+      'Não Deveria Entrar', 'novo-negado@docesdaana.com.br', '111.444.777-35', '1998-06-15', perfil.id,
+    )
 
     expect(convidado).toBeNull()
     expect(usuarios.erro).toBeTruthy()

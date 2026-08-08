@@ -102,6 +102,8 @@ function usuarioGql(usuario: Usuario) {
     id: usuario.id,
     nome: usuario.nome,
     email: usuario.email,
+    cpf: usuario.cpf,
+    dataNascimento: usuario.dataNascimento,
     ativo: usuario.ativo,
     empresas: usuario.empresas.map(v => ({
       __typename: 'UsuarioEmpresa',
@@ -534,6 +536,40 @@ function exigirEscopoGlobal(usuario: Usuario): Response | null {
 }
 
 /**
+ * `convidarUsuario` (`cadastro-manutencao-usuario`, REQ-03/04) estreitou a
+ * autorização: `USUARIO_WRITE` deixou de bastar — exige ser o **dono da
+ * empresa** (`Empresa.donoUsuarioId`) ou ter escopo global. Replica no
+ * servidor a mesma checagem que `souDonoDaEmpresa` faz no cliente só para
+ * decidir o que a UI oferece; aqui é a autoridade de verdade.
+ */
+function exigirDonoOuGlobal(usuario: Usuario, empresaId: string): Response | null {
+  if (usuario.perfilGlobal?.escopoGlobal) return null
+  const empresa = mockEmpresas.find(e => e.id === empresaId)
+  if (empresa?.donoUsuarioId === usuario.id) return null
+  return erroGraphQL('Só o dono da empresa (ou escopo global) pode cadastrar usuário', 'FORBIDDEN')
+}
+
+/** CPF já cadastrado por outro usuário — `excetoUsuarioId` deixa a própria edição passar. */
+function cpfJaCadastrado(cpf: unknown, excetoUsuarioId?: string): boolean {
+  const digitos = String(cpf ?? '').replace(/\D/g, '')
+  return mockUsuarios.some(u => u.id !== excetoUsuarioId && u.cpf.replace(/\D/g, '') === digitos)
+}
+
+/**
+ * O schema declara `dataNascimento: DateTime!` — o backend real (scalar
+ * RFC3339 do graphql-java-extended-scalars) recusa uma data "nua"
+ * (`"1990-01-01"`, sem hora) com erro de validação. `Date.parse` do JS é
+ * permissivo demais para pegar isso (aceita a data nua de bom grado), por
+ * isso a checagem é textual: exige o separador `T` e a hora. Sem este guard,
+ * um regression como REQ-01 mandar `dataNascimento` sem o sufixo de hora
+ * passaria os testes e só quebraria contra o backend real (foi exatamente o
+ * que aconteceu na verificação ao vivo de 2026-08-07).
+ */
+function dataNascimentoValida(valor: unknown): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(String(valor ?? ''))
+}
+
+/**
  * Compõe `EmpresaAdmin` no servidor — dono, equipe e `totalUsuarios` prontos.
  * É a mesma junção que `admin.ts` fazia no cliente antes de migrar; agora
  * mora aqui, porque é aqui que ela pertence (o front só lê o resultado).
@@ -857,11 +893,25 @@ export function instalarServidorFalso(): ServidorFalso {
       case 'usuarios':
         return dados({ usuarios: usuariosVisiveis(usuario).map(usuarioGql) })
 
+      /**
+       * Autorização estreitada (REQ-03/04, `cadastro-manutencao-usuario`):
+       * deixa de bastar alcançar a empresa — precisa ser o dono dela, ou ter
+       * escopo global. `cpf`/`dataNascimento` obrigatórios (REQ-01); CPF
+       * duplicado é recusado como o e-mail já era.
+       */
       case 'convidarUsuario': {
         const alcance = exigirAlcance(usuario, variaveis.empresaId)
         if (alcance instanceof Response) return alcance
+        const negado = exigirDonoOuGlobal(usuario, alcance)
+        if (negado) return negado
+        if (!dataNascimentoValida(variaveis.dataNascimento)) {
+          return erroGraphQL('dataNascimento precisa ser DateTime RFC3339 (com hora)', 'BAD_REQUEST')
+        }
         if (mockUsuarios.some(u => u.email === variaveis.email)) {
           return erroGraphQL('E-mail ja cadastrado', 'BAD_REQUEST')
+        }
+        if (cpfJaCadastrado(variaveis.cpf)) {
+          return erroGraphQL('CPF ja cadastrado', 'BAD_REQUEST')
         }
         const perfil = mockPerfis.find(p => p.id === variaveis.perfilId)
         if (!perfil) return erroGraphQL('Perfil nao encontrado', 'NOT_FOUND')
@@ -871,6 +921,8 @@ export function instalarServidorFalso(): ServidorFalso {
           id: `usr-convidado-${sequencia}`,
           nome: String(variaveis.nome),
           email: String(variaveis.email),
+          cpf: String(variaveis.cpf ?? ''),
+          dataNascimento: String(variaveis.dataNascimento ?? ''),
           ativo: true,
           empresas: [{ empresaId: alcance, perfil }],
         }
@@ -889,8 +941,14 @@ export function instalarServidorFalso(): ServidorFalso {
       case 'convidarUsuarioGlobal': {
         const negado = exigirEscopoGlobal(usuario)
         if (negado) return negado
+        if (!dataNascimentoValida(variaveis.dataNascimento)) {
+          return erroGraphQL('dataNascimento precisa ser DateTime RFC3339 (com hora)', 'BAD_REQUEST')
+        }
         if (mockUsuarios.some(u => u.email === variaveis.email)) {
           return erroGraphQL('E-mail ja cadastrado', 'BAD_REQUEST')
+        }
+        if (cpfJaCadastrado(variaveis.cpf)) {
+          return erroGraphQL('CPF ja cadastrado', 'BAD_REQUEST')
         }
         const perfil = mockPerfis.find(p => p.id === variaveis.perfilId)
         if (!perfil) return erroGraphQL('Perfil nao encontrado', 'NOT_FOUND')
@@ -903,6 +961,8 @@ export function instalarServidorFalso(): ServidorFalso {
           id: `usr-convidado-${sequencia}`,
           nome: String(variaveis.nome),
           email: String(variaveis.email),
+          cpf: String(variaveis.cpf ?? ''),
+          dataNascimento: String(variaveis.dataNascimento ?? ''),
           ativo: true,
           empresas: [],
           perfilGlobal: perfil,
@@ -915,6 +975,38 @@ export function instalarServidorFalso(): ServidorFalso {
             usuario: usuarioGql(convidado),
           },
         })
+      }
+
+      /**
+       * Edição de dados cadastrais (REQ-02/08/09) — nome/CPF/nascimento/e-mail.
+       * Não mexe em perfil/vínculo. Quem pode editar: o dono de **alguma**
+       * empresa em que o alvo está vinculado, ou escopo global — mesma régua
+       * de quem pode cadastrar; `usuariosVisiveis` já garante que o alvo é
+       * alcançável por quem pediu.
+       */
+      case 'atualizarUsuario': {
+        const alvo = mockUsuarios.find(u => u.id === String(variaveis.usuarioId))
+        if (!alvo) return erroGraphQL('Usuário não encontrado', 'NOT_FOUND')
+        const podeEditar =
+          usuario.perfilGlobal?.escopoGlobal ||
+          alvo.empresas.some(v => mockEmpresas.find(e => e.id === v.empresaId)?.donoUsuarioId === usuario.id)
+        if (!podeEditar) {
+          return erroGraphQL('Só o dono da empresa (ou escopo global) pode editar este usuário', 'FORBIDDEN')
+        }
+        if (!dataNascimentoValida(variaveis.dataNascimento)) {
+          return erroGraphQL('dataNascimento precisa ser DateTime RFC3339 (com hora)', 'BAD_REQUEST')
+        }
+        if (mockUsuarios.some(u => u.id !== alvo.id && u.email === variaveis.email)) {
+          return erroGraphQL('E-mail ja cadastrado', 'BAD_REQUEST')
+        }
+        if (cpfJaCadastrado(variaveis.cpf, alvo.id)) {
+          return erroGraphQL('CPF ja cadastrado', 'BAD_REQUEST')
+        }
+        alvo.nome = String(variaveis.nome)
+        alvo.cpf = String(variaveis.cpf ?? '')
+        alvo.dataNascimento = String(variaveis.dataNascimento ?? '')
+        alvo.email = String(variaveis.email)
+        return dados({ atualizarUsuario: usuarioGql(alvo) })
       }
 
       case 'minhasEmpresas':

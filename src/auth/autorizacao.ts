@@ -11,7 +11,7 @@
  * — regra de isolamento decidida no navegador é regra que o usuário pode
  * alterar. O front reflete o conjunto que o servidor devolveu; não o calcula.
  */
-import type { Perfil, PermissaoChave, Usuario } from '@/types'
+import type { Empresa, Perfil, PermissaoChave, Usuario } from '@/types'
 
 /**
  * Perfil que vale para a sessão agora.
@@ -46,4 +46,19 @@ export function temPermissao(perfil: Perfil | null, chave: PermissaoChave): bool
  */
 export function podeAcessarModuloAdmin(perfil: Perfil | null): boolean {
   return isAdminGlobal(perfil)
+}
+
+/**
+ * O usuário logado é o **dono** desta empresa (`Empresa.donoUsuarioId`, R09)?
+ *
+ * Distinto de `temPermissao(perfil, 'USUARIO_WRITE')`: qualquer PROPRIETARIO
+ * vinculado tem a permissão RBAC, mas só quem cadastrou a empresa é o dono —
+ * o backend estreitou `convidarUsuario` para exigir isto (ou escopo global),
+ * e esta função é a mesma checagem no cliente, só para decidir o que a tela
+ * oferece (REQ-03/04). Não lança para `usuario`/`empresa` nulos: devolve
+ * `false`, o mesmo resultado seguro de "não é dono".
+ */
+export function souDonoDaEmpresa(usuario: Usuario | null, empresa: Empresa | null): boolean {
+  if (!usuario || !empresa) return false
+  return empresa.donoUsuarioId === usuario.id
 }

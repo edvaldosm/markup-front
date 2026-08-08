@@ -354,6 +354,10 @@ export interface Usuario {
   id: string
   nome: string
   email: string
+  /** CPF (só dígitos ou formatado — o servidor normaliza); dado cadastral, não de sistema */
+  cpf: string
+  /** ISO-8601 (escalar `DateTime`), sem cálculo de idade no front — só apresentação */
+  dataNascimento: string
   ativo: boolean
   empresas: VinculoEmpresa[]
   /**

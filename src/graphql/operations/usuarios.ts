@@ -27,6 +27,8 @@ export const USUARIOS = gql`
       id
       nome
       email
+      cpf
+      dataNascimento
       ativo
       empresas {
         empresaId
@@ -46,15 +48,36 @@ export const USUARIOS = gql`
  * `senhaProvisoria` é exibida **uma única vez**: não é recuperável depois. A UI
  * precisa dizer isso antes que o usuário feche o modal e perca a credencial de
  * outra pessoa.
+ *
+ * `cpf`/`dataNascimento` obrigatórios (REQ-01) — o backend estreitou também a
+ * autorização: deixa de bastar `USUARIO_WRITE`, passa a exigir ser o dono da
+ * empresa ou ter escopo global (REQ-03/04, checado no cliente por
+ * `souDonoDaEmpresa` antes mesmo de oferecer o botão).
  */
 export const CONVIDAR_USUARIO = gql`
-  mutation convidarUsuario($nome: String!, $email: String!, $empresaId: ID!, $perfilId: ID!) {
-    convidarUsuario(nome: $nome, email: $email, empresaId: $empresaId, perfilId: $perfilId) {
+  mutation convidarUsuario(
+    $nome: String!
+    $email: String!
+    $cpf: String!
+    $dataNascimento: DateTime!
+    $empresaId: ID!
+    $perfilId: ID!
+  ) {
+    convidarUsuario(
+      nome: $nome
+      email: $email
+      cpf: $cpf
+      dataNascimento: $dataNascimento
+      empresaId: $empresaId
+      perfilId: $perfilId
+    ) {
       senhaProvisoria
       usuario {
         id
         nome
         email
+        cpf
+        dataNascimento
         ativo
         empresas {
           empresaId
@@ -62,6 +85,46 @@ export const CONVIDAR_USUARIO = gql`
             ...CamposPerfil
           }
         }
+      }
+    }
+  }
+  ${CAMPOS_PERFIL}
+`
+
+/**
+ * Edição de dados cadastrais (REQ-02/08/09) — nome/CPF/nascimento/e-mail.
+ * Não mexe em perfil nem vínculo: isso continua em `definirPerfilNoVinculo`
+ * (fluxo já existente, fora de escopo desta feature).
+ */
+export const ATUALIZAR_USUARIO = gql`
+  mutation atualizarUsuario(
+    $usuarioId: ID!
+    $nome: String!
+    $cpf: String!
+    $dataNascimento: DateTime!
+    $email: String!
+  ) {
+    atualizarUsuario(
+      usuarioId: $usuarioId
+      nome: $nome
+      cpf: $cpf
+      dataNascimento: $dataNascimento
+      email: $email
+    ) {
+      id
+      nome
+      email
+      cpf
+      dataNascimento
+      ativo
+      empresas {
+        empresaId
+        perfil {
+          ...CamposPerfil
+        }
+      }
+      perfilGlobal {
+        ...CamposPerfil
       }
     }
   }
